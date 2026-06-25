@@ -106,6 +106,12 @@
   .spinner { display: inline-block; width: 15px; height: 15px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: -3px; margin-right: 6px; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .btn-search-sm { height: 42px; padding: 0 16px; font-size: 13px; font-weight: 600; background: var(--green-dark); color: #fff; border: none; border-radius: var(--radius-sm); cursor: pointer; white-space: nowrap; font-family: 'Inter', sans-serif; }
+  .order-card.highlight { border: 2px solid var(--green-dark); }
+  .highlight-badge { display: inline-block; font-size: 10px; font-weight: 600; background: var(--green-dark); color: #fff; border-radius: 99px; padding: 2px 8px; margin-left: 6px; vertical-align: middle; letter-spacing: 0.04em; }
+  .client-header { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .client-header i { font-size: 16px; color: var(--text-muted); }
+  .client-header-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .client-header-sub { font-size: 12px; color: var(--text-faint); }
 </style>
 </head>
 <body>
@@ -172,32 +178,12 @@
       <p class="top-bar-title">Check order</p>
       <button class="btn-back" onclick="goRol()">← Back</button>
     </div>
-    <input class="inp" id="orden-input" type="text" placeholder="Order number (e.g. 100423)" maxlength="20" />
-    <button class="btn-primary" id="btn-buscar" onclick="buscar()">Search</button>
-    <p class="error-msg" id="error-msg"><i class="ti ti-alert-circle"></i> Order not found. Double-check the number.</p>
-    <div class="result-card" id="result-card">
-      <p class="res-orden" id="res-orden"></p>
-      <p class="res-cliente" id="res-cliente"></p>
-      <div class="producto-row" id="res-producto-wrap">
-        <i class="ti ti-box"></i><span id="res-producto"></span>
-      </div>
-      <div class="track-steps">
-        <div class="step"><div class="step-dot" id="d1"><i class="ti ti-clock"></i></div><div class="step-line" id="l1"></div></div>
-        <div class="step"><div class="step-dot" id="d2"><i class="ti ti-road"></i></div><div class="step-line" id="l2"></div></div>
-        <div class="step"><div class="step-dot" id="d3"><i class="ti ti-forklift"></i></div><div class="step-line" id="l3"></div></div>
-        <div class="step"><div class="step-dot" id="d4"><i class="ti ti-truck"></i></div></div>
-      </div>
-      <div class="step-labels">
-        <span class="step-label" id="sl1">Waiting</span>
-        <span class="step-label" id="sl2">At dock</span>
-        <span class="step-label" id="sl3">Loading</span>
-        <span class="step-label" id="sl4">Departed</span>
-      </div>
-      <div class="meta-row">
-        <span class="meta-label">Last updated</span>
-        <span class="meta-val" id="res-hora"></span>
-      </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <input class="inp" id="orden-input" type="text" placeholder="Order # or customer name" maxlength="40" style="margin-bottom:0;flex:1;" />
+      <button class="btn-primary" id="btn-buscar" onclick="buscar()" style="width:auto;padding:0 18px;white-space:nowrap;">Search</button>
     </div>
+    <p class="error-msg" id="error-msg"><i class="ti ti-alert-circle"></i> No orders found. Double-check and try again.</p>
+    <div id="results-list" style="display:flex;flex-direction:column;gap:10px;margin-top:4px;"></div>
   </div>
 
   <!-- ENCARGADO -->
@@ -228,7 +214,7 @@ const SEL = ["sel-1","sel-2","sel-3","sel-4"];
 
 function show(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
 function goRol() { pinVal=""; updateDots(); show('screen-rol'); }
-function goChofer() { document.getElementById('error-msg').style.display='none'; document.getElementById('result-card').style.display='none'; document.getElementById('orden-input').value=''; show('screen-chofer'); }
+function goChofer() { document.getElementById('error-msg').style.display='none'; document.getElementById('results-list').innerHTML=''; document.getElementById('orden-input').value=''; loadChoferData(); show('screen-chofer'); }
 function goPin() { pinVal=""; updateDots(); document.getElementById('pin-error').style.display='none'; show('screen-pin'); }
 
 function updateDots() { for(let i=0;i<4;i++) document.getElementById('pd'+i).className='pin-dot'+(i<pinVal.length?' filled':''); }
@@ -242,33 +228,70 @@ function pinKey(k) {
 }
 function pinDel() { pinVal=pinVal.slice(0,-1); updateDots(); }
 
+let choferOrdenes = [];
+
+async function loadChoferData() {
+  try {
+    const res = await fetch(`${API}?action=getAll&pin=${PIN}`);
+    choferOrdenes = await res.json();
+  } catch(e) { choferOrdenes = []; }
+}
+
+function renderOrderCard(o, highlighted) {
+  const est = parseInt(o.estatus);
+  const stepIcons = ['ti-clock','ti-road','ti-forklift','ti-truck'];
+  const stepLabels = ['Waiting','At dock','Loading','Departed'];
+  const steps = stepIcons.map((icon,i) => {
+    let dotClass = 'step-dot';
+    if(i+1 < est) dotClass += ' done';
+    else if(i+1 === est) dotClass += est===4?' done':' active';
+    const lineClass = 'step-line'+(i+1 < est?' done':'');
+    return `<div class="step">
+      <div class="${dotClass}"><i class="ti ${icon}"></i></div>
+      ${i<3?`<div class="${lineClass}"></div>`:''}
+    </div>`;
+  }).join('');
+  const stepLbls = stepLabels.map((l,i)=>`<span class="step-label${i+1===est?' active':''}">${l}</span>`).join('');
+  return `
+    <div class="order-card${highlighted?' highlight':''}">
+      <p class="res-orden" style="margin-bottom:2px;">Order #${o.orden}${highlighted?'<span class="highlight-badge">Your order</span>':''}</p>
+      ${o.producto?`<div class="producto-row" style="margin-bottom:10px;"><i class="ti ti-box"></i><span>${o.producto}</span></div>`:''}
+      <div class="track-steps">${steps}</div>
+      <div class="step-labels">${stepLbls}</div>
+      <div class="meta-row"><span class="meta-label">Last updated</span><span class="meta-val">${o.hora||'—'}</span></div>
+    </div>`;
+}
+
 async function buscar() {
   const val = document.getElementById('orden-input').value.trim();
   if(!val) return;
   const errEl = document.getElementById('error-msg');
-  const card = document.getElementById('result-card');
+  const list = document.getElementById('results-list');
   const btn = document.getElementById('btn-buscar');
-  errEl.style.display='none'; card.style.display='none';
+  errEl.style.display='none'; list.innerHTML='';
   btn.innerHTML='<span class="spinner"></span>Searching...'; btn.disabled=true;
   try {
+    // Find the searched order
     const res = await fetch(`${API}?action=getOrder&orden=${encodeURIComponent(val)}`);
-    const data = await res.json();
+    const found = await res.json();
     btn.innerHTML='Search'; btn.disabled=false;
-    if(data.error){ errEl.style.display='block'; return; }
-    document.getElementById('res-orden').textContent='Order #'+data.orden;
-    document.getElementById('res-cliente').textContent=data.cliente;
-    document.getElementById('res-hora').textContent=data.hora||'—';
-    const pw=document.getElementById('res-producto-wrap'), pt=document.getElementById('res-producto');
-    if(data.producto){ pt.textContent=data.producto; pw.style.display='flex'; } else { pw.style.display='none'; }
-    for(let i=1;i<=4;i++){
-      const dot=document.getElementById('d'+i), lbl=document.getElementById('sl'+i);
-      dot.className='step-dot'; lbl.className='step-label';
-      const est=parseInt(data.estatus);
-      if(i<est) dot.classList.add('done');
-      else if(i===est){ dot.classList.add(est===4?'done':'active'); lbl.classList.add('active'); }
-      if(i<4) document.getElementById('l'+i).className='step-line'+(i<est?' done':'');
+    if(found.error){ errEl.style.display='block'; return; }
+    // Get all orders for the same client
+    const clientOrders = choferOrdenes.filter(o => o.cliente === found.cliente);
+    // If choferOrdenes not loaded yet, just show the one order
+    const toShow = clientOrders.length > 0 ? clientOrders : [found];
+    // Show client header if multiple orders
+    if(toShow.length > 1) {
+      list.innerHTML = `<div class="client-header">
+        <i class="ti ti-user"></i>
+        <div><p class="client-header-name">${found.cliente}</p>
+        <p class="client-header-sub">${toShow.length} orders today</p></div>
+      </div>`;
     }
-    card.style.display='block';
+    // Render searched order first (highlighted), then the rest
+    const others = toShow.filter(o => String(o.orden) !== String(found.orden));
+    list.innerHTML += renderOrderCard(found, true);
+    others.forEach(o => { list.innerHTML += renderOrderCard(o, false); });
   } catch(e) { btn.innerHTML='Search'; btn.disabled=false; errEl.textContent='Connection error. Try again.'; errEl.style.display='block'; }
 }
 document.getElementById('orden-input').addEventListener('keydown',e=>{ if(e.key==='Enter') buscar(); });
