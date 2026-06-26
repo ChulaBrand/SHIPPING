@@ -264,6 +264,21 @@ function todayStr() {
   const d = new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
+function yesterdayStr() {
+  const d = new Date(); d.setDate(d.getDate()-1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function formatLastUpdated(hora, fecha) {
+  if(!hora || hora==='—' || hora==='undefined') return '—';
+  const today = todayStr();
+  const yesterday = yesterdayStr();
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  if(!fecha || fecha===today) return 'Today, '+hora;
+  if(fecha===yesterday) return 'Yesterday, '+hora;
+  const parts = String(fecha).split('-');
+  if(parts.length===3) return months[parseInt(parts[1])-1]+' '+parseInt(parts[2])+', '+hora;
+  return hora;
+}
 function isOlderThan48h(fecha) {
   if(!fecha) return false;
   return (new Date() - new Date(fecha)) / 3600000 > 48;
@@ -339,7 +354,7 @@ function renderDriverCard(o, highlighted) {
     <p class="order-num" style="margin-bottom:4px;">Order #${o.orden}${highlighted?'<span class="highlight-badge">Your order</span>':''}${lockedTag}</p>
     ${prodHtml}${partialHtml}${banner}
     ${buildTracker(est)}
-    <div class="meta-row"><span class="meta-label">Last updated</span><span class="meta-val">${o.hora||'—'}</span></div>
+    <div class="meta-row"><span class="meta-label">Last updated</span><span class="meta-val">${formatLastUpdated(o.hora, o.fecha)}</span></div>
   </div>`;
 }
 
