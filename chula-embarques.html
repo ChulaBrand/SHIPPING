@@ -11,127 +11,132 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --green-dark: #1B3A2D;
-    --green-mid: #7EC845;
-    --purple: #5B21B6;
-    --bg: #F7F5F0;
-    --white: #ffffff;
-    --text: #1a1a1a;
-    --text-muted: #6b7280;
-    --text-faint: #9ca3af;
-    --border: rgba(0,0,0,0.10);
-    --border-strong: rgba(0,0,0,0.18);
-    --radius: 12px;
-    --radius-sm: 8px;
+    --green-dark: #1B3A2D; --green-mid: #7EC845; --purple: #5B21B6;
+    --bg: #F7F5F0; --white: #fff; --text: #1a1a1a;
+    --text-muted: #6b7280; --text-faint: #9ca3af;
+    --border: rgba(0,0,0,0.10); --border-strong: rgba(0,0,0,0.18);
+    --radius: 12px; --radius-sm: 8px;
   }
-  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 2rem 1rem 4rem; }
-  .container { width: 100%; max-width: 420px; }
-  .logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 2.5rem; }
-  .logo-mark { width: 36px; height: 36px; background: var(--purple); border-radius: 9px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-  .logo-mark svg { width: 36px; height: 36px; }
-  .logo-text { font-size: 13px; font-weight: 600; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text-muted); }
-  .logo-text span { color: var(--text); }
-  .screen { display: none; }
-  .screen.active { display: block; }
-  .page-title { font-size: 24px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
-  .page-sub { font-size: 15px; color: var(--text-muted); margin-bottom: 2rem; }
-  .role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .role-btn { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem 1rem 1.25rem; cursor: pointer; text-align: center; transition: border-color 0.15s, transform 0.1s; }
-  .role-btn:hover { border-color: var(--border-strong); }
-  .role-btn:active { transform: scale(0.97); }
-  .role-icon { font-size: 30px; color: var(--text-muted); margin-bottom: 10px; display: block; }
-  .role-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
-  .role-desc { font-size: 12px; color: var(--text-faint); line-height: 1.4; }
-  .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-  .top-bar-title { font-size: 17px; font-weight: 600; color: var(--text); }
-  .btn-back { background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; color: var(--text-muted); cursor: pointer; padding: 5px 12px; font-family: 'Inter', sans-serif; }
-  .btn-back:hover { background: rgba(0,0,0,0.04); }
-  .pin-wrap { max-width: 280px; margin: 0 auto; text-align: center; padding-top: 0.5rem; }
-  .pin-title { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
-  .pin-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 1.75rem; }
-  .pin-dots { display: flex; justify-content: center; gap: 14px; margin-bottom: 1.75rem; }
-  .pin-dot { width: 15px; height: 15px; border-radius: 50%; border: 2px solid var(--border-strong); background: var(--bg); transition: all 0.15s; }
-  .pin-dot.filled { background: var(--green-dark); border-color: var(--green-dark); }
-  .pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
-  .pkey { height: 54px; font-size: 20px; font-weight: 500; background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; color: var(--text); font-family: 'Inter', sans-serif; transition: background 0.1s, transform 0.1s; }
-  .pkey:active { background: var(--bg); transform: scale(0.95); }
-  .pkey.del { font-size: 16px; color: var(--text-muted); }
-  .pin-error { font-size: 13px; color: #dc2626; min-height: 20px; margin-bottom: 10px; }
-  .inp { font-family: 'IBM Plex Mono', monospace; font-size: 16px; width: 100%; padding: 0 14px; height: 48px; background: var(--white); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-sm); outline: none; margin-bottom: 10px; transition: border-color 0.15s; }
-  .inp:focus { border-color: var(--green-dark); }
-  .inp-sm { font-family: 'IBM Plex Mono', monospace; font-size: 13px; flex: 1; padding: 0 11px; height: 42px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-sm); outline: none; min-width: 0; }
-  .inp-sm.txt { font-family: 'Inter', sans-serif; }
-  .btn-primary { width: 100%; height: 48px; font-size: 15px; font-weight: 600; background: var(--green-dark); color: #fff; border: none; border-radius: var(--radius-sm); cursor: pointer; font-family: 'Inter', sans-serif; }
-  .btn-primary:active { transform: scale(0.98); }
+  body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:2rem 1rem 4rem; }
+  .container { width:100%; max-width:420px; }
+  .logo-row { display:flex; align-items:center; gap:10px; margin-bottom:2.5rem; }
+  .logo-mark { width:36px; height:36px; background:var(--purple); border-radius:9px; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .logo-mark svg { width:36px; height:36px; }
+  .logo-text { font-size:13px; font-weight:600; letter-spacing:.10em; text-transform:uppercase; color:var(--text-muted); }
+  .logo-text span { color:var(--text); }
+  .screen { display:none; } .screen.active { display:block; }
+  .page-title { font-size:24px; font-weight:500; margin-bottom:4px; }
+  .page-sub { font-size:15px; color:var(--text-muted); margin-bottom:2rem; }
+  .role-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .role-btn { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem 1rem 1.25rem; cursor:pointer; text-align:center; transition:border-color .15s,transform .1s; }
+  .role-btn:hover { border-color:var(--border-strong); } .role-btn:active { transform:scale(.97); }
+  .role-icon { font-size:30px; color:var(--text-muted); margin-bottom:10px; display:block; }
+  .role-title { font-size:14px; font-weight:600; margin-bottom:3px; }
+  .role-desc { font-size:12px; color:var(--text-faint); line-height:1.4; }
+  .top-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; }
+  .top-bar-title { font-size:17px; font-weight:600; }
+  .btn-back { background:none; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px; color:var(--text-muted); cursor:pointer; padding:5px 12px; font-family:'Inter',sans-serif; }
+  .pin-wrap { max-width:280px; margin:0 auto; text-align:center; }
+  .pin-title { font-size:17px; font-weight:600; margin-bottom:6px; }
+  .pin-sub { font-size:13px; color:var(--text-muted); margin-bottom:1.75rem; }
+  .pin-dots { display:flex; justify-content:center; gap:14px; margin-bottom:1.75rem; }
+  .pin-dot { width:15px; height:15px; border-radius:50%; border:2px solid var(--border-strong); background:var(--bg); transition:all .15s; }
+  .pin-dot.filled { background:var(--green-dark); border-color:var(--green-dark); }
+  .pin-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px; }
+  .pkey { height:54px; font-size:20px; font-weight:500; background:var(--white); border:1px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; color:var(--text); font-family:'Inter',sans-serif; }
+  .pkey:active { background:var(--bg); transform:scale(.95); }
+  .pkey.del { font-size:16px; color:var(--text-muted); }
+  .pin-error { font-size:13px; color:#dc2626; min-height:20px; margin-bottom:10px; }
+  .inp { font-family:'IBM Plex Mono',monospace; font-size:16px; width:100%; padding:0 14px; height:48px; background:var(--white); color:var(--text); border:1px solid var(--border); border-radius:var(--radius-sm); outline:none; margin-bottom:10px; }
+  .inp:focus { border-color:var(--green-dark); }
+  .inp-sm { font-family:'IBM Plex Mono',monospace; font-size:13px; flex:1; padding:0 11px; height:42px; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:var(--radius-sm); outline:none; min-width:0; }
+  .inp-sm.txt { font-family:'Inter',sans-serif; }
+  .btn-primary { width:100%; height:48px; font-size:15px; font-weight:600; background:var(--green-dark); color:#fff; border:none; border-radius:var(--radius-sm); cursor:pointer; font-family:'Inter',sans-serif; }
+  .btn-primary:active { transform:scale(.98); }
+  .btn-search-sm { height:42px; padding:0 16px; font-size:13px; font-weight:600; background:var(--green-dark); color:#fff; border:none; border-radius:var(--radius-sm); cursor:pointer; white-space:nowrap; font-family:'Inter',sans-serif; }
+  .btn-sync { width:100%; height:44px; font-size:13px; font-weight:600; background:#fff; color:var(--green-dark); border:2px solid var(--green-dark); border-radius:var(--radius-sm); cursor:pointer; font-family:'Inter',sans-serif; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:1.5rem; }
+  .btn-sync:active { background:var(--bg); }
+  .section-label { font-size:11px; font-weight:600; color:var(--text-faint); text-transform:uppercase; letter-spacing:.09em; margin-bottom:10px; }
+  .search-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:1rem; margin-bottom:1.5rem; display:flex; gap:8px; }
+  .orders-list { display:flex; flex-direction:column; gap:10px; }
+  .results-list { display:flex; flex-direction:column; gap:10px; margin-top:4px; }
   /* order cards */
-  .order-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; }
-  .order-card.highlight { border: 2px solid var(--green-dark); }
-  .order-num { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-faint); margin-bottom: 2px; }
-  .order-cliente { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
-  .order-producto-lbl { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
-  .highlight-badge { display: inline-block; font-size: 10px; font-weight: 600; background: var(--green-dark); color: #fff; border-radius: 99px; padding: 2px 8px; margin-left: 6px; vertical-align: middle; }
-  .producto-row { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg); border-radius: var(--radius-sm); border: 1px solid var(--border); margin-bottom: 1rem; }
-  .producto-row i { font-size: 15px; color: var(--text-faint); }
-  .producto-row span { font-size: 13px; color: var(--text); font-weight: 500; }
+  .order-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:1rem; }
+  .order-card.highlight { border:2px solid var(--green-dark); }
+  .order-card.locked { opacity:.65; }
+  .order-num { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-faint); margin-bottom:2px; }
+  .order-cliente { font-size:15px; font-weight:600; margin-bottom:2px; }
+  .order-producto-lbl { font-size:12px; color:var(--text-muted); margin-bottom:10px; }
+  .highlight-badge { display:inline-block; font-size:10px; font-weight:600; background:var(--green-dark); color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
+  .locked-badge { display:inline-block; font-size:10px; font-weight:600; background:#6b7280; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
+  .producto-row { display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--bg); border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:1rem; }
+  .producto-row i { font-size:15px; color:var(--text-faint); }
+  .producto-row span { font-size:13px; color:var(--text); font-weight:500; }
   /* tracker */
-  .track-steps { display: flex; align-items: center; margin-bottom: 6px; }
-  .step { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; }
-  .step-dot { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--border-strong); background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 12px; z-index: 1; color: var(--text-faint); transition: all 0.2s; }
-  .step-dot.done { background: var(--green-dark); border-color: var(--green-dark); color: #fff; }
-  .step-dot.s1 { background: #DBEAFE; border-color: #93C5FD; color: #1E40AF; }
-  .step-dot.s2 { background: #FEF9C3; border-color: #FDE047; color: #854D0E; }
-  .step-dot.s3 { background: #FAEEDA; border-color: #EF9F27; color: #854F0B; }
-  .step-dot.s4 { background: #EAF3DE; border-color: #97C459; color: #3B6D11; }
-  .step-dot.s5 { background: #EDE9FE; border-color: #A78BFA; color: #5B21B6; }
-  .step-line { position: absolute; top: 13px; left: calc(50% + 13px); right: calc(-50% + 13px); height: 2px; background: var(--border-strong); z-index: 0; transition: background 0.2s; }
-  .step-line.done { background: var(--green-dark); }
-  .step:last-child .step-line { display: none; }
-  .step-labels { display: flex; margin-bottom: 8px; }
-  .step-label { flex: 1; text-align: center; font-size: 9px; color: var(--text-faint); padding: 0 1px; line-height: 1.3; }
-  .step-label.active { color: var(--text); font-weight: 600; }
-  /* status badge shown on chofer view */
-  .status-banner { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: var(--radius-sm); margin-bottom: 1rem; }
-  .status-banner-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
-  .status-banner-label { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
-  .status-banner-desc { font-size: 12px; line-height: 1.4; opacity: 0.85; }
-  .sb-1 { background: #DBEAFE; color: #1E40AF; }
-  .sb-2 { background: #FEF9C3; color: #854D0E; }
-  .sb-3 { background: #FAEEDA; color: #854F0B; }
-  .sb-4 { background: #EAF3DE; color: #3B6D11; }
-  .sb-5 { background: #EDE9FE; color: #5B21B6; }
-  .meta-row { display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 0.25rem; }
-  .meta-label { font-size: 12px; color: var(--text-faint); }
-  .meta-val { font-size: 12px; color: var(--text-muted); font-weight: 500; }
-  .error-msg { font-size: 13px; color: #dc2626; margin: 10px 0 0; display: none; }
-  /* clerk */
-  .section-label { font-size: 11px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.09em; margin-bottom: 10px; }
-  .search-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; margin-bottom: 1.5rem; display: flex; gap: 8px; }
-  .orders-list { display: flex; flex-direction: column; gap: 10px; }
-  .order-header { margin-bottom: 10px; }
-  /* 5 status buttons — wrap into 3+2 */
-  .status-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
-  .status-btns .sbtn:nth-child(4) { grid-column: 1 / 2; }
-  .status-btns .sbtn:nth-child(5) { grid-column: 2 / 3; }
-  .sbtn { height: 40px; font-size: 11px; font-weight: 500; border: 2px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; background: var(--bg); color: var(--text-muted); font-family: 'Inter', sans-serif; transition: background 0.1s, border-color 0.1s; line-height: 1.2; padding: 0 4px; }
-  .sbtn:active { transform: scale(0.97); }
-  .sbtn.sel-1 { background: #DBEAFE; color: #1E40AF; border-color: #93C5FD; font-weight: 600; }
-  .sbtn.sel-2 { background: #FEF9C3; color: #854D0E; border-color: #FDE047; font-weight: 600; }
-  .sbtn.sel-3 { background: #FAEEDA; color: #854F0B; border-color: #EF9F27; font-weight: 600; }
-  .sbtn.sel-4 { background: #EAF3DE; color: #3B6D11; border-color: #97C459; font-weight: 600; }
-  .sbtn.sel-5 { background: #EDE9FE; color: #5B21B6; border-color: #A78BFA; font-weight: 600; }
-  .status-desc-lbl { font-size: 11px; color: var(--text-faint); font-style: italic; text-align: center; min-height: 16px; }
-  .client-header { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
-  .client-header i { font-size: 18px; color: var(--text-muted); }
-  .client-header-name { font-size: 14px; font-weight: 600; color: var(--text); }
-  .client-header-sub { font-size: 12px; color: var(--text-faint); }
-  .results-list { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
-  .empty-state { text-align: center; padding: 2.5rem 0; color: var(--text-faint); font-size: 14px; line-height: 2; }
-  .empty-state i { font-size: 28px; display: block; margin-bottom: 6px; }
-  .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--green-dark); color: #fff; font-size: 13px; font-weight: 500; padding: 10px 20px; border-radius: 99px; transition: transform 0.3s; white-space: nowrap; z-index: 99; }
-  .toast.show { transform: translateX(-50%) translateY(0); }
-  .spinner { display: inline-block; width: 15px; height: 15px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: -3px; margin-right: 6px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .btn-search-sm { height: 42px; padding: 0 16px; font-size: 13px; font-weight: 600; background: var(--green-dark); color: #fff; border: none; border-radius: var(--radius-sm); cursor: pointer; white-space: nowrap; font-family: 'Inter', sans-serif; }
+  .track-steps { display:flex; align-items:center; margin-bottom:6px; }
+  .step { flex:1; display:flex; flex-direction:column; align-items:center; position:relative; }
+  .step-dot { width:24px; height:24px; border-radius:50%; border:2px solid var(--border-strong); background:var(--bg); display:flex; align-items:center; justify-content:center; font-size:11px; z-index:1; color:var(--text-faint); transition:all .2s; }
+  .step-dot.done { background:var(--green-dark); border-color:var(--green-dark); color:#fff; }
+  .step-dot.s1 { background:#F3E8FF; border-color:#C084FC; color:#7E22CE; }
+  .step-dot.s2 { background:#DBEAFE; border-color:#93C5FD; color:#1E40AF; }
+  .step-dot.s3 { background:#FEF9C3; border-color:#FDE047; color:#854D0E; }
+  .step-dot.s4 { background:#FAEEDA; border-color:#EF9F27; color:#854F0B; }
+  .step-dot.s5 { background:#EAF3DE; border-color:#97C459; color:#3B6D11; }
+  .step-dot.s6 { background:#EDE9FE; border-color:#A78BFA; color:#5B21B6; }
+  .step-line { position:absolute; top:12px; left:calc(50% + 12px); right:calc(-50% + 12px); height:2px; background:var(--border-strong); z-index:0; }
+  .step-line.done { background:var(--green-dark); }
+  .step:last-child .step-line { display:none; }
+  .step-labels { display:flex; margin-bottom:8px; }
+  .step-label { flex:1; text-align:center; font-size:8px; color:var(--text-faint); padding:0 1px; line-height:1.3; }
+  .step-label.active { color:var(--text); font-weight:600; }
+  /* status banner */
+  .status-banner { display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border-radius:var(--radius-sm); margin-bottom:1rem; }
+  .status-banner-icon { font-size:20px; flex-shrink:0; margin-top:1px; }
+  .status-banner-label { font-size:13px; font-weight:600; margin-bottom:2px; }
+  .status-banner-desc { font-size:12px; line-height:1.4; opacity:.85; }
+  .sb-1{background:#F3E8FF;color:#7E22CE;} .sb-2{background:#DBEAFE;color:#1E40AF;}
+  .sb-3{background:#FEF9C3;color:#854D0E;} .sb-4{background:#FAEEDA;color:#854F0B;}
+  .sb-5{background:#EAF3DE;color:#3B6D11;} .sb-6{background:#EDE9FE;color:#5B21B6;}
+  /* partial ready banner for driver */
+  .partial-banner { background:#FEF3C7; color:#92400E; border-radius:var(--radius-sm); padding:8px 12px; font-size:12px; margin-bottom:10px; }
+  .partial-banner strong { display:block; font-size:13px; margin-bottom:4px; }
+  .partial-item { display:flex; align-items:center; gap:6px; margin-top:4px; font-size:12px; }
+  .partial-item.ready { color:#3B6D11; } .partial-item.pending { color:#92400E; }
+  .meta-row { display:flex; justify-content:space-between; border-top:1px solid var(--border); padding-top:1rem; margin-top:.25rem; }
+  .meta-label { font-size:12px; color:var(--text-faint); }
+  .meta-val { font-size:12px; color:var(--text-muted); font-weight:500; }
+  .error-msg { font-size:13px; color:#dc2626; margin:10px 0 0; display:none; }
+  /* clerk status btns — 3+3 grid */
+  .status-btns { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:8px; }
+  .sbtn { height:40px; font-size:11px; font-weight:500; border:2px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; background:var(--bg); color:var(--text-muted); font-family:'Inter',sans-serif; line-height:1.2; padding:0 4px; }
+  .sbtn:active { transform:scale(.97); }
+  .sbtn.sel-1{background:#F3E8FF;color:#7E22CE;border-color:#C084FC;font-weight:600;}
+  .sbtn.sel-2{background:#DBEAFE;color:#1E40AF;border-color:#93C5FD;font-weight:600;}
+  .sbtn.sel-3{background:#FEF9C3;color:#854D0E;border-color:#FDE047;font-weight:600;}
+  .sbtn.sel-4{background:#FAEEDA;color:#854F0B;border-color:#EF9F27;font-weight:600;}
+  .sbtn.sel-5{background:#EAF3DE;color:#3B6D11;border-color:#97C459;font-weight:600;}
+  .sbtn.sel-6{background:#EDE9FE;color:#5B21B6;border-color:#A78BFA;font-weight:600;}
+  .sbtn:disabled { opacity:.45; cursor:not-allowed; }
+  /* checklist */
+  .checklist { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; padding:10px 12px; background:var(--bg); border-radius:var(--radius-sm); border:1px solid var(--border); }
+  .checklist-title { font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px; }
+  .check-item { display:flex; align-items:center; gap:10px; cursor:pointer; }
+  .check-item input[type=checkbox] { width:18px; height:18px; accent-color:var(--green-dark); cursor:pointer; flex-shrink:0; }
+  .check-item label { font-size:13px; color:var(--text); cursor:pointer; line-height:1.3; }
+  .check-item.checked label { text-decoration:line-through; color:var(--text-faint); }
+  .ready-hint { font-size:11px; color:#854F0B; font-style:italic; margin-bottom:6px; }
+  .status-desc-lbl { font-size:11px; color:var(--text-faint); font-style:italic; text-align:center; min-height:16px; }
+  .client-header { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; margin-bottom:10px; display:flex; align-items:center; gap:10px; }
+  .client-header i { font-size:18px; color:var(--text-muted); }
+  .client-header-name { font-size:14px; font-weight:600; }
+  .client-header-sub { font-size:12px; color:var(--text-faint); }
+  .day-divider { font-size:11px; font-weight:600; color:var(--text-faint); text-transform:uppercase; letter-spacing:.08em; padding:6px 0 4px; border-top:1px solid var(--border); margin-top:4px; }
+  .empty-state { text-align:center; padding:2.5rem 0; color:var(--text-faint); font-size:14px; line-height:2; }
+  .empty-state i { font-size:28px; display:block; margin-bottom:6px; }
+  .toast { position:fixed; bottom:2rem; left:50%; transform:translateX(-50%) translateY(80px); background:var(--green-dark); color:#fff; font-size:13px; font-weight:500; padding:10px 20px; border-radius:99px; transition:transform .3s; white-space:nowrap; z-index:99; }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+  .spinner { display:inline-block; width:15px; height:15px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; vertical-align:-3px; margin-right:6px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -199,10 +204,10 @@
       <button class="btn-back" onclick="goRol()">← Back</button>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:10px;">
-      <input class="inp" id="orden-input" type="text" placeholder="Order number (e.g. 100423)" maxlength="20" style="margin-bottom:0;flex:1;" />
+      <input class="inp" id="orden-input" type="text" placeholder="Order number" maxlength="20" style="margin-bottom:0;flex:1;" />
       <button class="btn-primary" id="btn-buscar" onclick="buscar()" style="width:auto;padding:0 18px;white-space:nowrap;">Search</button>
     </div>
-    <p class="error-msg" id="error-msg"><i class="ti ti-alert-circle"></i> Order not found. Double-check the number.</p>
+    <p class="error-msg" id="error-msg"><i class="ti ti-alert-circle"></i> Order not found.</p>
     <div class="results-list" id="results-list"></div>
   </div>
 
@@ -212,6 +217,9 @@
       <p class="top-bar-title">Shipping panel</p>
       <button class="btn-back" onclick="goRol()">Sign out</button>
     </div>
+    <button class="btn-sync" onclick="syncDraft()">
+      <i class="ti ti-refresh"></i> Sync from Draft
+    </button>
     <p class="section-label">Find order</p>
     <div class="search-card">
       <input class="inp-sm txt" id="enc-search" type="text" placeholder="Order # or customer name" maxlength="40" />
@@ -219,9 +227,12 @@
     </div>
     <p class="section-label">Today's orders</p>
     <div class="orders-list" id="orders-list"></div>
+    <div id="past-section" style="display:none;">
+      <p class="section-label" style="margin-top:1.25rem;">Previous orders</p>
+      <div class="orders-list" id="past-list"></div>
+    </div>
   </div>
 </div>
-
 <div class="toast" id="toast"></div>
 
 <script>
@@ -231,19 +242,32 @@ let pinVal = "";
 let ordenes = [];
 let choferOrdenes = [];
 
-const LABELS = ["Processing","Ready","Waiting for dock","Loading","Departed"];
+const LABELS = ["Order Received","Processing","Ready","Waiting for dock","Loading","Departed"];
 const DESCS  = [
+  "Order has been received in the system",
   "Order received, being prepared",
   "Order is ready, waiting for driver",
   "Driver arrived, waiting for an available dock",
   "Truck is at the dock, loading in progress",
   "Truck has left the facility"
 ];
-const ICONS  = ["ti-loader","ti-circle-check","ti-road","ti-forklift","ti-truck"];
-const SEL    = ["sel-1","sel-2","sel-3","sel-4","sel-5"];
-const DOT_CLS= ["s1","s2","s3","s4","s5"];
-const BANNER_CLS = ["sb-1","sb-2","sb-3","sb-4","sb-5"];
-const BANNER_ICONS = ["🕐","✅","🚧","📦","🚛"];
+const ICONS   = ["ti-inbox","ti-loader","ti-circle-check","ti-road","ti-forklift","ti-truck"];
+const SEL     = ["sel-1","sel-2","sel-3","sel-4","sel-5","sel-6"];
+const DOT_CLS = ["s1","s2","s3","s4","s5","s6"];
+const BANNER_CLS  = ["sb-1","sb-2","sb-3","sb-4","sb-5","sb-6"];
+const BANNER_ICONS= ["📥","🕐","✅","🚧","📦","🚛"];
+
+// checks stored in memory: { "orden": [true, false, true] }
+const checkState = {};
+
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function isOlderThan48h(fecha) {
+  if(!fecha) return false;
+  return (new Date() - new Date(fecha)) / 3600000 > 48;
+}
 
 function show(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
 function goRol() { pinVal=""; updateDots(); show('screen-rol'); }
@@ -251,11 +275,9 @@ function goChofer() {
   document.getElementById('error-msg').style.display='none';
   document.getElementById('results-list').innerHTML='';
   document.getElementById('orden-input').value='';
-  loadChoferData();
-  show('screen-chofer');
+  loadChoferData(); show('screen-chofer');
 }
 function goPin() { pinVal=""; updateDots(); document.getElementById('pin-error').style.display='none'; show('screen-pin'); }
-
 function updateDots() { for(let i=0;i<4;i++) document.getElementById('pd'+i).className='pin-dot'+(i<pinVal.length?' filled':''); }
 function pinKey(k) {
   if(!k||pinVal.length>=4) return;
@@ -268,38 +290,54 @@ function pinKey(k) {
 function pinDel() { pinVal=pinVal.slice(0,-1); updateDots(); }
 
 async function loadChoferData() {
-  try {
-    const res = await fetch(`${API}?action=getAll&pin=${PIN}`);
-    choferOrdenes = await res.json();
-  } catch(e) { choferOrdenes = []; }
+  try { const r=await fetch(`${API}?action=getAll&pin=${PIN}`); choferOrdenes=await r.json(); } catch(e){ choferOrdenes=[]; }
 }
 
 function buildTracker(est) {
-  const steps = ICONS.map((icon,i) => {
-    let dotClass = 'step-dot';
-    if(i+1 < est) dotClass += ' done';
-    else if(i+1 === est) dotClass += ' '+DOT_CLS[i];
-    const lineClass = 'step-line'+(i+1 < est?' done':'');
-    return `<div class="step">
-      <div class="${dotClass}"><i class="ti ${icon}"></i></div>
-      ${i<4?`<div class="${lineClass}"></div>`:''}
-    </div>`;
+  const steps = ICONS.map((icon,i)=>{
+    let dc='step-dot'; if(i+1<est) dc+=' done'; else if(i+1===est) dc+=' '+DOT_CLS[i];
+    return `<div class="step"><div class="${dc}"><i class="ti ${icon}"></i></div>${i<5?`<div class="step-line${i+1<est?' done':''}"></div>`:''}</div>`;
   }).join('');
   const lbls = LABELS.map((l,i)=>`<span class="step-label${i+1===est?' active':''}">${l}</span>`).join('');
   return `<div class="track-steps">${steps}</div><div class="step-labels">${lbls}</div>`;
 }
 
+function parseProductos(str) {
+  if(!str) return [];
+  return String(str).split(',').map(s=>s.trim()).filter(Boolean);
+}
+
+// Driver card — shows partial checklist if status=3 and some checked
 function renderDriverCard(o, highlighted) {
   const est = parseInt(o.estatus)||1;
+  const locked = isOlderThan48h(o.fecha);
+  const prods = parseProductos(o.productos);
+  const checks = checkState[o.orden] || prods.map(()=>false);
+
+  // If "Ready" (3), show partial product status
+  let partialHtml = '';
+  if(est === 3 && prods.length > 1) {
+    const readyProds = prods.filter((_,i)=>checks[i]);
+    const pendProds  = prods.filter((_,i)=>!checks[i]);
+    if(readyProds.length > 0 && pendProds.length > 0) {
+      partialHtml = `<div class="partial-banner">
+        <strong>Partial readiness:</strong>
+        ${readyProds.map(p=>`<div class="partial-item ready"><i class="ti ti-circle-check"></i>${p}</div>`).join('')}
+        ${pendProds.map(p=>`<div class="partial-item pending"><i class="ti ti-clock"></i>${p} — pending</div>`).join('')}
+      </div>`;
+    }
+  }
+
+  const prodHtml = prods.length ? `<div class="producto-row"><i class="ti ti-box"></i><span>${prods.join(', ')}</span></div>` : '';
   const banner = `<div class="status-banner ${BANNER_CLS[est-1]}">
     <span class="status-banner-icon">${BANNER_ICONS[est-1]}</span>
     <div><p class="status-banner-label">${LABELS[est-1]}</p><p class="status-banner-desc">${DESCS[est-1]}</p></div>
   </div>`;
-  const prod = o.producto ? `<div class="producto-row"><i class="ti ti-box"></i><span>${o.producto}</span></div>` : '';
-  return `<div class="order-card${highlighted?' highlight':''}">
-    <p class="order-num" style="margin-bottom:4px;">Order #${o.orden}${highlighted?'<span class="highlight-badge">Your order</span>':''}</p>
-    ${prod}
-    ${banner}
+  const lockedTag = locked ? '<span class="locked-badge">Locked</span>' : '';
+
+  return `<div class="order-card${highlighted?' highlight':''}${locked?' locked':''}">
+    <p class="order-num" style="margin-bottom:4px;">Order #${o.orden}${highlighted?'<span class="highlight-badge">Your order</span>':''}${lockedTag}</p>
+    ${prodHtml}${partialHtml}${banner}
     ${buildTracker(est)}
     <div class="meta-row"><span class="meta-label">Last updated</span><span class="meta-val">${o.hora||'—'}</span></div>
   </div>`;
@@ -308,90 +346,135 @@ function renderDriverCard(o, highlighted) {
 async function buscar() {
   const val = document.getElementById('orden-input').value.trim();
   if(!val) return;
-  const errEl = document.getElementById('error-msg');
-  const list = document.getElementById('results-list');
-  const btn = document.getElementById('btn-buscar');
+  const errEl=document.getElementById('error-msg'), list=document.getElementById('results-list'), btn=document.getElementById('btn-buscar');
   errEl.style.display='none'; list.innerHTML='';
   btn.innerHTML='<span class="spinner"></span>Searching...'; btn.disabled=true;
   try {
-    const res = await fetch(`${API}?action=getOrder&orden=${encodeURIComponent(val)}`);
-    const found = await res.json();
+    const res=await fetch(`${API}?action=getOrder&orden=${encodeURIComponent(val)}`);
+    const found=await res.json();
     btn.innerHTML='Search'; btn.disabled=false;
     if(found.error){ errEl.style.display='block'; return; }
-    const clientOrders = choferOrdenes.filter(o => o.cliente === found.cliente);
-    const toShow = clientOrders.length > 0 ? clientOrders : [found];
-    let html = '';
-    if(toShow.length > 1) {
-      html += `<div class="client-header"><i class="ti ti-user"></i><div>
-        <p class="client-header-name">${found.cliente}</p>
-        <p class="client-header-sub">${toShow.length} orders today</p></div></div>`;
-    }
-    html += renderDriverCard(found, true);
-    toShow.filter(o=>String(o.orden)!==String(found.orden)).forEach(o=>{ html+=renderDriverCard(o,false); });
-    list.innerHTML = html;
-  } catch(e) { btn.innerHTML='Search'; btn.disabled=false; errEl.textContent='Connection error. Try again.'; errEl.style.display='block'; }
+    const clientOrders=choferOrdenes.filter(o=>o.cliente===found.cliente);
+    const toShow=clientOrders.length>0?clientOrders:[found];
+    let html='';
+    if(toShow.length>1) html+=`<div class="client-header"><i class="ti ti-user"></i><div><p class="client-header-name">${found.cliente}</p><p class="client-header-sub">${toShow.length} orders today</p></div></div>`;
+    html+=renderDriverCard(found,true);
+    toShow.filter(o=>String(o.orden)!==String(found.orden)).forEach(o=>{html+=renderDriverCard(o,false);});
+    list.innerHTML=html;
+  } catch(e){ btn.innerHTML='Search'; btn.disabled=false; errEl.textContent='Connection error.'; errEl.style.display='block'; }
 }
-document.getElementById('orden-input').addEventListener('keydown',e=>{ if(e.key==='Enter') buscar(); });
+document.getElementById('orden-input').addEventListener('keydown',e=>{if(e.key==='Enter')buscar();});
 
+// ── CLERK ────────────────────────────────────────────────
 async function loadOrdenes() {
-  const list = document.getElementById('orders-list');
+  const list=document.getElementById('orders-list');
   list.innerHTML='<div class="empty-state"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i>Loading...</div>';
   try {
-    const res = await fetch(`${API}?action=getAll&pin=${PIN}`);
-    ordenes = await res.json();
-    renderOrdenes();
-  } catch(e) { list.innerHTML='<div class="empty-state">Connection error</div>'; }
+    const r=await fetch(`${API}?action=getAll&pin=${PIN}`); ordenes=await r.json(); renderOrdenes();
+  } catch(e){ list.innerHTML='<div class="empty-state">Connection error</div>'; }
 }
 
 function buildClerkCard(o) {
-  const est = parseInt(o.estatus)||1;
-  return `<div class="order-card" id="card-${o.orden}">
-    <div class="order-header">
-      <p class="order-num">Order #${o.orden}</p>
+  const est=parseInt(o.estatus)||1;
+  const locked=isOlderThan48h(o.fecha);
+  const prods=parseProductos(o.productos);
+  if(!checkState[o.orden]) checkState[o.orden]=prods.map(()=>false);
+  const checks=checkState[o.orden];
+  const allChecked=checks.every(Boolean);
+
+  // Checklist — only show when status < 3 (Ready)
+  let checklistHtml='';
+  if(prods.length>0 && est<3 && !locked) {
+    const hint=!allChecked?`<p class="ready-hint">Check all products to enable Ready</p>`:'';
+    const items=prods.map((p,i)=>`
+      <label class="check-item${checks[i]?' checked':''}">
+        <input type="checkbox" ${checks[i]?'checked':''} onchange="toggleCheck('${o.orden}',${i},this)"/>
+        <span>${p}</span>
+      </label>`).join('');
+    checklistHtml=`<div class="checklist"><p class="checklist-title">Products</p>${items}</div>${hint}`;
+  } else if(prods.length>0) {
+    checklistHtml=`<div class="checklist"><p class="checklist-title">Products</p>${prods.map(p=>`<div style="font-size:13px;color:var(--text);padding:2px 0;">${p}</div>`).join('')}</div>`;
+  }
+
+  const btns=LABELS.map((l,i)=>{
+    const isReady=i===2; // index 2 = Ready (status 3)
+    const disabled=locked||(isReady&&!allChecked);
+    return `<button class="sbtn${est===i+1?' '+SEL[i]:''}" onclick="cambiarEstatus('${o.orden}',${i+1})" ${disabled?'disabled':''}>${l}</button>`;
+  }).join('');
+
+  return `<div class="order-card${locked?' locked':''}" id="card-${o.orden}">
+    <div style="margin-bottom:10px;">
+      <p class="order-num">Order #${o.orden}${locked?'<span class="locked-badge">Locked</span>':''}</p>
       <p class="order-cliente">${o.cliente}</p>
-      ${o.producto?`<p class="order-producto-lbl">${o.producto}</p>`:''}
     </div>
-    <div class="status-btns">
-      ${LABELS.map((l,i)=>`<button class="sbtn${est===i+1?' '+SEL[i]:''}" onclick="cambiarEstatus('${o.orden}',${i+1})">${l}</button>`).join('')}
-    </div>
+    ${checklistHtml}
+    <div class="status-btns">${btns}</div>
     <p class="status-desc-lbl" id="desc-${o.orden}">${DESCS[est-1]}</p>
   </div>`;
 }
 
-function renderOrdenes(list_id='orders-list', data=ordenes) {
-  const list = document.getElementById(list_id);
+function toggleCheck(orden, idx, el) {
+  if(!checkState[orden]) return;
+  checkState[orden][idx]=el.checked;
+  // Re-render just this card
+  const o=ordenes.find(x=>String(x.orden)===String(orden));
+  if(o) { const card=document.getElementById('card-'+orden); if(card) card.outerHTML=buildClerkCard(o); }
+}
+
+function renderOrdenes() {
+  const today=todayStr();
+  const todayOrders=ordenes.filter(o=>o.fecha===today);
+  const pastOrders=ordenes.filter(o=>o.fecha!==today);
+  const list=document.getElementById('orders-list');
   list.innerHTML='';
-  if(!data.length){ list.innerHTML='<div class="empty-state"><i class="ti ti-inbox"></i>No orders yet</div>'; return; }
-  data.forEach(o=>{ list.innerHTML += buildClerkCard(o); });
+  if(!todayOrders.length){ list.innerHTML='<div class="empty-state"><i class="ti ti-inbox"></i>No orders today</div>'; }
+  else todayOrders.forEach(o=>{list.innerHTML+=buildClerkCard(o);});
+  const pastSection=document.getElementById('past-section');
+  const pastList=document.getElementById('past-list');
+  if(pastOrders.length>0){
+    pastSection.style.display='block';
+    pastList.innerHTML='';
+    pastOrders.forEach(o=>{pastList.innerHTML+=buildClerkCard(o);});
+  } else { pastSection.style.display='none'; }
 }
 
 async function cambiarEstatus(orden, est) {
-  const card = document.getElementById('card-'+orden);
-  card.querySelectorAll('.sbtn').forEach((b,i)=>{ b.className='sbtn'+(i===est-1?' '+SEL[i]:''); });
-  const descEl = document.getElementById('desc-'+orden);
-  if(descEl) descEl.textContent = DESCS[est-1];
-  const o = ordenes.find(x=>String(x.orden)===String(orden));
-  if(o) o.estatus=est;
+  const card=document.getElementById('card-'+orden);
+  const o=ordenes.find(x=>String(x.orden)===String(orden));
+  if(!o) return;
+  o.estatus=est;
+  card.outerHTML=buildClerkCard(o);
   showToast('Status updated ✓');
+  try { await fetch(API,{method:'POST',body:JSON.stringify({pin:PIN,action:'updateStatus',orden,estatus:est})}); }
+  catch(e){ showToast('Sync error — check connection'); }
+}
+
+async function syncDraft() {
+  const btn=document.querySelector('.btn-sync');
+  btn.innerHTML='<span class="spinner"></span>Syncing...'; btn.disabled=true;
   try {
-    await fetch(API, { method:'POST', body: JSON.stringify({ pin:PIN, action:'updateStatus', orden, estatus:est }) });
-  } catch(e) { showToast('Sync error — check connection'); }
+    await fetch(API,{method:'POST',body:JSON.stringify({pin:PIN,action:'syncDraft'})});
+    await loadOrdenes();
+    showToast('Synced from Draft ✓');
+  } catch(e){ showToast('Sync error — check connection'); }
+  btn.innerHTML='<i class="ti ti-refresh"></i> Sync from Draft'; btn.disabled=false;
 }
 
 function encBuscar() {
-  const val = document.getElementById('enc-search').value.trim().toLowerCase();
+  const val=document.getElementById('enc-search').value.trim().toLowerCase();
   if(!val){ renderOrdenes(); return; }
-  const filtered = ordenes.filter(o=>String(o.orden).includes(val)||o.cliente.toLowerCase().includes(val));
-  const list = document.getElementById('orders-list');
+  const filtered=ordenes.filter(o=>String(o.orden).includes(val)||o.cliente.toLowerCase().includes(val));
+  const list=document.getElementById('orders-list');
   list.innerHTML='';
+  document.getElementById('past-section').style.display='none';
   if(!filtered.length){ list.innerHTML='<div class="empty-state"><i class="ti ti-search-off"></i>No match found</div>'; return; }
-  filtered.forEach(o=>{ list.innerHTML += buildClerkCard(o); });
+  filtered.forEach(o=>{list.innerHTML+=buildClerkCard(o);});
 }
-document.getElementById('enc-search').addEventListener('keydown',e=>{ if(e.key==='Enter') encBuscar(); });
+document.getElementById('enc-search').addEventListener('keydown',e=>{if(e.key==='Enter')encBuscar();});
 
 function showToast(msg) {
   const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2000);
+  setTimeout(()=>t.classList.remove('show'),2500);
 }
 </script>
 </body>
