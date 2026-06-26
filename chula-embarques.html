@@ -206,7 +206,7 @@
     <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
       <div style="display:flex;flex:1;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--white);overflow:hidden;">
         <span style="padding:0 10px;height:48px;display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--text-faint);background:var(--bg);border-right:1px solid var(--border);white-space:nowrap;">SP00</span>
-        <input id="orden-input" type="text" placeholder="380941" maxlength="16" style="flex:1;border:none;outline:none;padding:0 12px;height:48px;font-family:'IBM Plex Mono',monospace;font-size:16px;color:var(--text);background:var(--white);" />
+        <input id="orden-input" type="text" placeholder="Order #" maxlength="16" style="flex:1;border:none;outline:none;padding:0 12px;height:48px;font-family:'IBM Plex Mono',monospace;font-size:16px;color:var(--text);background:var(--white);" />
       </div>
       <button class="btn-primary" id="btn-buscar" onclick="buscar()" style="width:auto;padding:0 18px;white-space:nowrap;">Search</button>
     </div>
@@ -227,7 +227,7 @@
     <div class="search-card">
       <div style="display:flex;flex:1;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);overflow:hidden;">
         <span style="padding:0 8px;height:42px;display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-faint);background:var(--border);white-space:nowrap;border-right:1px solid var(--border);">SP00</span>
-        <input id="enc-search" type="text" placeholder="380941 or customer" maxlength="40" style="flex:1;border:none;outline:none;padding:0 10px;height:42px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);background:var(--bg);min-width:0;" />
+        <input id="enc-search" type="text" placeholder="Order or customer" maxlength="40" style="flex:1;border:none;outline:none;padding:0 10px;height:42px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);background:var(--bg);min-width:0;" />
       </div>
       <button class="btn-search-sm" onclick="encBuscar()">Search</button>
     </div>
@@ -341,8 +341,10 @@ function renderDriverCard(o, highlighted) {
     const readyProds = prods.filter((_,i)=>checks[i]);
     const pendProds  = prods.filter((_,i)=>!checks[i]);
     if(readyProds.length > 0 || pendProds.length > 0) {
-      partialHtml = `<div class="partial-banner">
-        <strong>${est===3&&pendProds.length===0 ? 'All products ready:' : 'Product status:'}</strong>
+      const allDone = pendProds.length === 0 && readyProds.length > 0;
+      const bannerStyle = allDone ? 'background:#EAF3DE;color:#3B6D11;' : 'background:#FEF3C7;color:#92400E;';
+      partialHtml = `<div class="partial-banner" style="${bannerStyle}">
+        <strong>${allDone ? 'All products ready:' : 'Product status:'}</strong>
         ${readyProds.map(p=>`<div class="partial-item ready"><i class="ti ti-circle-check"></i>${p}</div>`).join('')}
         ${pendProds.map(p=>`<div class="partial-item pending"><i class="ti ti-clock"></i>${p} — pending</div>`).join('')}
       </div>`;
@@ -404,18 +406,26 @@ function buildClerkCard(o) {
   const checks=checkState[o.orden];
   const allChecked=checks.every(Boolean);
 
-  // Checklist — only show when status < 3 (Ready)
+  // Checklist — always visible, editable only in Processing(2) and Ready(3)
   let checklistHtml='';
-  if(prods.length>0 && est>=2 && est<4 && !locked) {
-    const hint=!allChecked?`<p class="ready-hint">Check all products to enable Ready</p>`:'';
-    const items=prods.map((p,i)=>`
-      <label class="check-item${checks[i]?' checked':''}">
-        <input type="checkbox" ${checks[i]?'checked':''} onchange="toggleCheck('${o.orden}',${i},this)"/>
-        <span>${p}</span>
-      </label>`).join('');
+  if(prods.length>0) {
+    const editable = (est===2 || est===3) && !locked;
+    const hint = editable && !allChecked ? `<p class="ready-hint">Check all products to enable Ready</p>` : '';
+    const items = prods.map((p,i)=>{
+      if(editable) {
+        return `<label class="check-item${checks[i]?' checked':''}">
+          <input type="checkbox" ${checks[i]?'checked':''} onchange="toggleCheck('${o.orden}',${i},this)"/>
+          <span>${p}</span>
+        </label>`;
+      } else {
+        // Read-only — show checkmark or circle
+        const icon = checks[i]
+          ? '<i class="ti ti-circle-check" style="font-size:17px;color:#3B6D11;flex-shrink:0;"></i>'
+          : '<i class="ti ti-circle" style="font-size:17px;color:var(--text-faint);flex-shrink:0;"></i>';
+        return `<div class="check-item" style="cursor:default;">${icon}<span style="${checks[i]?'text-decoration:line-through;color:var(--text-faint);':''}">${p}</span></div>`;
+      }
+    }).join('');
     checklistHtml=`<div class="checklist"><p class="checklist-title">Products</p>${items}</div>${hint}`;
-  } else if(prods.length>0) {
-    checklistHtml=`<div class="checklist"><p class="checklist-title">Products</p>${prods.map(p=>`<div style="font-size:13px;color:var(--text);padding:2px 0;">${p}</div>`).join('')}</div>`;
   }
 
   const btns=LABELS.map((l,i)=>{
