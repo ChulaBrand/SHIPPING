@@ -203,8 +203,11 @@
       <p class="top-bar-title">Check order</p>
       <button class="btn-back" onclick="goRol()">← Back</button>
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:10px;">
-      <input class="inp" id="orden-input" type="text" placeholder="Order number" maxlength="20" style="margin-bottom:0;flex:1;" />
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+      <div style="display:flex;flex:1;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--white);overflow:hidden;">
+        <span style="padding:0 10px;height:48px;display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--text-faint);background:var(--bg);border-right:1px solid var(--border);white-space:nowrap;">SP00</span>
+        <input id="orden-input" type="text" placeholder="380941" maxlength="16" style="flex:1;border:none;outline:none;padding:0 12px;height:48px;font-family:'IBM Plex Mono',monospace;font-size:16px;color:var(--text);background:var(--white);" />
+      </div>
       <button class="btn-primary" id="btn-buscar" onclick="buscar()" style="width:auto;padding:0 18px;white-space:nowrap;">Search</button>
     </div>
     <p class="error-msg" id="error-msg"><i class="ti ti-alert-circle"></i> Order not found.</p>
@@ -222,7 +225,10 @@
     </button>
     <p class="section-label">Find order</p>
     <div class="search-card">
-      <input class="inp-sm txt" id="enc-search" type="text" placeholder="Order # or customer name" maxlength="40" />
+      <div style="display:flex;flex:1;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);overflow:hidden;">
+        <span style="padding:0 8px;height:42px;display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-faint);background:var(--border);white-space:nowrap;border-right:1px solid var(--border);">SP00</span>
+        <input id="enc-search" type="text" placeholder="380941 or customer" maxlength="40" style="flex:1;border:none;outline:none;padding:0 10px;height:42px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);background:var(--bg);min-width:0;" />
+      </div>
       <button class="btn-search-sm" onclick="encBuscar()">Search</button>
     </div>
     <p class="section-label">Today's orders</p>
@@ -329,14 +335,14 @@ function renderDriverCard(o, highlighted) {
   const prods = parseProductos(o.productos);
   const checks = checkState[o.orden] || prods.map(()=>false);
 
-  // If "Ready" (3), show partial product status
+  // Show product status during Processing(2) and Ready(3)
   let partialHtml = '';
-  if(est === 3 && prods.length > 1) {
+  if(prods.length > 0 && (est === 2 || est === 3)) {
     const readyProds = prods.filter((_,i)=>checks[i]);
     const pendProds  = prods.filter((_,i)=>!checks[i]);
-    if(readyProds.length > 0 && pendProds.length > 0) {
+    if(readyProds.length > 0 || pendProds.length > 0) {
       partialHtml = `<div class="partial-banner">
-        <strong>Partial readiness:</strong>
+        <strong>${est===3&&pendProds.length===0 ? 'All products ready:' : 'Product status:'}</strong>
         ${readyProds.map(p=>`<div class="partial-item ready"><i class="ti ti-circle-check"></i>${p}</div>`).join('')}
         ${pendProds.map(p=>`<div class="partial-item pending"><i class="ti ti-clock"></i>${p} — pending</div>`).join('')}
       </div>`;
@@ -359,8 +365,9 @@ function renderDriverCard(o, highlighted) {
 }
 
 async function buscar() {
-  const val = document.getElementById('orden-input').value.trim();
-  if(!val) return;
+  const raw = document.getElementById('orden-input').value.trim();
+  if(!raw) return;
+  const val = 'SP00' + raw.replace(/^SP00/i, '');
   const errEl=document.getElementById('error-msg'), list=document.getElementById('results-list'), btn=document.getElementById('btn-buscar');
   errEl.style.display='none'; list.innerHTML='';
   btn.innerHTML='<span class="spinner"></span>Searching...'; btn.disabled=true;
@@ -399,7 +406,7 @@ function buildClerkCard(o) {
 
   // Checklist — only show when status < 3 (Ready)
   let checklistHtml='';
-  if(prods.length>0 && est<3 && !locked) {
+  if(prods.length>0 && est>=2 && est<4 && !locked) {
     const hint=!allChecked?`<p class="ready-hint">Check all products to enable Ready</p>`:'';
     const items=prods.map((p,i)=>`
       <label class="check-item${checks[i]?' checked':''}">
@@ -476,9 +483,11 @@ async function syncDraft() {
 }
 
 function encBuscar() {
-  const val=document.getElementById('enc-search').value.trim().toLowerCase();
-  if(!val){ renderOrdenes(); return; }
-  const filtered=ordenes.filter(o=>String(o.orden).includes(val)||o.cliente.toLowerCase().includes(val));
+  const raw=document.getElementById('enc-search').value.trim();
+  if(!raw){ renderOrdenes(); return; }
+  const isNum = /^[0-9]+$/.test(raw);
+  const val = isNum ? 'SP00'+raw : raw.toLowerCase();
+  const filtered=ordenes.filter(o=>String(o.orden).toLowerCase().includes(val.toLowerCase())||o.cliente.toLowerCase().includes(val.toLowerCase()));
   const list=document.getElementById('orders-list');
   list.innerHTML='';
   document.getElementById('past-section').style.display='none';
