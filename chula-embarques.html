@@ -541,19 +541,6 @@ async function syncDraft() {
 }
 
 // ── UPLOAD PDF → DRAFT ──────────────────────────────────
-const UPLOAD_SYSTEM_PROMPT = `Eres un asistente que lee reportes PDF exportados de Produce Magic para el almacén Chula Brand y extrae cada orden EXACTAMENTE como aparece, sin convertir nada a pallets ni códigos internos.
-
-Para cada orden en el PDF extrae:
-- "orden": el número de orden tal como aparece, normalmente empieza con "SP00" (ej. "SP00381353"). Si solo ves el consecutivo, agrega el prefijo "SP00".
-- "cliente": el nombre del cliente/empresa tal como aparece en el PDF, sin modificarlo ni acortarlo.
-- "productos": la descripción de cada producto de esa orden, tal como aparece en el PDF (tipo de fruta, variedad o color, peso de caja, conteo), seguida de la cantidad total entre paréntesis. Si una orden tiene varios productos, sepáralos con ", " (coma y espacio). Ejemplo de formato esperado: "Papaya 3/4 35Lb 8Count (144), Papaya Maradona A 35Lb 8Count (96)" o "Avocados Hass 40Count (160), Papaya 3/4 35Lb 8Count (48)".
-- No conviertas colores a pallets, no agrupes por color/tamaño, no elimines la marca o variedad. Mantén el texto lo más fiel posible al original, solo limpia espacios/saltos de línea raros.
-- Líneas sin una cantidad numérica se ignoran.
-- Cada número de orden distinto es su propia fila, aunque el cliente se repita.
-
-Devuelve EXCLUSIVAMENTE un arreglo JSON válido, sin texto antes ni después, sin backticks de markdown, con esta forma exacta:
-[{"orden": "SP00381353", "cliente": "A. Garcia Trucking & Produce, LLC.", "productos": "Papaya 3/4 35Lb 8Count, Papaya 3/4 35Lb 6Count (192)"}]`;
-
 let uploadRows = [];
 let uploadPdfBase64 = null;
 
@@ -610,27 +597,13 @@ document.getElementById('parseBtn').addEventListener('click', async () => {
   document.getElementById('previewWrap').style.display = 'none';
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 1000,
-        system: UPLOAD_SYSTEM_PROMPT,
-        messages: [{
-          role: "user",
-          content: [
-            { type: "document", source: { type: "base64", media_type: "application/pdf", data: uploadPdfBase64 } },
-            { type: "text", text: "Extrae las órdenes de este PDF y devuelve SOLO el arreglo JSON, sin texto adicional ni backticks." }
-          ]
-        }]
-      })
+    const res = await fetch(API, {
+      method: 'POST',
+      body: JSON.stringify({ pin: PIN, action: 'parseDraftPdf', pdfBase64: uploadPdfBase64 })
     });
-    const data = await response.json();
-    const textBlock = (data.content || []).find(b => b.type === 'text');
-    if (!textBlock) throw new Error('No text in response.');
-    let raw = textBlock.text.trim().replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '').trim();
-    const parsed = JSON.parse(raw);
+    const result = await res.json();
+    if (result.error) throw new Error(result.error);
+    const parsed = result.rows;
     if (!Array.isArray(parsed) || !parsed.length) throw new Error('No orders found in PDF.');
     uploadRows = parsed;
     renderUploadPreview();
