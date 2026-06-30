@@ -122,8 +122,8 @@
   .checklist-title { font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px; }
   .check-item { display:flex; align-items:center; gap:10px; cursor:pointer; }
   .check-item input[type=checkbox] { width:18px; height:18px; accent-color:var(--green-dark); cursor:pointer; flex-shrink:0; }
+  .check-item input[type=checkbox]:disabled { cursor:default; opacity:0.85; }
   .check-item label { font-size:13px; color:var(--text); cursor:pointer; line-height:1.3; }
-  .check-item.checked label { text-decoration:line-through; color:var(--text-faint); }
   .ready-hint { font-size:11px; color:#854F0B; font-style:italic; margin-bottom:6px; }
   .status-desc-lbl { font-size:11px; color:var(--text-faint); font-style:italic; text-align:center; min-height:16px; }
   .client-header { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; margin-bottom:10px; display:flex; align-items:center; gap:10px; }
@@ -406,32 +406,27 @@ function buildClerkCard(o) {
   const checks=checkState[o.orden];
   const allChecked=checks.every(Boolean);
 
-  // Checklist — always visible, editable only in Processing(2) and Ready(3)
+  // Checklist — always visible as checkboxes, editable only in Processing(2) and Ready(3)
   let checklistHtml='';
   if(prods.length>0) {
     const editable = (est===2 || est===3) && !locked;
     const hint = editable && !allChecked ? `<p class="ready-hint">Check all products to enable Ready</p>` : '';
     const items = prods.map((p,i)=>{
-      if(editable) {
-        return `<label class="check-item${checks[i]?' checked':''}">
-          <input type="checkbox" ${checks[i]?'checked':''} onchange="toggleCheck('${o.orden}',${i},this)"/>
-          <span>${p}</span>
-        </label>`;
-      } else {
-        // Read-only — show checkmark or circle
-        const icon = checks[i]
-          ? '<i class="ti ti-circle-check" style="font-size:17px;color:#3B6D11;flex-shrink:0;"></i>'
-          : '<i class="ti ti-circle" style="font-size:17px;color:var(--text-faint);flex-shrink:0;"></i>';
-        return `<div class="check-item" style="cursor:default;">${icon}<span style="${checks[i]?'text-decoration:line-through;color:var(--text-faint);':''}">${p}</span></div>`;
-      }
+      const grayStyle = (!editable && checks[i]) ? 'color:var(--text-faint);' : '';
+      return `<label class="check-item${checks[i]?' checked':''}" style="${editable?'':'cursor:default;'}">
+        <input type="checkbox" ${checks[i]?'checked':''} ${editable?`onchange="toggleCheck('${o.orden}',${i},this)"`:'disabled'}/>
+        <span style="${grayStyle}">${p}</span>
+      </label>`;
     }).join('');
     checklistHtml=`<div class="checklist"><p class="checklist-title">Products</p>${items}</div>${hint}`;
   }
 
   const btns=LABELS.map((l,i)=>{
-    const isReady=i===2; // index 2 = Ready (status 3)
-    const disabled=locked||(isReady&&!allChecked);
-    return `<button class="sbtn${est===i+1?' '+SEL[i]:''}" onclick="cambiarEstatus('${o.orden}',${i+1})" ${disabled?'disabled':''}>${l}</button>`;
+    const idx=i+1; // 1=Order Received,2=Processing,3=Ready,4=Waiting,5=Loading,6=Departed
+    // Block moving to Ready or beyond unless all products are checked
+    const blockedByChecklist = prods.length>0 && !allChecked && idx>=3;
+    const disabled = locked || blockedByChecklist;
+    return `<button class="sbtn${est===idx?' '+SEL[i]:''}" onclick="cambiarEstatus('${o.orden}',${idx})" ${disabled?'disabled':''}>${l}</button>`;
   }).join('');
 
   return `<div class="order-card${locked?' locked':''}" id="card-${o.orden}">
