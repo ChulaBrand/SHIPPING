@@ -233,10 +233,7 @@
     </div>
     <p class="section-label">Today's orders</p>
     <div class="orders-list" id="orders-list"></div>
-    <div id="past-section" style="display:none;">
-      <p class="section-label" style="margin-top:1.25rem;">Previous orders</p>
-      <div class="orders-list" id="past-list"></div>
-    </div>
+
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -451,18 +448,10 @@ function toggleCheck(orden, idx, el) {
 function renderOrdenes() {
   const today=todayStr();
   const todayOrders=ordenes.filter(o=>o.fecha===today);
-  const pastOrders=ordenes.filter(o=>o.fecha!==today);
   const list=document.getElementById('orders-list');
   list.innerHTML='';
   if(!todayOrders.length){ list.innerHTML='<div class="empty-state"><i class="ti ti-inbox"></i>No orders today</div>'; }
   else todayOrders.forEach(o=>{list.innerHTML+=buildClerkCard(o);});
-  const pastSection=document.getElementById('past-section');
-  const pastList=document.getElementById('past-list');
-  if(pastOrders.length>0){
-    pastSection.style.display='block';
-    pastList.innerHTML='';
-    pastOrders.forEach(o=>{pastList.innerHTML+=buildClerkCard(o);});
-  } else { pastSection.style.display='none'; }
 }
 
 async function cambiarEstatus(orden, est) {
@@ -495,7 +484,6 @@ function encBuscar() {
   const filtered=ordenes.filter(o=>String(o.orden).toLowerCase().includes(val.toLowerCase())||o.cliente.toLowerCase().includes(val.toLowerCase()));
   const list=document.getElementById('orders-list');
   list.innerHTML='';
-  document.getElementById('past-section').style.display='none';
   if(!filtered.length){ list.innerHTML='<div class="empty-state"><i class="ti ti-search-off"></i>No match found</div>'; return; }
   filtered.forEach(o=>{list.innerHTML+=buildClerkCard(o);});
 }
