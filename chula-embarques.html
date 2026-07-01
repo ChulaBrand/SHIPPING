@@ -137,6 +137,7 @@
   .driver-product-row { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:12.5px; padding:3px 0; }
   .driver-product-row span:first-child { color:var(--text); }
   .driver-product-badge { font-size:9.5px; font-weight:700; padding:3px 8px; border-radius:99px; white-space:nowrap; }
+  .driver-product-badge.not-shipped { background:#FEE2E2; color:#B91C1C; }
   .status-desc-lbl { font-size:11px; color:var(--text-faint); font-style:italic; text-align:center; min-height:16px; }
   .warn-note { font-size:11px; color:#92400E; background:#FEF3C7; border:1px solid #FDE68A; border-radius:var(--radius-sm); padding:6px 10px; text-align:center; margin-bottom:8px; }
   .client-header { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; margin-bottom:10px; display:flex; align-items:center; gap:10px; }
@@ -407,13 +408,16 @@ function renderDriverCard(o, highlighted) {
   const prods = parseProductos(o.productos);
   const statuses = (productState[o.orden] && productState[o.orden].length===prods.length)
     ? productState[o.orden]
-    : prods.map(()=>est);
+    : prods.map(()=>Math.min(est, 3));
 
   let productsHtml = '';
   if(prods.length > 0) {
     const rows = prods.map((p,i)=>{
-      const s = statuses[i];
-      return `<div class="driver-product-row"><span>${p}</span><span class="driver-product-badge ${SEL[s-1]}">${LETTERS[s-1]} · ${LABELS[s-1]}</span></div>`;
+      const s = Math.min(statuses[i], 3);
+      const notShipped = est === 6 && s < 3;
+      const label = notShipped ? 'Not shipped' : LABELS[s-1];
+      const badge = notShipped ? `<span class="driver-product-badge not-shipped">⚠ ${label}</span>` : `<span class="driver-product-badge ${SEL[s-1]}">${LETTERS[s-1]} · ${label}</span>`;
+      return `<div class="driver-product-row"><span>${p}</span>${badge}</div>`;
     }).join('');
     productsHtml = `<div class="checklist"><p class="checklist-title">Products</p>${rows}</div>`;
   }
@@ -470,16 +474,16 @@ function buildClerkCard(o) {
   const est = parseInt(o.estatus) || 1;
 
   if (!productState[o.orden] || productState[o.orden].length !== prods.length) {
-    productState[o.orden] = prods.length ? prods.map(() => est) : [est];
+    productState[o.orden] = prods.length ? prods.map(() => Math.min(est, 3)) : [Math.min(est, 3)];
   }
   const minProd = prods.length ? Math.min(...productState[o.orden]) : est;
-  const incomplete = prods.length > 0 && est > minProd;
+  const incomplete = prods.length > 0 && est > 3 && productState[o.orden].some(s => s < 3);
 
   let checklistHtml = '';
   if (prods.length > 0) {
     const items = prods.map((p, i) => {
       const pStat = productState[o.orden][i];
-      const circles = LETTERS.map((letter, ci) => {
+      const circles = LETTERS.slice(0, 3).map((letter, ci) => {
         const idx = ci + 1;
         const activeCls = pStat === idx ? ` active p${idx}` : '';
         const clickAttr = locked ? '' : `onclick="setProductStatus('${o.orden}',${i},${idx})"`;
@@ -490,7 +494,7 @@ function buildClerkCard(o) {
     checklistHtml = `<div class="checklist"><p class="checklist-title">Products</p>${items}</div>`;
   }
 
-  const warnHtml = incomplete ? `<p class="warn-note">⚠️ Order moved ahead — not all products are at this stage yet</p>` : '';
+  const warnHtml = incomplete ? `<p class="warn-note">⚠️ Order moved ahead — not all products are Ready yet</p>` : '';
 
   const btns = LABELS.map((l, i) => {
     const idx = i + 1;
@@ -509,16 +513,25 @@ function buildClerkCard(o) {
   </div>`;
 }
 
-// Product circle click: order status auto-syncs to the SLOWEST product (not independent)
+// Product circle click (O/P/R only). While the order hasn't shipped yet (still O/P/R),
+// order status auto-syncs to the slowest product. Once the order is already Waiting for
+// dock / Loading / Departed, editing a product no longer pulls the order status backward —
+// it just records that product's own prep status for the record.
 function setProductStatus(orden, idx, status) {
   if (!productState[orden]) return;
   productState[orden][idx] = status;
   const o = ordenes.find(x => String(x.orden) === String(orden));
   if (!o) return;
-  const prods = parseProductos(o.productos);
-  const minProd = prods.length ? Math.min(...productState[orden]) : status;
-  o.estatus = minProd;
-  pushOrderStatus(orden, minProd);
+  const currentEst = parseInt(o.estatus) || 1;
+  if (currentEst <= 3) {
+    const prods = parseProductos(o.productos);
+    const minProd = prods.length ? Math.min(...productState[orden]) : status;
+    o.estatus = minProd;
+    pushOrderStatus(orden, minProd);
+  } else {
+    const card = document.getElementById('card-' + orden);
+    if (card) card.outerHTML = buildClerkCard(o);
+  }
 }
 
 // Order-level button click: fully manual, never blocked, doesn't touch product circles
