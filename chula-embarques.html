@@ -432,7 +432,7 @@ function renderDriverCard(o, highlighted) {
     <p class="order-num" style="margin-bottom:4px;">Order #${o.orden}${highlighted?'<span class="highlight-badge">Your order</span>':''}${lockedTag}</p>
     ${productsHtml}${banner}
     ${buildTracker(est)}
-    <div class="meta-row"><span class="meta-label">Last updated</span><span class="meta-val">${formatLastUpdated(o.hora, o.fecha)}</span></div>
+    <div class="meta-row"><span class="meta-label">Last updated</span><span class="meta-val">${formatLastUpdated(o.hora, o.actualizado || o.fecha)}</span></div>
   </div>`;
 }
 
