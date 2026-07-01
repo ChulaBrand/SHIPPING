@@ -117,14 +117,26 @@
   .sbtn.sel-5{background:#EAF3DE;color:#3B6D11;border-color:#97C459;font-weight:600;}
   .sbtn.sel-6{background:#EDE9FE;color:#5B21B6;border-color:#A78BFA;font-weight:600;}
   .sbtn:disabled { opacity:.45; cursor:not-allowed; }
-  /* checklist */
-  .checklist { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; padding:10px 12px; background:var(--bg); border-radius:var(--radius-sm); border:1px solid var(--border); }
-  .checklist-title { font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px; }
-  .check-item { display:flex; align-items:center; gap:10px; cursor:pointer; }
-  .check-item input[type=checkbox] { width:18px; height:18px; accent-color:var(--green-dark); cursor:pointer; flex-shrink:0; }
-  .check-item input[type=checkbox]:disabled { cursor:default; opacity:0.85; }
-  .check-item label { font-size:13px; color:var(--text); cursor:pointer; line-height:1.3; }
-  .ready-hint { font-size:11px; color:#854F0B; font-style:italic; margin-bottom:6px; }
+  .sbtn-letter { display:block; font-size:9px; font-weight:700; opacity:.6; letter-spacing:.06em; margin-bottom:2px; }
+  .sbtn-text { display:block; }
+  /* checklist / per-product status circles */
+  .checklist { display:flex; flex-direction:column; gap:10px; margin-bottom:10px; padding:10px 12px; background:var(--bg); border-radius:var(--radius-sm); border:1px solid var(--border); }
+  .checklist-title { font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:2px; }
+  .product-item { display:flex; flex-direction:column; gap:6px; }
+  .product-name { font-size:12.5px; color:var(--text); line-height:1.3; }
+  .pcircle-row { display:flex; gap:5px; }
+  .pcircle { width:24px; height:24px; border-radius:50%; border:2px solid var(--border-strong); background:var(--white); display:flex; align-items:center; justify-content:center; font-size:9.5px; font-weight:700; color:var(--text-faint); cursor:pointer; font-family:'IBM Plex Mono',monospace; flex-shrink:0; }
+  .pcircle:active { transform:scale(.92); }
+  .pcircle.active.p1{background:#F3E8FF;border-color:#C084FC;color:#7E22CE;}
+  .pcircle.active.p2{background:#DBEAFE;border-color:#93C5FD;color:#1E40AF;}
+  .pcircle.active.p3{background:#FEF9C3;border-color:#FDE047;color:#854D0E;}
+  .pcircle.active.p4{background:#FAEEDA;border-color:#EF9F27;color:#854F0B;}
+  .pcircle.active.p5{background:#EAF3DE;border-color:#97C459;color:#3B6D11;}
+  .pcircle.active.p6{background:#EDE9FE;border-color:#A78BFA;color:#5B21B6;}
+  .pcircle.disabled { cursor:default; opacity:.55; }
+  .driver-product-row { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:12.5px; padding:3px 0; }
+  .driver-product-row span:first-child { color:var(--text); }
+  .driver-product-badge { font-size:9.5px; font-weight:700; padding:3px 8px; border-radius:99px; white-space:nowrap; }
   .status-desc-lbl { font-size:11px; color:var(--text-faint); font-style:italic; text-align:center; min-height:16px; }
   .client-header { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; margin-bottom:10px; display:flex; align-items:center; gap:10px; }
   .client-header i { font-size:18px; color:var(--text-muted); }
@@ -312,12 +324,13 @@ const DESCS  = [
 ];
 const ICONS   = ["ti-inbox","ti-loader","ti-circle-check","ti-road","ti-forklift","ti-truck"];
 const SEL     = ["sel-1","sel-2","sel-3","sel-4","sel-5","sel-6"];
+const LETTERS = ["O","P","R","W","L","D"];
 const DOT_CLS = ["s1","s2","s3","s4","s5","s6"];
 const BANNER_CLS  = ["sb-1","sb-2","sb-3","sb-4","sb-5","sb-6"];
 const BANNER_ICONS= ["📥","🕐","✅","🚧","📦","🚛"];
 
-// checks stored in memory: { "orden": [true, false, true] }
-const checkState = {};
+// per-product status, in-memory for this session: { "orden": [1,2,1,...] }
+const productState = {};
 
 function todayStr() {
   const d = new Date();
@@ -381,30 +394,24 @@ function parseProductos(str) {
   return String(str).split(',').map(s=>s.trim()).filter(Boolean);
 }
 
-// Driver card — shows partial checklist if status=3 and some checked
+// Driver card — shows each product's individual status when available
 function renderDriverCard(o, highlighted) {
   const est = parseInt(o.estatus)||1;
   const locked = isOlderThan48h(o.fecha);
   const prods = parseProductos(o.productos);
-  const checks = checkState[o.orden] || prods.map(()=>false);
+  const statuses = (productState[o.orden] && productState[o.orden].length===prods.length)
+    ? productState[o.orden]
+    : prods.map(()=>est);
 
-  // Show product status during Processing(2) and Ready(3)
-  let partialHtml = '';
-  if(prods.length > 0 && (est === 2 || est === 3)) {
-    const readyProds = prods.filter((_,i)=>checks[i]);
-    const pendProds  = prods.filter((_,i)=>!checks[i]);
-    if(readyProds.length > 0 || pendProds.length > 0) {
-      const allDone = pendProds.length === 0 && readyProds.length > 0;
-      const bannerStyle = allDone ? 'background:#EAF3DE;color:#3B6D11;' : 'background:#FEF3C7;color:#92400E;';
-      partialHtml = `<div class="partial-banner" style="${bannerStyle}">
-        <strong>${allDone ? 'All products ready:' : 'Product status:'}</strong>
-        ${readyProds.map(p=>`<div class="partial-item ready"><i class="ti ti-circle-check"></i>${p}</div>`).join('')}
-        ${pendProds.map(p=>`<div class="partial-item pending"><i class="ti ti-clock"></i>${p} — pending</div>`).join('')}
-      </div>`;
-    }
+  let productsHtml = '';
+  if(prods.length > 0) {
+    const rows = prods.map((p,i)=>{
+      const s = statuses[i];
+      return `<div class="driver-product-row"><span>${p}</span><span class="driver-product-badge ${SEL[s-1]}">${LETTERS[s-1]} · ${LABELS[s-1]}</span></div>`;
+    }).join('');
+    productsHtml = `<div class="checklist"><p class="checklist-title">Products</p>${rows}</div>`;
   }
 
-  const prodHtml = prods.length ? `<div class="producto-row"><i class="ti ti-box"></i><span>${prods.join(', ')}</span></div>` : '';
   const banner = `<div class="status-banner ${BANNER_CLS[est-1]}">
     <span class="status-banner-icon">${BANNER_ICONS[est-1]}</span>
     <div><p class="status-banner-label">${LABELS[est-1]}</p><p class="status-banner-desc">${DESCS[est-1]}</p></div>
@@ -413,7 +420,7 @@ function renderDriverCard(o, highlighted) {
 
   return `<div class="order-card${highlighted?' highlight':''}${locked?' locked':''}">
     <p class="order-num" style="margin-bottom:4px;">Order #${o.orden}${highlighted?'<span class="highlight-badge">Your order</span>':''}${lockedTag}</p>
-    ${prodHtml}${partialHtml}${banner}
+    ${productsHtml}${banner}
     ${buildTracker(est)}
     <div class="meta-row"><span class="meta-label">Last updated</span><span class="meta-val">${formatLastUpdated(o.hora, o.fecha)}</span></div>
   </div>`;
@@ -452,53 +459,73 @@ async function loadOrdenes() {
 }
 
 function buildClerkCard(o) {
-  const est=parseInt(o.estatus)||1;
-  const locked=isOlderThan48h(o.fecha);
-  const prods=parseProductos(o.productos);
-  if(!checkState[o.orden]) checkState[o.orden]=prods.map(()=>false);
-  const checks=checkState[o.orden];
-  const allChecked=checks.every(Boolean);
+  const locked = isOlderThan48h(o.fecha);
+  const prods = parseProductos(o.productos);
+  const fallbackEst = parseInt(o.estatus) || 1;
 
-  // Checklist — always visible as checkboxes, editable only in Processing(2) and Ready(3)
-  let checklistHtml='';
-  if(prods.length>0) {
-    const editable = (est===2 || est===3) && !locked;
-    const hint = editable && !allChecked ? `<p class="ready-hint">Check all products to enable Ready</p>` : '';
-    const items = prods.map((p,i)=>{
-      const grayStyle = (!editable && checks[i]) ? 'color:var(--text-faint);' : '';
-      return `<label class="check-item${checks[i]?' checked':''}" style="${editable?'':'cursor:default;'}">
-        <input type="checkbox" ${checks[i]?'checked':''} ${editable?`onchange="toggleCheck('${o.orden}',${i},this)"`:'disabled'}/>
-        <span style="${grayStyle}">${p}</span>
-      </label>`;
+  if (!productState[o.orden] || productState[o.orden].length !== prods.length) {
+    productState[o.orden] = prods.length ? prods.map(() => fallbackEst) : [fallbackEst];
+  }
+  const est = prods.length ? Math.min(...productState[o.orden]) : fallbackEst;
+
+  let checklistHtml = '';
+  if (prods.length > 0) {
+    const items = prods.map((p, i) => {
+      const pStat = productState[o.orden][i];
+      const circles = LETTERS.map((letter, ci) => {
+        const idx = ci + 1;
+        const activeCls = pStat === idx ? ` active p${idx}` : '';
+        const clickAttr = locked ? '' : `onclick="setProductStatus('${o.orden}',${i},${idx})"`;
+        return `<div class="pcircle${activeCls}${locked ? ' disabled' : ''}" ${clickAttr}>${letter}</div>`;
+      }).join('');
+      return `<div class="product-item"><span class="product-name">${p}</span><div class="pcircle-row">${circles}</div></div>`;
     }).join('');
-    checklistHtml=`<div class="checklist"><p class="checklist-title">Products</p>${items}</div>${hint}`;
+    checklistHtml = `<div class="checklist"><p class="checklist-title">Products</p>${items}</div>`;
   }
 
-  const btns=LABELS.map((l,i)=>{
-    const idx=i+1; // 1=Order Received,2=Processing,3=Ready,4=Waiting,5=Loading,6=Departed
-    // Block moving to Ready or beyond unless all products are checked
-    const blockedByChecklist = prods.length>0 && !allChecked && idx>=3;
-    const disabled = locked || blockedByChecklist;
-    return `<button class="sbtn${est===idx?' '+SEL[i]:''}" onclick="cambiarEstatus('${o.orden}',${idx})" ${disabled?'disabled':''}>${l}</button>`;
+  const btns = LABELS.map((l, i) => {
+    const idx = i + 1;
+    return `<button class="sbtn${est === idx ? ' ' + SEL[i] : ''}" onclick="setAllProducts('${o.orden}',${idx})" ${locked ? 'disabled' : ''}><span class="sbtn-letter">${LETTERS[i]}</span><span class="sbtn-text">${l}</span></button>`;
   }).join('');
 
-  return `<div class="order-card${locked?' locked':''}" id="card-${o.orden}">
+  return `<div class="order-card${locked ? ' locked' : ''}" id="card-${o.orden}">
     <div style="margin-bottom:10px;">
-      <p class="order-num">Order #${o.orden}${locked?'<span class="locked-badge">Locked</span>':''}</p>
+      <p class="order-num">Order #${o.orden}${locked ? '<span class="locked-badge">Locked</span>' : ''}</p>
       <p class="order-cliente">${o.cliente}</p>
     </div>
     ${checklistHtml}
     <div class="status-btns">${btns}</div>
-    <p class="status-desc-lbl" id="desc-${o.orden}">${DESCS[est-1]}</p>
+    <p class="status-desc-lbl" id="desc-${o.orden}">${DESCS[est - 1]}</p>
   </div>`;
 }
 
-function toggleCheck(orden, idx, el) {
-  if(!checkState[orden]) return;
-  checkState[orden][idx]=el.checked;
-  // Re-render just this card
-  const o=ordenes.find(x=>String(x.orden)===String(orden));
-  if(o) { const card=document.getElementById('card-'+orden); if(card) card.outerHTML=buildClerkCard(o); }
+// Set a single product's status (order status becomes the slowest of all its products)
+function setProductStatus(orden, idx, status) {
+  if (!productState[orden]) return;
+  productState[orden][idx] = status;
+  syncOrderStatus(orden);
+}
+
+// Bulk-set every product in the order to the same status (order-level button shortcut)
+function setAllProducts(orden, status) {
+  const o = ordenes.find(x => String(x.orden) === String(orden));
+  if (!o) return;
+  const prods = parseProductos(o.productos);
+  productState[orden] = prods.length ? prods.map(() => status) : [status];
+  syncOrderStatus(orden);
+}
+
+async function syncOrderStatus(orden) {
+  const o = ordenes.find(x => String(x.orden) === String(orden));
+  if (!o) return;
+  const prods = parseProductos(o.productos);
+  const effective = prods.length ? Math.min(...productState[orden]) : (productState[orden][0] || o.estatus);
+  o.estatus = effective;
+  const card = document.getElementById('card-' + orden);
+  if (card) card.outerHTML = buildClerkCard(o);
+  showToast('Status updated ✓');
+  try { await fetch(API, { method: 'POST', body: JSON.stringify({ pin: PIN, action: 'updateStatus', orden, estatus: effective }) }); }
+  catch (e) { showToast('Sync error — check connection'); }
 }
 
 function renderOrdenes() {
@@ -516,17 +543,6 @@ function renderOrdenes() {
     pastList.innerHTML='';
     pastOrders.forEach(o=>{pastList.innerHTML+=buildClerkCard(o);});
   } else { pastSection.style.display='none'; }
-}
-
-async function cambiarEstatus(orden, est) {
-  const card=document.getElementById('card-'+orden);
-  const o=ordenes.find(x=>String(x.orden)===String(orden));
-  if(!o) return;
-  o.estatus=est;
-  card.outerHTML=buildClerkCard(o);
-  showToast('Status updated ✓');
-  try { await fetch(API,{method:'POST',body:JSON.stringify({pin:PIN,action:'updateStatus',orden,estatus:est})}); }
-  catch(e){ showToast('Sync error — check connection'); }
 }
 
 async function syncDraft() {
