@@ -140,6 +140,14 @@
   .driver-product-badge.not-shipped { background:#FEE2E2; color:#B91C1C; }
   .status-desc-lbl { font-size:11px; color:var(--text-faint); font-style:italic; text-align:center; min-height:16px; }
   .warn-note { font-size:11px; color:#92400E; background:#FEF3C7; border:1px solid #FDE68A; border-radius:var(--radius-sm); padding:6px 10px; text-align:center; margin-bottom:8px; }
+  .user-select-btn { display:flex; align-items:center; gap:10px; padding:14px 16px; background:var(--white); border:1.5px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; font-family:'Inter',sans-serif; font-size:15px; font-weight:600; color:var(--text); }
+  .user-select-btn:hover { border-color:var(--purple); }
+  .admin-user-row { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--white); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:8px; }
+  .admin-user-row .name { font-weight:600; font-size:14px; }
+  .admin-user-row .inactive { color:var(--text-faint); text-decoration:line-through; }
+  .admin-toggle-btn { font-size:11.5px; font-weight:600; padding:6px 12px; border-radius:99px; cursor:pointer; border:1px solid var(--border-strong); background:var(--white); }
+  .admin-toggle-btn.is-active { color:var(--green-dark); border-color:var(--green-dark); }
+  .admin-toggle-btn.is-inactive { color:#B91C1C; border-color:#FCA5A5; background:#FEF2F2; }
   .client-header { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; margin-bottom:10px; display:flex; align-items:center; gap:10px; }
   .client-header i { font-size:18px; color:var(--text-muted); }
   .client-header-name { font-size:14px; font-weight:600; }
@@ -205,20 +213,29 @@
         <p class="role-title">Driver / Client</p>
         <p class="role-desc">Check order status</p>
       </div>
-      <div class="role-btn" onclick="goPin()">
+      <div class="role-btn" onclick="goUserSelect()">
         <i class="ti ti-clipboard-list role-icon"></i>
         <p class="role-title">Shipping Clerk</p>
         <p class="role-desc">Update orders</p>
       </div>
     </div>
+    <p style="text-align:center;margin-top:22px;"><a href="#" onclick="goAdminPin();return false;" style="font-size:11.5px;color:var(--text-faint);text-decoration:none;">Admin</a></p>
+  </div>
+
+  <!-- USER SELECT -->
+  <div class="screen" id="screen-user-select">
+    <div class="top-bar"><span></span><button class="btn-back" onclick="goRol()">← Back</button></div>
+    <p class="pin-title" style="text-align:center;">Who are you?</p>
+    <p class="pin-sub" style="text-align:center;">Select your name</p>
+    <div class="role-grid" id="user-select-list" style="grid-template-columns:1fr;gap:8px;margin-top:16px;"></div>
   </div>
 
   <!-- PIN -->
   <div class="screen" id="screen-pin">
     <div class="top-bar"><span></span><button class="btn-back" onclick="goRol()">← Back</button></div>
     <div class="pin-wrap">
-      <p class="pin-title">Clerk access</p>
-      <p class="pin-sub">Enter your 4-digit PIN</p>
+      <p class="pin-title" id="pin-title">Clerk access</p>
+      <p class="pin-sub" id="pin-sub">Enter your 4-digit PIN</p>
       <div class="pin-dots">
         <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
         <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
@@ -232,6 +249,25 @@
       </div>
       <p class="pin-error" id="pin-error">Incorrect PIN. Try again.</p>
     </div>
+  </div>
+
+  <!-- ADMIN PANEL -->
+  <div class="screen" id="screen-admin">
+    <div class="top-bar">
+      <p class="top-bar-title">Admin — Users</p>
+      <button class="btn-back" onclick="goRol()">← Back</button>
+    </div>
+    <div class="checklist" style="margin-bottom:16px;">
+      <p class="checklist-title">Add user</p>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <input id="admin-new-name" type="text" placeholder="Name" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'Inter',sans-serif;font-size:14px;">
+        <input id="admin-new-pin" type="text" inputmode="numeric" maxlength="4" placeholder="4-digit PIN" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;">
+        <button class="btn-primary" onclick="adminAddUser()">Add user</button>
+      </div>
+      <p class="upload-status show" id="admin-add-status" style="display:none;"></p>
+    </div>
+    <p class="section-label">Users</p>
+    <div id="admin-user-list"></div>
   </div>
 
   <!-- CHOFER -->
@@ -359,21 +395,67 @@ function isOlderThan48h(fecha) {
 }
 
 function show(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
-function goRol() { pinVal=""; updateDots(); show('screen-rol'); }
+function goRol() { pinVal=""; updateDots(); currentUser=null; selectedUser=null; adminPinVal=''; show('screen-rol'); }
 function goChofer() {
   document.getElementById('error-msg').style.display='none';
   document.getElementById('results-list').innerHTML='';
   document.getElementById('orden-input').value='';
   loadChoferData(); show('screen-chofer');
 }
+
+let pinMode = 'clerk'; // 'clerk' or 'admin'
+let selectedUser = null;
+let currentUser = null;
+let adminPinVal = '';
+
+async function goUserSelect() {
+  show('screen-user-select');
+  const list = document.getElementById('user-select-list');
+  list.innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i>Loading...</div>';
+  try {
+    const res = await fetch(`${API}?action=getUsers`);
+    const names = await res.json();
+    if (!Array.isArray(names) || !names.length) { list.innerHTML = '<div class="empty-state"><i class="ti ti-user-off"></i>No active users. Ask an admin to add you.</div>'; return; }
+    list.innerHTML = names.map(n => `<div class="user-select-btn" onclick="selectUser('${n.replace(/'/g,"\\'")}')"><i class="ti ti-user"></i> ${n}</div>`).join('');
+  } catch (e) { list.innerHTML = '<div class="empty-state"><i class="ti ti-alert-circle"></i>Connection error.</div>'; }
+}
+
+function selectUser(name) {
+  selectedUser = name;
+  pinMode = 'clerk';
+  document.getElementById('pin-title').textContent = 'Clerk access';
+  document.getElementById('pin-sub').textContent = 'Enter PIN for ' + name;
+  goPin();
+}
+
+function goAdminPin() {
+  pinMode = 'admin';
+  document.getElementById('pin-title').textContent = 'Admin access';
+  document.getElementById('pin-sub').textContent = 'Enter admin PIN';
+  goPin();
+}
+
 function goPin() { pinVal=""; updateDots(); document.getElementById('pin-error').style.display='none'; show('screen-pin'); }
 function updateDots() { for(let i=0;i<4;i++) document.getElementById('pd'+i).className='pin-dot'+(i<pinVal.length?' filled':''); }
 function pinKey(k) {
   if(!k||pinVal.length>=4) return;
   pinVal+=k; updateDots();
-  if(pinVal.length===4) setTimeout(()=>{
-    if(pinVal===PIN){ show('screen-enc'); loadOrdenes(); }
-    else { document.getElementById('pin-error').style.display='block'; pinVal=""; updateDots(); }
+  if(pinVal.length===4) setTimeout(async ()=>{
+    if (pinMode === 'admin') {
+      try {
+        const res = await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'adminLogin', adminPin: pinVal }) });
+        const result = await res.json();
+        if (result.success) { adminPinVal = pinVal; show('screen-admin'); loadAdminUsers(); }
+        else { document.getElementById('pin-error').style.display='block'; pinVal=""; updateDots(); }
+      } catch(e){ document.getElementById('pin-error').style.display='block'; pinVal=""; updateDots(); }
+    } else {
+      try {
+        const res = await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'loginUser', name: selectedUser, userPin: pinVal }) });
+        const result = await res.json();
+        if (result.success) { currentUser = selectedUser; show('screen-enc'); loadOrdenes(); }
+        else { document.getElementById('pin-error').style.display='block'; pinVal=""; updateDots(); }
+      } catch(e){ document.getElementById('pin-error').style.display='block'; pinVal=""; updateDots(); }
+    }
   },200);
 }
 function pinDel() { pinVal=pinVal.slice(0,-1); updateDots(); }
@@ -382,6 +464,50 @@ document.addEventListener('keydown', e => {
   if(e.key >= '0' && e.key <= '9') { pinKey(e.key); }
   else if(e.key === 'Backspace') { pinDel(); }
 });
+
+// ── ADMIN PANEL ──────────────────────────────────
+async function loadAdminUsers() {
+  const list = document.getElementById('admin-user-list');
+  list.innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i>Loading...</div>';
+  try {
+    const res = await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'adminGetUsers', adminPin: adminPinVal }) });
+    const users = await res.json();
+    if (users.error) { list.innerHTML = `<div class="empty-state"><i class="ti ti-alert-circle"></i>${users.error}</div>`; return; }
+    if (!users.length) { list.innerHTML = '<div class="empty-state"><i class="ti ti-users"></i>No users yet.</div>'; return; }
+    list.innerHTML = users.map(u => `
+      <div class="admin-user-row">
+        <span class="name${u.active?'':' inactive'}">${u.name}</span>
+        <span class="admin-toggle-btn ${u.active?'is-active':'is-inactive'}" onclick="adminToggleUser('${u.name.replace(/'/g,"\\'")}', ${!u.active})">${u.active?'Active':'Inactive'}</span>
+      </div>`).join('');
+  } catch(e) { list.innerHTML = '<div class="empty-state"><i class="ti ti-alert-circle"></i>Connection error.</div>'; }
+}
+
+async function adminAddUser() {
+  const nameEl = document.getElementById('admin-new-name');
+  const pinEl = document.getElementById('admin-new-pin');
+  const statusEl = document.getElementById('admin-add-status');
+  const name = nameEl.value.trim();
+  const userPin = pinEl.value.trim();
+  statusEl.style.display = 'block';
+  if (!name || !/^[0-9]{4}$/.test(userPin)) { statusEl.textContent = 'Enter a name and a 4-digit PIN.'; statusEl.className = 'upload-status show err'; return; }
+  statusEl.textContent = 'Adding...'; statusEl.className = 'upload-status show loading';
+  try {
+    const res = await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'adminAddUser', adminPin: adminPinVal, name, userPin }) });
+    const result = await res.json();
+    if (result.error) { statusEl.textContent = result.error; statusEl.className = 'upload-status show err'; return; }
+    nameEl.value = ''; pinEl.value = '';
+    statusEl.textContent = '✓ User added.'; statusEl.className = 'upload-status show ok';
+    loadAdminUsers();
+  } catch(e) { statusEl.textContent = 'Connection error.'; statusEl.className = 'upload-status show err'; }
+}
+
+async function adminToggleUser(name, active) {
+  try {
+    await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'adminToggleUser', adminPin: adminPinVal, name, active }) });
+    loadAdminUsers();
+  } catch(e) { showToast('Connection error.'); }
+}
+
 
 async function loadChoferData() {
   try { const r=await fetch(`${API}?action=getAll&pin=${PIN}`); const all=await r.json(); choferOrdenes = Array.isArray(all) ? all.filter(o=>!isOlderThan48h(o.fecha)) : []; } catch(e){ choferOrdenes=[]; }
@@ -547,7 +673,7 @@ async function pushOrderStatus(orden, estatus) {
   const card = document.getElementById('card-' + orden);
   if (card && o) card.outerHTML = buildClerkCard(o);
   showToast('Status updated ✓');
-  try { await fetch(API, { method: 'POST', body: JSON.stringify({ pin: PIN, action: 'updateStatus', orden, estatus }) }); }
+  try { await fetch(API, { method: 'POST', body: JSON.stringify({ pin: PIN, action: 'updateStatus', orden, estatus, usuario: currentUser }) }); }
   catch (e) { showToast('Sync error — check connection'); }
 }
 
