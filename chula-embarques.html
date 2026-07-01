@@ -138,6 +138,7 @@
   .driver-product-row span:first-child { color:var(--text); }
   .driver-product-badge { font-size:9.5px; font-weight:700; padding:3px 8px; border-radius:99px; white-space:nowrap; }
   .status-desc-lbl { font-size:11px; color:var(--text-faint); font-style:italic; text-align:center; min-height:16px; }
+  .warn-note { font-size:11px; color:#92400E; background:#FEF3C7; border:1px solid #FDE68A; border-radius:var(--radius-sm); padding:6px 10px; text-align:center; margin-bottom:8px; }
   .client-header { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; margin-bottom:10px; display:flex; align-items:center; gap:10px; }
   .client-header i { font-size:18px; color:var(--text-muted); }
   .client-header-name { font-size:14px; font-weight:600; }
@@ -375,9 +376,14 @@ function pinKey(k) {
   },200);
 }
 function pinDel() { pinVal=pinVal.slice(0,-1); updateDots(); }
+document.addEventListener('keydown', e => {
+  if(!document.getElementById('screen-pin').classList.contains('active')) return;
+  if(e.key >= '0' && e.key <= '9') { pinKey(e.key); }
+  else if(e.key === 'Backspace') { pinDel(); }
+});
 
 async function loadChoferData() {
-  try { const r=await fetch(`${API}?action=getAll&pin=${PIN}`); choferOrdenes=await r.json(); } catch(e){ choferOrdenes=[]; }
+  try { const r=await fetch(`${API}?action=getAll&pin=${PIN}`); const all=await r.json(); choferOrdenes = Array.isArray(all) ? all.filter(o=>!isOlderThan48h(o.fecha)) : []; } catch(e){ choferOrdenes=[]; }
 }
 
 function buildTracker(est) {
@@ -437,7 +443,7 @@ async function buscar() {
     const res=await fetch(`${API}?action=getOrder&orden=${encodeURIComponent(val)}`);
     const found=await res.json();
     btn.innerHTML='Search'; btn.disabled=false;
-    if(found.error){ errEl.style.display='block'; return; }
+    if(found.error || isOlderThan48h(found.fecha)){ errEl.style.display='block'; return; }
     const clientOrders=choferOrdenes.filter(o=>o.cliente===found.cliente);
     const toShow=clientOrders.length>0?clientOrders:[found];
     let html='';
@@ -461,12 +467,13 @@ async function loadOrdenes() {
 function buildClerkCard(o) {
   const locked = isOlderThan48h(o.fecha);
   const prods = parseProductos(o.productos);
-  const fallbackEst = parseInt(o.estatus) || 1;
+  const est = parseInt(o.estatus) || 1;
 
   if (!productState[o.orden] || productState[o.orden].length !== prods.length) {
-    productState[o.orden] = prods.length ? prods.map(() => fallbackEst) : [fallbackEst];
+    productState[o.orden] = prods.length ? prods.map(() => est) : [est];
   }
-  const est = prods.length ? Math.min(...productState[o.orden]) : fallbackEst;
+  const minProd = prods.length ? Math.min(...productState[o.orden]) : est;
+  const incomplete = prods.length > 0 && est > minProd;
 
   let checklistHtml = '';
   if (prods.length > 0) {
@@ -483,9 +490,11 @@ function buildClerkCard(o) {
     checklistHtml = `<div class="checklist"><p class="checklist-title">Products</p>${items}</div>`;
   }
 
+  const warnHtml = incomplete ? `<p class="warn-note">⚠️ Order moved ahead — not all products are at this stage yet</p>` : '';
+
   const btns = LABELS.map((l, i) => {
     const idx = i + 1;
-    return `<button class="sbtn${est === idx ? ' ' + SEL[i] : ''}" onclick="setAllProducts('${o.orden}',${idx})" ${locked ? 'disabled' : ''}><span class="sbtn-letter">${LETTERS[i]}</span><span class="sbtn-text">${l}</span></button>`;
+    return `<button class="sbtn${est === idx ? ' ' + SEL[i] : ''}" onclick="setOrderStatus('${o.orden}',${idx})" ${locked ? 'disabled' : ''}><span class="sbtn-letter">${LETTERS[i]}</span><span class="sbtn-text">${l}</span></button>`;
   }).join('');
 
   return `<div class="order-card${locked ? ' locked' : ''}" id="card-${o.orden}">
@@ -494,44 +503,46 @@ function buildClerkCard(o) {
       <p class="order-cliente">${o.cliente}</p>
     </div>
     ${checklistHtml}
+    ${warnHtml}
     <div class="status-btns">${btns}</div>
     <p class="status-desc-lbl" id="desc-${o.orden}">${DESCS[est - 1]}</p>
   </div>`;
 }
 
-// Set a single product's status (order status becomes the slowest of all its products)
+// Product circle click: order status auto-syncs to the SLOWEST product (not independent)
 function setProductStatus(orden, idx, status) {
   if (!productState[orden]) return;
   productState[orden][idx] = status;
-  syncOrderStatus(orden);
-}
-
-// Bulk-set every product in the order to the same status (order-level button shortcut)
-function setAllProducts(orden, status) {
   const o = ordenes.find(x => String(x.orden) === String(orden));
   if (!o) return;
   const prods = parseProductos(o.productos);
-  productState[orden] = prods.length ? prods.map(() => status) : [status];
-  syncOrderStatus(orden);
+  const minProd = prods.length ? Math.min(...productState[orden]) : status;
+  o.estatus = minProd;
+  pushOrderStatus(orden, minProd);
 }
 
-async function syncOrderStatus(orden) {
+// Order-level button click: fully manual, never blocked, doesn't touch product circles
+function setOrderStatus(orden, status) {
   const o = ordenes.find(x => String(x.orden) === String(orden));
   if (!o) return;
-  const prods = parseProductos(o.productos);
-  const effective = prods.length ? Math.min(...productState[orden]) : (productState[orden][0] || o.estatus);
-  o.estatus = effective;
+  o.estatus = status;
+  pushOrderStatus(orden, status);
+}
+
+async function pushOrderStatus(orden, estatus) {
+  const o = ordenes.find(x => String(x.orden) === String(orden));
   const card = document.getElementById('card-' + orden);
-  if (card) card.outerHTML = buildClerkCard(o);
+  if (card && o) card.outerHTML = buildClerkCard(o);
   showToast('Status updated ✓');
-  try { await fetch(API, { method: 'POST', body: JSON.stringify({ pin: PIN, action: 'updateStatus', orden, estatus: effective }) }); }
+  try { await fetch(API, { method: 'POST', body: JSON.stringify({ pin: PIN, action: 'updateStatus', orden, estatus }) }); }
   catch (e) { showToast('Sync error — check connection'); }
 }
 
 function renderOrdenes() {
   const today=todayStr();
-  const todayOrders=ordenes.filter(o=>o.fecha===today);
-  const pastOrders=ordenes.filter(o=>o.fecha!==today);
+  const visible=ordenes.filter(o=>!isOlderThan48h(o.fecha));
+  const todayOrders=visible.filter(o=>o.fecha===today);
+  const pastOrders=visible.filter(o=>o.fecha!==today);
   const list=document.getElementById('orders-list');
   list.innerHTML='';
   if(!todayOrders.length){ list.innerHTML='<div class="empty-state"><i class="ti ti-inbox"></i>No orders today</div>'; }
@@ -691,10 +702,11 @@ function encBuscar() {
   if(!raw){ renderOrdenes(); return; }
   const isNum = /^[0-9]+$/.test(raw);
   const val = isNum ? 'SP00'+raw : raw.toLowerCase();
-  const filtered=ordenes.filter(o=>String(o.orden).toLowerCase().includes(val.toLowerCase())||o.cliente.toLowerCase().includes(val.toLowerCase()));
+  const exact = ordenes.find(o=>String(o.orden).toLowerCase()===val.toLowerCase());
   const list=document.getElementById('orders-list');
   list.innerHTML='';
   document.getElementById('past-section').style.display='none';
+  const filtered = exact ? [exact] : ordenes.filter(o=>!isOlderThan48h(o.fecha) && (String(o.orden).toLowerCase().includes(val.toLowerCase())||o.cliente.toLowerCase().includes(val.toLowerCase())));
   if(!filtered.length){ list.innerHTML='<div class="empty-state"><i class="ti ti-search-off"></i>No match found</div>'; return; }
   filtered.forEach(o=>{list.innerHTML+=buildClerkCard(o);});
 }
