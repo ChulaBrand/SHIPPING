@@ -346,7 +346,7 @@
 
 <script>
 const API = "https://script.google.com/macros/s/AKfycbwJ8viClBTNp-fOnZ4mYlwDobAWSdKX1rD05E3OIN-y9yIXXBLVeeRbuMo5hYJssI_cuQ/exec";
-const PIN = "1234";
+const PIN = "6Nzj0kVi22556jQWd5oMPjqHNQNrxCYE";
 let pinVal = "";
 let ordenes = [];
 let choferOrdenes = [];
@@ -509,8 +509,12 @@ async function adminToggleUser(name, active) {
 }
 
 
+let choferDataPromise = null; // se usa en buscar() para esperar a que choferOrdenes esté listo
 async function loadChoferData() {
-  try { const r=await fetch(`${API}?action=getAll&pin=${PIN}`); const all=await r.json(); choferOrdenes = Array.isArray(all) ? all.filter(o=>!isOlderThan48h(o.fecha)) : []; } catch(e){ choferOrdenes=[]; }
+  choferDataPromise = (async () => {
+    try { const r=await fetch(`${API}?action=getAll&pin=${PIN}`); const all=await r.json(); choferOrdenes = Array.isArray(all) ? all.filter(o=>!isOlderThan48h(o.fecha)) : []; } catch(e){ choferOrdenes=[]; }
+  })();
+  return choferDataPromise;
 }
 
 function buildTracker(est) {
@@ -572,6 +576,7 @@ async function buscar() {
   try {
     const res=await fetch(`${API}?action=getOrder&orden=${encodeURIComponent(val)}`);
     const found=await res.json();
+    if (choferDataPromise) await choferDataPromise; // asegura que choferOrdenes ya esté listo antes de filtrar
     btn.innerHTML='Search'; btn.disabled=false;
     if(found.error || isOlderThan48h(found.fecha)){ errEl.style.display='block'; return; }
     const clientOrders=choferOrdenes.filter(o=>o.cliente===found.cliente);
