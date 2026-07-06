@@ -538,7 +538,7 @@ function renderDriverCard(o, highlighted) {
   const prods = parseProductos(o.productos);
   const statuses = (productState[o.orden] && productState[o.orden].length===prods.length)
     ? productState[o.orden]
-    : prods.map(()=>Math.min(est, 3));
+    : (Array.isArray(o.productEstatus) && o.productEstatus.length===prods.length ? o.productEstatus : prods.map(()=>Math.min(est, 3)));
 
   let productsHtml = '';
   if(prods.length > 0) {
@@ -605,7 +605,11 @@ function buildClerkCard(o) {
   const est = parseInt(o.estatus) || 1;
 
   if (!productState[o.orden] || productState[o.orden].length !== prods.length) {
-    productState[o.orden] = prods.length ? prods.map(() => Math.min(est, 3)) : [Math.min(est, 3)];
+    if (Array.isArray(o.productEstatus) && o.productEstatus.length === prods.length) {
+      productState[o.orden] = o.productEstatus.slice(); // recupera el detalle guardado en el servidor
+    } else {
+      productState[o.orden] = prods.length ? prods.map(() => Math.min(est, 3)) : [Math.min(est, 3)];
+    }
   }
   const minProd = prods.length ? Math.min(...productState[o.orden]) : est;
   const incomplete = prods.length > 0 && est > 3 && productState[o.orden].some(s => s < 3);
@@ -662,6 +666,7 @@ function setProductStatus(orden, idx, status) {
   } else {
     const card = document.getElementById('card-' + orden);
     if (card) card.outerHTML = buildClerkCard(o);
+    pushOrderStatus(orden, o.estatus); // el estatus general no cambia, pero sí se persiste el detalle por producto
   }
 }
 
@@ -678,7 +683,9 @@ async function pushOrderStatus(orden, estatus) {
   const card = document.getElementById('card-' + orden);
   if (card && o) card.outerHTML = buildClerkCard(o);
   showToast('Status updated ✓');
-  try { await fetch(API, { method: 'POST', body: JSON.stringify({ pin: PIN, action: 'updateStatus', orden, estatus, usuario: currentUser }) }); }
+  const body = { pin: PIN, action: 'updateStatus', orden, estatus, usuario: currentUser };
+  if (productState[orden]) body.productEstatus = productState[orden]; // persiste el detalle por producto
+  try { await fetch(API, { method: 'POST', body: JSON.stringify(body) }); }
   catch (e) { showToast('Sync error — check connection'); }
 }
 
