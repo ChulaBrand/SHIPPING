@@ -374,6 +374,7 @@
         <button class="btn-primary" id="papayaDownloadExcelBtn" style="width:auto;padding:0 16px;">⬇ Excel</button>
         <button class="btn-primary" id="papayaDownloadWordBtn" style="width:auto;padding:0 16px;">⬇ Word</button>
         <button class="btn-primary" id="papayaShowSheetsBtn" style="width:auto;padding:0 16px;">📋 Lista para Sheets</button>
+        <button class="btn-primary" id="papayaSendDraftBtn" style="width:auto;padding:0 16px;">📤 Send to Draft</button>
         <button class="btn-back" id="papayaResetBtn">Procesar otro PDF</button>
       </div>
       <div id="papayaSheetsBox" style="display:none;margin-top:12px;">
@@ -442,7 +443,11 @@ function isOlderThan48h(fecha) {
 }
 
 function show(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
-function goRol() { pinVal=""; updateDots(); currentUser=null; selectedUser=null; adminPinVal=''; show('screen-rol'); }
+let usersPromise = null;
+function prefetchUsers() {
+  usersPromise = fetch(`${API}?action=getUsers`).then(r => r.json()).catch(() => null);
+}
+function goRol() { pinVal=""; updateDots(); currentUser=null; selectedUser=null; adminPinVal=''; show('screen-rol'); prefetchUsers(); }
 function goPapayaUpload() { show('screen-papaya-upload'); }
 function goChofer() {
   document.getElementById('error-msg').style.display='none';
@@ -461,8 +466,8 @@ async function goUserSelect() {
   const list = document.getElementById('user-select-list');
   list.innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i>Loading...</div>';
   try {
-    const res = await fetch(`${API}?action=getUsers`);
-    const names = await res.json();
+    if (!usersPromise) prefetchUsers(); // por si el prefetch inicial no alcanzó a correr
+    const names = await usersPromise;
     if (!Array.isArray(names) || !names.length) { list.innerHTML = '<div class="empty-state"><i class="ti ti-user-off"></i>No active users. Ask an admin to add you.</div>'; return; }
     list.innerHTML = names.map(n => `<div class="user-select-btn" onclick="selectUser('${n.replace(/'/g,"\\'")}')"><i class="ti ti-user"></i> ${n}</div>`).join('');
   } catch (e) { list.innerHTML = '<div class="empty-state"><i class="ti ti-alert-circle"></i>Connection error.</div>'; }
@@ -1505,7 +1510,8 @@ const papayaCopySheetsBtn = document.getElementById("papayaCopySheetsBtn");
 const papayaCopyStatus = document.getElementById("papayaCopyStatus");
 const papayaResetBtn = document.getElementById("papayaResetBtn");
 
-let papayaLastRows = [], papayaLastFlags = [], papayaLastFileName = "reporte";
+const papayaSendDraftBtn = document.getElementById("papayaSendDraftBtn");
+let papayaLastRows = [], papayaLastFlags = [], papayaLastFileName = "reporte", papayaLastDraftRows = [];
 
 papayaDropzone.addEventListener("click", () => papayaFileInput.click());
 papayaDropzone.addEventListener("dragover", e => { e.preventDefault(); papayaDropzone.classList.add("drag"); });
@@ -1523,6 +1529,7 @@ papayaResetBtn.addEventListener("click", () => {
   papayaSheetsBox.style.display = "none";
   papayaStatusEl.textContent = "";
   papayaFileInput.value = "";
+  papayaLastDraftRows = [];
 });
 
 async function handlePapayaFile(file) {
@@ -1548,6 +1555,11 @@ async function handlePapayaFile(file) {
       return;
     }
     papayaLastRows = rows; papayaLastFlags = flags;
+    // Filas para el Draft (orden/cliente/productos), del mismo parseo completo — no solo lo de papaya
+    papayaLastDraftRows = orders.map(o => {
+      const productos = o.products.filter(([qty]) => qty !== null).map(([qty, desc]) => `${qty} ${desc}`).join(', ');
+      return { orden: o.sp, cliente: o.name, productos };
+    }).filter(r => r.productos);
     renderPapayaResults(rows, flags);
     papayaStatusEl.textContent = "Listo.";
   } catch (err) {
@@ -1618,6 +1630,23 @@ papayaCopySheetsBtn.addEventListener("click", async () => {
     papayaCopyStatus.textContent = "¡Copiado!";
   }
 });
+
+papayaSendDraftBtn.addEventListener("click", async () => {
+  if (!papayaLastDraftRows.length) { showToast('No hay órdenes para enviar'); return; }
+  const original = papayaSendDraftBtn.textContent;
+  papayaSendDraftBtn.disabled = true;
+  papayaSendDraftBtn.textContent = 'Enviando...';
+  try {
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ pin: PIN, action: 'writeDraft', rows: papayaLastDraftRows }) });
+    const result = await res.json();
+    if (result.error) { showToast('Error: ' + result.error); }
+    else { showToast(`${result.count} órdenes enviadas al Draft ✓ — ya puedes usar "Sync from Draft"`); }
+  } catch (e) { showToast('Connection error'); }
+  papayaSendDraftBtn.disabled = false;
+  papayaSendDraftBtn.textContent = original;
+});
+
+prefetchUsers(); // arranca desde que carga la página, para que "Clerk" abra instantáneo
 </script>
 </body>
 </html>
