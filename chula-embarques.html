@@ -20,8 +20,24 @@
   }
   body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:2rem 1rem 4rem; }
   .container { width:100%; max-width:420px; }
-  @media (min-width:640px) { .container { max-width:560px; } body { font-size:16px; } }
-  @media (min-width:1024px) { .container { max-width:680px; } body { padding-top:3rem; } }
+  @media (min-width:640px) {
+    .container { max-width:600px; }
+    body { font-size:16px; }
+    .role-btn { padding:2.5rem 1.25rem 2.25rem; }
+    .role-icon-wrap { width:68px; height:68px; }
+    .role-icon { font-size:32px; }
+    .role-title { font-size:17px; }
+    .role-desc { font-size:13.5px; }
+    .user-select-btn { padding:2.25rem 1.25rem; font-size:16.5px; }
+    .user-select-btn i { font-size:30px; }
+    .page-title { font-size:28px; }
+    .page-sub { font-size:15px; }
+  }
+  @media (min-width:1024px) {
+    .container { max-width:760px; }
+    body { padding-top:3.5rem; }
+    .role-grid { gap:20px; }
+  }
   .logo-row { display:flex; align-items:center; gap:10px; margin-bottom:2.5rem; }
   .logo-mark { width:36px; height:36px; background:var(--purple); border-radius:9px; display:flex; align-items:center; justify-content:center; overflow:hidden; }
   .logo-mark svg { width:36px; height:36px; }
@@ -30,12 +46,13 @@
   .screen { display:none; } .screen.active { display:block; }
   .page-title { font-size:24px; font-weight:500; margin-bottom:4px; }
   .page-sub { font-size:15px; color:var(--text-muted); margin-bottom:2rem; }
-  .role-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  .role-btn { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem 1rem 1.25rem; cursor:pointer; text-align:center; transition:border-color .15s,transform .1s; }
-  .role-btn:hover { border-color:var(--border-strong); } .role-btn:active { transform:scale(.97); }
-  .role-icon { font-size:30px; color:var(--text-muted); margin-bottom:10px; display:block; }
-  .role-title { font-size:14px; font-weight:600; margin-bottom:3px; }
-  .role-desc { font-size:12px; color:var(--text-faint); line-height:1.4; }
+  .role-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; }
+  .role-btn { background:var(--white); border:1.5px solid var(--border); border-radius:16px; padding:2rem 1rem 1.75rem; cursor:pointer; text-align:center; transition:border-color .15s,transform .1s,box-shadow .15s; }
+  .role-btn:hover { border-color:var(--purple); box-shadow:0 6px 16px rgba(91,42,134,.10); } .role-btn:active { transform:scale(.97); }
+  .role-icon-wrap { width:56px; height:56px; border-radius:50%; background:#F5F0FE; display:flex; align-items:center; justify-content:center; margin:0 auto 12px; }
+  .role-icon { font-size:26px; color:var(--purple); margin-bottom:0; display:block; }
+  .role-title { font-size:15px; font-weight:700; margin-bottom:4px; }
+  .role-desc { font-size:12.5px; color:var(--text-faint); line-height:1.4; }
   .top-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; }
   .top-bar-title { font-size:17px; font-weight:600; }
   .btn-back { background:none; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px; color:var(--text-muted); cursor:pointer; padding:5px 12px; font-family:'Inter',sans-serif; }
@@ -143,8 +160,10 @@
   .driver-product-badge.not-shipped { background:#FEE2E2; color:#B91C1C; }
   .status-desc-lbl { font-size:11px; color:var(--text-faint); font-style:italic; text-align:center; min-height:16px; }
   .warn-note { font-size:11px; color:#92400E; background:#FEF3C7; border:1px solid #FDE68A; border-radius:var(--radius-sm); padding:6px 10px; text-align:center; margin-bottom:8px; }
-  .user-select-btn { display:flex; align-items:center; gap:10px; padding:14px 16px; background:var(--white); border:1.5px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; font-family:'Inter',sans-serif; font-size:15px; font-weight:600; color:var(--text); }
-  .user-select-btn:hover { border-color:var(--purple); }
+  .user-select-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:1.75rem 1rem; background:var(--white); border:1.5px solid var(--border); border-radius:16px; cursor:pointer; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; color:var(--text); text-align:center; transition:border-color .15s,transform .1s,box-shadow .15s; }
+  .user-select-btn:hover { border-color:var(--purple); box-shadow:0 6px 16px rgba(91,42,134,.10); }
+  .user-select-btn:active { transform:scale(.97); }
+  .user-select-btn i { font-size:26px; color:var(--purple); }
   .admin-user-row { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--white); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:8px; }
   .admin-user-row .name { font-weight:600; font-size:14px; }
   .admin-user-row .inactive { color:var(--text-faint); text-decoration:line-through; }
@@ -207,9 +226,9 @@
     background: linear-gradient(135deg, var(--pp-purple), var(--pp-purple-dark));
     color: #fff; padding: 20px 18px; border-radius: 14px; margin-bottom: 16px; position: relative;
   }
-  .pp-header h1 { margin: 6px 0 0; font-size: 18px; line-height:1.3; }
+  .pp-header h1 { margin: 6px 0 0; font-size: 18px; line-height:1.3; padding-right: 64px; }
   .pp-header p { margin: 6px 0 0; opacity: .85; font-size: 12.5px; }
-  .pp-back { background: rgba(255,255,255,.15); color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  .pp-back { position: absolute; top: 14px; right: 14px; background: rgba(255,255,255,.15); color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
   .pp-card { background: var(--pp-card); border: 1px solid var(--pp-border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
   .pp-dropzone { border: 2px dashed var(--pp-purple); border-radius: 12px; padding: 32px 16px; text-align: center; cursor: pointer; transition: background .15s; background: #FBF9FD; }
   .pp-dropzone.drag { background: #F0E9F7; }
@@ -264,12 +283,12 @@
     <p class="page-sub">How are you accessing today?</p>
     <div class="role-grid">
       <div class="role-btn" onclick="goChofer()">
-        <i class="ti ti-truck role-icon"></i>
+        <div class="role-icon-wrap"><i class="ti ti-truck role-icon"></i></div>
         <p class="role-title">Driver / Client</p>
         <p class="role-desc">Check order status</p>
       </div>
       <div class="role-btn" onclick="goUserSelect()">
-        <i class="ti ti-clipboard-list role-icon"></i>
+        <div class="role-icon-wrap"><i class="ti ti-clipboard-list role-icon"></i></div>
         <p class="role-title">Shipping Clerk</p>
         <p class="role-desc">Update orders</p>
       </div>
@@ -282,7 +301,7 @@
     <div class="top-bar"><span></span><button class="btn-back" onclick="goRol()">← Back</button></div>
     <p class="pin-title" style="text-align:center;">Who are you?</p>
     <p class="pin-sub" style="text-align:center;">Select your name</p>
-    <div class="role-grid" id="user-select-list" style="grid-template-columns:1fr;gap:8px;margin-top:16px;"></div>
+    <div class="role-grid" id="user-select-list" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:16px;"></div>
   </div>
 
   <!-- PIN -->
@@ -346,7 +365,10 @@
   <div class="screen" id="screen-enc">
     <div class="top-bar">
       <p class="top-bar-title">Shipping panel</p>
-      <button class="btn-back" onclick="goRol()">Sign out</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-back" onclick="goPapayaUpload('screen-enc')">Upload</button>
+        <button class="btn-back" onclick="goRol()">Sign out</button>
+      </div>
     </div>
     <p class="section-label">Find order</p>
     <div class="search-card">
@@ -362,7 +384,6 @@
       <p class="section-label" style="margin-top:1.25rem;">Previous orders</p>
       <div class="orders-list" id="past-list"></div>
     </div>
-    <p style="text-align:center;margin-top:22px;"><a href="#" onclick="goPapayaUpload();return false;" style="font-size:11.5px;color:var(--text-faint);text-decoration:none;">Upload</a></p>
   </div>
 
   <!-- UPLOAD PDF -->
@@ -395,7 +416,7 @@
   <!-- PAPAYA PALLET REPORT (standalone tool, runs 100% in the browser, no server calls) -->
   <div class="screen pp-tool" id="screen-papaya-upload">
     <div class="pp-header">
-      <button class="pp-back" onclick="goRol()">← Back</button>
+      <button class="pp-back" onclick="goPapayaBack()">← Back</button>
       <h1>🥭 Chula Brand — Reporte de Papaya</h1>
       <p>Sube el PDF de "Sales Orders Not Shipped". Todo corre en tu navegador, no se sube nada a ningún servidor.</p>
     </div>
@@ -490,8 +511,10 @@ let usersPromise = null;
 function prefetchUsers() {
   usersPromise = fetch(`${API}?action=getUsers`).then(r => r.json()).catch(() => null);
 }
+let papayaReturnScreen = 'screen-rol';
+function goPapayaUpload(returnScreen) { papayaReturnScreen = returnScreen || 'screen-rol'; show('screen-papaya-upload'); }
+function goPapayaBack() { show(papayaReturnScreen); }
 function goRol() { pinVal=""; updateDots(); currentUser=null; selectedUser=null; adminPinVal=''; show('screen-rol'); prefetchUsers(); }
-function goPapayaUpload() { show('screen-papaya-upload'); }
 function goChofer() {
   document.getElementById('error-msg').style.display='none';
   document.getElementById('results-list').innerHTML='';
@@ -1581,13 +1604,13 @@ async function handlePapayaFile(file) {
     const buf = await file.arrayBuffer();
     const lines = await extractLines(buf);
     const orders = parseOrders(lines);
-    const [rows, flags] = buildReportRows(orders);
-    if (!rows.length) {
-      papayaStatusEl.textContent = "No se encontraron líneas de papaya en este PDF.";
+    if (!orders.length) {
+      papayaStatusEl.textContent = "No se encontraron órdenes en este PDF.";
       return;
     }
-    papayaLastRows = rows; papayaLastFlags = flags;
-    // Filas para el Draft (orden/cliente/productos), del mismo parseo completo — no solo lo de papaya.
+
+    // Filas para el Draft (orden/cliente/productos) — de TODAS las órdenes del PDF,
+    // tengan o no papaya, para que "Send + Sync" no dependa del reporte de pallets.
     // Agrupa líneas con la misma descripción y suma sus cantidades (algunas órdenes traen el mismo
     // producto repetido varias veces, por tarima, en vez de una sola línea con el total).
     papayaLastDraftRows = orders.map(o => {
@@ -1600,8 +1623,11 @@ async function handlePapayaFile(file) {
       const productos = [...combined.entries()].map(([desc, qty]) => `${qty} ${desc}`).join(', ');
       return { orden: o.sp, cliente: o.name, productos };
     }).filter(r => r.productos);
+
+    const [rows, flags] = buildReportRows(orders);
+    papayaLastRows = rows; papayaLastFlags = flags;
     renderPapayaResults(rows, flags);
-    papayaStatusEl.textContent = "Listo.";
+    papayaStatusEl.textContent = rows.length ? "Listo." : "Listo — este PDF no trae papaya, pero ya puedes mandar las órdenes al Draft.";
   } catch (err) {
     console.error(err);
     papayaStatusEl.textContent = "Error al procesar el PDF: " + err.message;
@@ -1609,8 +1635,12 @@ async function handlePapayaFile(file) {
 }
 
 function renderPapayaResults(rows, flags) {
-  const total = rows.reduce((s, r) => s + r.pallets_num, 0);
-  papayaSummaryEl.innerHTML = `<b>${rows.length}</b> órdenes con papaya &nbsp;·&nbsp; <b>${total}</b> pallets totales`;
+  if (!rows.length) {
+    papayaSummaryEl.innerHTML = `Este PDF no trae líneas de papaya — no hay reporte de pallets que mostrar, pero las órdenes ya están listas para <b>Send + Sync to Draft</b>.`;
+  } else {
+    const total = rows.reduce((s, r) => s + r.pallets_num, 0);
+    papayaSummaryEl.innerHTML = `<b>${rows.length}</b> órdenes con papaya &nbsp;·&nbsp; <b>${total}</b> pallets totales`;
+  }
 
   papayaTbody.innerHTML = "";
   rows.forEach((r, i) => {
