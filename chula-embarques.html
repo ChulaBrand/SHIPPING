@@ -224,11 +224,10 @@
   }
   .pp-header {
     background: linear-gradient(135deg, var(--pp-purple), var(--pp-purple-dark));
-    color: #fff; padding: 20px 18px; border-radius: 14px; margin-bottom: 16px; position: relative;
+    color: #fff; padding: 20px 18px; border-radius: 14px; margin-bottom: 16px;
   }
-  .pp-header h1 { margin: 6px 0 0; font-size: 18px; line-height:1.3; padding-right: 64px; }
+  .pp-header h1 { margin: 6px 0 0; font-size: 18px; line-height:1.3; }
   .pp-header p { margin: 6px 0 0; opacity: .85; font-size: 12.5px; }
-  .pp-back { position: absolute; top: 14px; right: 14px; background: rgba(255,255,255,.15); color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
   .pp-card { background: var(--pp-card); border: 1px solid var(--pp-border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
   .pp-dropzone { border: 2px dashed var(--pp-purple); border-radius: 12px; padding: 32px 16px; text-align: center; cursor: pointer; transition: background .15s; background: #FBF9FD; }
   .pp-dropzone.drag { background: #F0E9F7; }
@@ -274,7 +273,7 @@
         <ellipse cx="35" cy="45" rx="2" ry="2.5" fill="#7C2D12" opacity="0.7"/>
       </svg>
     </div>
-    <span class="logo-text">Chula Brand — <span>Embarques</span></span>
+    <span class="logo-text">Chula Brand — <span onclick="toggleAdminBtn()" style="cursor:pointer;">Embarques</span></span>
   </div>
 
   <!-- ROL -->
@@ -293,7 +292,10 @@
         <p class="role-desc">Update orders</p>
       </div>
     </div>
-    <p style="text-align:center;margin-top:22px;"><a href="#" onclick="goAdminPin();return false;" style="font-size:11.5px;color:var(--text-faint);text-decoration:none;">Admin</a> <span style="font-size:11.5px;color:var(--text-faint);">·</span> <a href="#" onclick="goPapayaUpload();return false;" style="font-size:11.5px;color:var(--text-faint);text-decoration:none;">Upload</a></p>
+    <div style="display:flex;justify-content:center;gap:10px;margin-top:22px;">
+      <button class="btn-back" onclick="goPapayaUpload()">Upload</button>
+      <button class="btn-back" id="hiddenAdminBtn" onclick="goAdminPin()" style="display:none;">Admin</button>
+    </div>
   </div>
 
   <!-- USER SELECT -->
@@ -347,7 +349,7 @@
   <!-- CHOFER -->
   <div class="screen" id="screen-chofer">
     <div class="top-bar">
-      <p class="top-bar-title">Check order</p>
+      <p class="top-bar-title">Check Order</p>
       <button class="btn-back" onclick="goRol()">← Back</button>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
@@ -364,7 +366,7 @@
   <!-- ENCARGADO -->
   <div class="screen" id="screen-enc">
     <div class="top-bar">
-      <p class="top-bar-title">Shipping panel</p>
+      <p class="top-bar-title">Shipping Panel</p>
       <div style="display:flex;gap:8px;">
         <button class="btn-back" onclick="goPapayaUpload('screen-enc')">Upload</button>
         <button class="btn-back" onclick="goRol()">Sign out</button>
@@ -415,8 +417,11 @@
 
   <!-- PAPAYA PALLET REPORT (standalone tool, runs 100% in the browser, no server calls) -->
   <div class="screen pp-tool" id="screen-papaya-upload">
+    <div class="top-bar">
+      <p class="top-bar-title">Upload PDF</p>
+      <button class="btn-back" onclick="goPapayaBack()">← Back</button>
+    </div>
     <div class="pp-header">
-      <button class="pp-back" onclick="goPapayaBack()">← Back</button>
       <h1>🥭 Chula Brand — Reporte de Papaya</h1>
       <p>Sube el PDF de "Sales Orders Not Shipped". Todo corre en tu navegador, no se sube nada a ningún servidor.</p>
     </div>
@@ -434,16 +439,10 @@
     <div class="pp-card" id="papayaResultsCard" style="display:none;">
       <div id="papayaSummary" class="pp-summary"></div>
       <div class="pp-actions">
+        <button class="pp-btn" id="papayaSendDraftBtn">📤 Send + Sync to Draft</button>
         <button class="pp-btn pp-secondary" id="papayaDownloadExcelBtn">⬇ Excel</button>
         <button class="pp-btn pp-secondary" id="papayaDownloadWordBtn">⬇ Word</button>
-        <button class="pp-btn pp-secondary" id="papayaShowSheetsBtn">📋 Lista para Sheets</button>
-        <button class="pp-btn" id="papayaSendDraftBtn">📤 Send + Sync to Draft</button>
         <button class="pp-btn pp-outline" id="papayaResetBtn">Procesar otro PDF</button>
-      </div>
-      <div class="pp-sheets-box" id="papayaSheetsBox" style="display:none;">
-        <textarea id="papayaSheetsText" readonly class="pp-sheets-text"></textarea>
-        <button class="pp-btn pp-outline" id="papayaCopySheetsBtn">Copiar al portapapeles</button>
-        <span id="papayaCopyStatus" class="pp-copy-status"></span>
       </div>
       <div id="papayaFlags" class="pp-flags"></div>
       <table class="pp-table" id="papayaResultsTable">
@@ -547,6 +546,10 @@ function selectUser(name) {
   goPin();
 }
 
+function toggleAdminBtn() {
+  const btn = document.getElementById('hiddenAdminBtn');
+  btn.style.display = (btn.style.display === 'none') ? 'inline-block' : 'none';
+}
 function goAdminPin() {
   pinMode = 'admin';
   document.getElementById('pin-title').textContent = 'Admin access';
@@ -1078,6 +1081,21 @@ function parseOrders(lines) {
     }
   }
   if (current) orders.push(current);
+
+  // A veces el "note" (ej. sub-cliente como CANTU, MARVIN, MR WHOLESALE) queda en su propia
+  // línea del PDF en vez de pegado al encabezado, y termina clasificado como un producto fantasma
+  // (sin cantidad). Lo detectamos aquí y lo recuperamos como note en vez de dejarlo como producto.
+  const KNOWN_PRODUCT_RE = /^(papaya|limes?|pineapples?|bananas?|avocados?|cucumbers?|fresh|aloe|plantains?)\b/i;
+  for (const o of orders) {
+    if (!o.note && o.products.length) {
+      const [qty, desc] = o.products[0];
+      if (qty === null && desc && desc.length <= 30 && !KNOWN_PRODUCT_RE.test(desc)) {
+        o.note = desc;
+        o.products.shift();
+      }
+    }
+  }
+
   return orders;
 }
 
@@ -1558,11 +1576,6 @@ const papayaFlagsEl = document.getElementById("papayaFlags");
 const papayaTbody = document.querySelector("#papayaResultsTable tbody");
 const papayaDownloadExcelBtn = document.getElementById("papayaDownloadExcelBtn");
 const papayaDownloadWordBtn = document.getElementById("papayaDownloadWordBtn");
-const papayaShowSheetsBtn = document.getElementById("papayaShowSheetsBtn");
-const papayaSheetsBox = document.getElementById("papayaSheetsBox");
-const papayaSheetsText = document.getElementById("papayaSheetsText");
-const papayaCopySheetsBtn = document.getElementById("papayaCopySheetsBtn");
-const papayaCopyStatus = document.getElementById("papayaCopyStatus");
 const papayaResetBtn = document.getElementById("papayaResetBtn");
 
 const papayaSendDraftBtn = document.getElementById("papayaSendDraftBtn");
@@ -1581,7 +1594,6 @@ papayaFileInput.addEventListener("change", () => {
 });
 papayaResetBtn.addEventListener("click", () => {
   papayaResultsCard.style.display = "none";
-  papayaSheetsBox.style.display = "none";
   papayaStatusEl.textContent = "";
   papayaFileInput.value = "";
   papayaLastDraftRows = [];
@@ -1599,7 +1611,6 @@ async function handlePapayaFile(file) {
   papayaLastFileName = file.name.replace(/\.pdf$/i, "");
   papayaStatusEl.textContent = "Leyendo PDF...";
   papayaResultsCard.style.display = "none";
-  papayaSheetsBox.style.display = "none";
   try {
     const buf = await file.arrayBuffer();
     const lines = await extractLines(buf);
@@ -1628,6 +1639,7 @@ async function handlePapayaFile(file) {
     papayaLastRows = rows; papayaLastFlags = flags;
     renderPapayaResults(rows, flags);
     papayaStatusEl.textContent = rows.length ? "Listo." : "Listo — este PDF no trae papaya, pero ya puedes mandar las órdenes al Draft.";
+    sendAndSyncDraft(); // se manda solo, no depende de que alguien se acuerde de picarle
   } catch (err) {
     console.error(err);
     papayaStatusEl.textContent = "Error al procesar el PDF: " + err.message;
@@ -1683,25 +1695,9 @@ papayaDownloadWordBtn.addEventListener("click", () => {
   URL.revokeObjectURL(url);
 });
 
-papayaShowSheetsBtn.addEventListener("click", () => {
-  const lines = papayaLastRows.map(r => `${r.pallets}\t${r.cliente_corto}\t${r.codigo}`);
-  papayaSheetsText.value = lines.join("\n");
-  papayaSheetsBox.style.display = "block";
-  papayaCopyStatus.textContent = "";
-});
-
-papayaCopySheetsBtn.addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText(papayaSheetsText.value);
-    papayaCopyStatus.textContent = "¡Copiado!";
-  } catch {
-    papayaSheetsText.select();
-    document.execCommand("copy");
-    papayaCopyStatus.textContent = "¡Copiado!";
-  }
-});
-
-papayaSendDraftBtn.addEventListener("click", async () => {
+// Manda las órdenes al Draft y sincroniza — se llama sola en cuanto termina de leer el PDF
+// (ver handlePapayaFile), y también queda disponible en el botón por si hay que reintentar a mano.
+async function sendAndSyncDraft() {
   if (!papayaLastDraftRows.length) { showToast('No hay órdenes para enviar'); return; }
   const original = papayaSendDraftBtn.textContent;
   papayaSendDraftBtn.disabled = true;
@@ -1717,10 +1713,12 @@ papayaSendDraftBtn.addEventListener("click", async () => {
     if (result2.error) { showToast(`Se guardó el Draft, pero el sync falló: ${result2.error}`); return; }
 
     showToast(`${result.count} órdenes enviadas, sincronizadas y Draft limpiado ✓`);
-  } catch (e) { showToast('Connection error'); }
+  } catch (e) { showToast('Connection error — usa el botón para reintentar'); }
   papayaSendDraftBtn.disabled = false;
   papayaSendDraftBtn.textContent = original;
-});
+}
+
+papayaSendDraftBtn.addEventListener("click", sendAndSyncDraft);
 
 prefetchUsers(); // arranca desde que carga la página, para que "Clerk" abra instantáneo
 </script>
