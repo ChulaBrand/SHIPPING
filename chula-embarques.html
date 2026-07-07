@@ -1719,11 +1719,11 @@ papayaSendDraftBtn.addEventListener("click", sendAndSyncDraft);
 
 prefetchUsers(); // arranca desde que carga la página, para que "Clerk" abra instantáneo
 
-// Auto-refresh de la lista de órdenes cada 30s, solo mientras el Shipping Panel está activo
+// Auto-refresh de la lista de órdenes cada 60s, solo mientras el Shipping Panel está activo
 setInterval(() => {
   const encScreen = document.getElementById('screen-enc');
   if (encScreen && encScreen.classList.contains('active') && currentUser) loadOrdenes();
-}, 30000);
+}, 90000);
 </script>
 </body>
 </html>
