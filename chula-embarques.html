@@ -500,7 +500,11 @@ function pinKey(k) {
       try {
         const res = await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'loginUser', name: selectedUser, userPin: pinVal }) });
         const result = await res.json();
-        if (result.success) { currentUser = selectedUser; show('screen-enc'); loadOrdenes(); }
+        if (result.success) {
+          currentUser = selectedUser; show('screen-enc');
+          if (Array.isArray(result.orders)) { ordenes = result.orders; renderOrdenes(); } // ya vinieron en la misma respuesta del login
+          else { loadOrdenes(); } // respaldo por si el servidor no las mandó
+        }
         else { document.getElementById('pin-error').style.display='block'; pinVal=""; updateDots(); }
       } catch(e){ document.getElementById('pin-error').style.display='block'; pinVal=""; updateDots(); }
     }
@@ -1117,14 +1121,13 @@ function buildReportRows(orders) {
   for (const [name, group] of groups.entries()) {
     if (group.length === 1) {
       const g = group[0];
-      entries.push({ sp: g.sp, cliente_full: g.cliente_full, cliente_corto: name, papaya_types: g.papaya_types });
+      entries.push({ sp: g.sp, cliente_full: g.cliente_full, cliente_corto: name, base_name: name, papaya_types: g.papaya_types });
       continue;
     }
     const distinctNotes = new Set(group.filter(g => g.note).map(g => g.note));
     if (distinctNotes.size === group.length) {
       for (const g of group) {
-        const clarifier = g.note ? titleCase(g.note.split(" ")[0]) : g.sp;
-        entries.push({ sp: g.sp, cliente_full: g.cliente_full, cliente_corto: `${name} (${clarifier})`, papaya_types: g.papaya_types });
+        entries.push({ sp: g.sp, cliente_full: g.cliente_full, cliente_corto: name, base_name: name, papaya_types: g.papaya_types });
       }
     } else {
       const combined = new Map();
@@ -1133,14 +1136,14 @@ function buildReportRows(orders) {
         sps.push(g.sp);
         for (const [k, v] of g.papaya_types.entries()) combined.set(k, (combined.get(k) || 0) + v);
       }
-      entries.push({ sp: sps.join(" + "), cliente_full: group[0].cliente_full, cliente_corto: name, papaya_types: combined });
+      entries.push({ sp: sps.join(" + "), cliente_full: group[0].cliente_full, cliente_corto: name, base_name: name, papaya_types: combined });
     }
   }
 
   const rows = [], flags = [];
   for (const e of entries) {
     const papayaTypes = e.papaya_types;
-    const clientKey = e.cliente_corto.toLowerCase();
+    const clientKey = e.base_name.toLowerCase(); // usa el nombre base (sin el sufijo aclarador) para no perder el divisor especial
     const isHeb = [...papayaTypes.keys()].some(k => k === "heb");
     const divisor = divisorFor(clientKey, isHeb);
 
