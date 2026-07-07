@@ -74,8 +74,6 @@
   .btn-primary { width:100%; height:48px; font-size:15px; font-weight:600; background:var(--green-dark); color:#fff; border:none; border-radius:var(--radius-sm); cursor:pointer; font-family:'Inter',sans-serif; }
   .btn-primary:active { transform:scale(.98); }
   .btn-search-sm { height:42px; padding:0 16px; font-size:13px; font-weight:600; background:var(--green-dark); color:#fff; border:none; border-radius:var(--radius-sm); cursor:pointer; white-space:nowrap; font-family:'Inter',sans-serif; }
-  .btn-sync { width:100%; height:44px; font-size:13px; font-weight:600; background:#fff; color:var(--green-dark); border:2px solid var(--green-dark); border-radius:var(--radius-sm); cursor:pointer; font-family:'Inter',sans-serif; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:1.5rem; }
-  .btn-sync:active { background:var(--bg); }
   .section-label { font-size:11px; font-weight:600; color:var(--text-faint); text-transform:uppercase; letter-spacing:.09em; margin-bottom:10px; }
   .search-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:1rem; margin-bottom:1.5rem; display:flex; gap:8px; }
   .orders-list { display:flex; flex-direction:column; gap:10px; }
@@ -181,29 +179,12 @@
   .toast.show { transform:translateX(-50%) translateY(0); }
   .spinner { display:inline-block; width:15px; height:15px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; vertical-align:-3px; margin-right:6px; }
   @keyframes spin { to { transform:rotate(360deg); } }
-  /* upload PDF panel */
-  .btn-upload { width:100%; height:44px; font-size:13px; font-weight:600; background:#fff; color:var(--purple); border:2px solid var(--purple); border-radius:var(--radius-sm); cursor:pointer; font-family:'Inter',sans-serif; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:.75rem; }
-  .btn-upload:active { background:#F5F0FE; }
-  .dropzone { border:2px dashed var(--border-strong); border-radius:var(--radius); padding:2rem 1rem; text-align:center; cursor:pointer; transition:border-color .15s,background .15s; margin-bottom:1rem; background:var(--white); }
-  .dropzone:hover, .dropzone.drag { border-color:var(--purple); background:#F8F4FE; }
-  .dropzone i { font-size:28px; color:var(--text-faint); display:block; margin-bottom:8px; }
-  .dropzone .dz-main { font-size:14px; font-weight:600; }
-  .dropzone .dz-sub { font-size:12px; color:var(--text-faint); margin-top:4px; }
-  .dz-filename { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--purple); text-align:center; margin:-4px 0 12px; display:none; }
+  /* upload-status: usado por el panel de Admin (mensajes de agregar usuario) */
   .upload-status { font-size:13px; font-family:'IBM Plex Mono',monospace; text-align:center; margin-bottom:12px; display:none; }
   .upload-status.show { display:block; }
   .upload-status.err { color:#dc2626; }
   .upload-status.ok { color:var(--green-dark); }
   .upload-status.loading { color:var(--purple); }
-  .preview-table { width:100%; border-collapse:collapse; font-size:12px; margin-bottom:10px; background:var(--white); border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden; }
-  .preview-table th { background:var(--green-dark); color:#fff; text-align:left; padding:7px 8px; font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; }
-  .preview-table td { padding:6px 8px; border-bottom:1px solid var(--border); font-family:'IBM Plex Mono',monospace; font-size:11.5px; vertical-align:top; }
-  .preview-table tr:nth-child(even) td { background:var(--bg); }
-  .preview-table td[contenteditable="true"]:focus { outline:none; background:#F5F0FE; box-shadow:inset 0 0 0 1px var(--purple); }
-  .preview-row-del { width:20px; text-align:center; color:#dc2626; cursor:pointer; opacity:.5; }
-  .preview-row-del:hover { opacity:1; }
-  .btn-add-row { width:100%; background:none; border:1px dashed var(--border-strong); border-radius:var(--radius-sm); padding:8px; font-size:12px; color:var(--text-muted); cursor:pointer; font-family:'Inter',sans-serif; margin-bottom:14px; }
-  .btn-add-row:hover { border-color:var(--purple); color:var(--purple); }
 
   /* Papaya pallet report tool — estilos aislados con prefijo pp- para no chocar con el resto del app */
   #screen-papaya-upload.pp-tool {
@@ -385,33 +366,6 @@
     <div id="past-section" style="display:none;">
       <p class="section-label" style="margin-top:1.25rem;">Previous orders</p>
       <div class="orders-list" id="past-list"></div>
-    </div>
-  </div>
-
-  <!-- UPLOAD PDF -->
-  <div class="screen" id="screen-upload">
-    <div class="top-bar">
-      <p class="top-bar-title">Upload PDF report</p>
-      <button class="btn-back" onclick="goEnc()">← Back</button>
-    </div>
-    <div class="dropzone" id="dropzone">
-      <i class="ti ti-file-type-pdf"></i>
-      <p class="dz-main">Click or drag the Produce Magic PDF here</p>
-      <p class="dz-sub">.pdf files only</p>
-      <input type="file" id="pdfInput" accept="application/pdf" style="display:none;">
-    </div>
-    <p class="dz-filename" id="dzFilename"></p>
-    <button class="btn-primary" id="parseBtn" disabled style="margin-bottom:10px;">Upload a PDF first</button>
-    <p class="upload-status" id="uploadStatus"></p>
-
-    <div id="previewWrap" style="display:none;">
-      <p class="section-label">Review before saving to Draft</p>
-      <table class="preview-table">
-        <thead><tr><th></th><th>Orden</th><th>Cliente</th><th>Productos</th></tr></thead>
-        <tbody id="previewBody"></tbody>
-      </table>
-      <button class="btn-add-row" id="addRowBtn">+ add row</button>
-      <button class="btn-primary" id="saveDraftBtn">Save to Draft</button>
     </div>
   </div>
 
@@ -638,7 +592,7 @@ async function adminToggleUser(name, active) {
 let choferDataPromise = null; // se usa en buscar() para esperar a que choferOrdenes esté listo
 async function loadChoferData() {
   choferDataPromise = (async () => {
-    try { const r=await fetch(`${API}?action=getAll&pin=${PIN}`); const all=await r.json(); choferOrdenes = Array.isArray(all) ? all.filter(o=>!isOlderThan48h(o.fecha)) : []; } catch(e){ choferOrdenes=[]; }
+    try { const r=await fetch(`${API}?action=getAll&pin=${PIN}`); const all=await r.json(); choferOrdenes = Array.isArray(all) ? all.filter(o=>!isOlderThan48h(o.actualizado)) : []; } catch(e){ choferOrdenes=[]; }
   })();
   return choferDataPromise;
 }
@@ -660,7 +614,7 @@ function parseProductos(str) {
 // Driver card — shows each product's individual status when available
 function renderDriverCard(o, highlighted) {
   const est = parseInt(o.estatus)||1;
-  const locked = isOlderThan48h(o.fecha);
+  const locked = isOlderThan48h(o.actualizado);
   const prods = parseProductos(o.productos);
   const statuses = (productState[o.orden] && productState[o.orden].length===prods.length)
     ? productState[o.orden]
@@ -704,7 +658,7 @@ async function buscar() {
     const found=await res.json();
     if (choferDataPromise) await choferDataPromise; // asegura que choferOrdenes ya esté listo antes de filtrar
     btn.innerHTML='Search'; btn.disabled=false;
-    if(found.error || isOlderThan48h(found.fecha)){ errEl.style.display='block'; return; }
+    if(found.error || isOlderThan48h(found.actualizado)){ errEl.style.display='block'; return; }
     const clientOrders=choferOrdenes.filter(o=>o.cliente===found.cliente);
     const toShow=clientOrders.length>0?clientOrders:[found];
     let html='';
@@ -726,7 +680,7 @@ async function loadOrdenes() {
 }
 
 function buildClerkCard(o) {
-  const locked = isOlderThan48h(o.fecha);
+  const locked = isOlderThan48h(o.actualizado);
   const prods = parseProductos(o.productos);
   const est = parseInt(o.estatus) || 1;
 
@@ -817,7 +771,7 @@ async function pushOrderStatus(orden, estatus) {
 
 function renderOrdenes() {
   const today=todayStr();
-  const visible=ordenes.filter(o=>!isOlderThan48h(o.fecha));
+  const visible=ordenes.filter(o=>!isOlderThan48h(o.actualizado));
   const todayOrders=visible.filter(o=>o.fecha===today);
   const pastOrders=visible.filter(o=>o.fecha!==today);
   const list=document.getElementById('orders-list');
@@ -833,136 +787,6 @@ function renderOrdenes() {
   } else { pastSection.style.display='none'; }
 }
 
-// ── UPLOAD PDF → DRAFT ──────────────────────────────────
-let uploadRows = [];
-let uploadPdfBase64 = null;
-
-function goUpload() {
-  document.getElementById('pdfInput').value = '';
-  document.getElementById('dzFilename').style.display = 'none';
-  document.getElementById('uploadStatus').className = 'upload-status';
-  document.getElementById('previewWrap').style.display = 'none';
-  document.getElementById('parseBtn').disabled = true;
-  document.getElementById('parseBtn').textContent = 'Upload a PDF first';
-  uploadPdfBase64 = null; uploadRows = [];
-  show('screen-upload');
-}
-function goEnc() { show('screen-enc'); }
-
-const dz = document.getElementById('dropzone');
-dz.addEventListener('click', () => document.getElementById('pdfInput').click());
-dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
-dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
-dz.addEventListener('drop', e => {
-  e.preventDefault(); dz.classList.remove('drag');
-  if (e.dataTransfer.files.length) handlePdfFile(e.dataTransfer.files[0]);
-});
-document.getElementById('pdfInput').addEventListener('change', e => {
-  if (e.target.files.length) handlePdfFile(e.target.files[0]);
-});
-
-function handlePdfFile(file) {
-  const statusEl = document.getElementById('uploadStatus');
-  if (file.type !== 'application/pdf') {
-    statusEl.textContent = 'Only PDF files are accepted.';
-    statusEl.className = 'upload-status show err';
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = () => {
-    uploadPdfBase64 = reader.result.split(',')[1];
-    const fn = document.getElementById('dzFilename');
-    fn.textContent = '✓ ' + file.name; fn.style.display = 'block';
-    const btn = document.getElementById('parseBtn');
-    btn.disabled = false; btn.textContent = 'Parse PDF';
-    statusEl.className = 'upload-status';
-  };
-  reader.readAsDataURL(file);
-}
-
-document.getElementById('parseBtn').addEventListener('click', async () => {
-  if (!uploadPdfBase64) return;
-  const btn = document.getElementById('parseBtn');
-  const statusEl = document.getElementById('uploadStatus');
-  btn.disabled = true;
-  statusEl.textContent = 'Reading the PDF…';
-  statusEl.className = 'upload-status show loading';
-  document.getElementById('previewWrap').style.display = 'none';
-
-  try {
-    const res = await fetch(API, {
-      method: 'POST',
-      body: JSON.stringify({ pin: PIN, action: 'parseDraftPdf', pdfBase64: uploadPdfBase64 })
-    });
-    const result = await res.json();
-    if (result.error) throw new Error(result.error);
-    const parsed = result.rows;
-    if (!Array.isArray(parsed) || !parsed.length) throw new Error('No orders found in PDF.');
-    uploadRows = parsed;
-    renderUploadPreview();
-    statusEl.className = 'upload-status';
-    document.getElementById('previewWrap').style.display = 'block';
-  } catch (err) {
-    statusEl.textContent = 'Error: ' + err.message;
-    statusEl.className = 'upload-status show err';
-  } finally {
-    btn.disabled = false;
-  }
-});
-
-function renderUploadPreview() {
-  const body = document.getElementById('previewBody');
-  body.innerHTML = '';
-  uploadRows.forEach(row => addUploadRowEl(row));
-}
-function addUploadRowEl(row) {
-  const body = document.getElementById('previewBody');
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td class="preview-row-del" title="remove">✕</td>
-    <td contenteditable="true">${row.orden ?? ''}</td>
-    <td contenteditable="true">${row.cliente ?? ''}</td>
-    <td contenteditable="true">${row.productos ?? ''}</td>
-  `;
-  tr.querySelector('.preview-row-del').addEventListener('click', () => { tr.remove(); syncUploadRows(); });
-  tr.querySelectorAll('td[contenteditable]').forEach(td => td.addEventListener('input', syncUploadRows));
-  body.appendChild(tr);
-}
-function syncUploadRows() {
-  const trs = [...document.getElementById('previewBody').querySelectorAll('tr')];
-  uploadRows = trs.map(tr => {
-    const tds = tr.querySelectorAll('td');
-    return { orden: tds[1].textContent.trim(), cliente: tds[2].textContent.trim(), productos: tds[3].textContent.trim() };
-  });
-}
-document.getElementById('addRowBtn').addEventListener('click', () => {
-  const newRow = { orden: '', cliente: '', productos: '' };
-  uploadRows.push(newRow);
-  addUploadRowEl(newRow);
-});
-
-document.getElementById('saveDraftBtn').addEventListener('click', async () => {
-  if (!uploadRows.length) return;
-  syncUploadRows();
-  const btn = document.getElementById('saveDraftBtn');
-  const statusEl = document.getElementById('uploadStatus');
-  const original = btn.textContent;
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Saving...';
-  try {
-    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ pin: PIN, action: 'writeDraft', rows: uploadRows }) });
-    const result = await res.json();
-    if (result.error) throw new Error(result.error);
-    statusEl.textContent = '✓ ' + uploadRows.length + ' orders saved to Draft. Go back and tap "Sync from Draft" to load them.';
-    statusEl.className = 'upload-status show ok';
-    showToast('Saved to Draft ✓');
-  } catch (err) {
-    statusEl.textContent = 'Error saving to Draft: ' + err.message;
-    statusEl.className = 'upload-status show err';
-  } finally {
-    btn.disabled = false; btn.textContent = original;
-  }
-});
-
 function encBuscar() {
   const raw=document.getElementById('enc-search').value.trim();
   if(!raw){ renderOrdenes(); return; }
@@ -972,7 +796,7 @@ function encBuscar() {
   const list=document.getElementById('orders-list');
   list.innerHTML='';
   document.getElementById('past-section').style.display='none';
-  const filtered = exact ? [exact] : ordenes.filter(o=>!isOlderThan48h(o.fecha) && (String(o.orden).toLowerCase().includes(val.toLowerCase())||o.cliente.toLowerCase().includes(val.toLowerCase())));
+  const filtered = exact ? [exact] : ordenes.filter(o=>!isOlderThan48h(o.actualizado) && (String(o.orden).toLowerCase().includes(val.toLowerCase())||o.cliente.toLowerCase().includes(val.toLowerCase())));
   if(!filtered.length){ list.innerHTML='<div class="empty-state"><i class="ti ti-search-off"></i>No match found</div>'; return; }
   filtered.forEach(o=>{list.innerHTML+=buildClerkCard(o);});
 }
