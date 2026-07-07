@@ -238,11 +238,12 @@
   .pp-footer { text-align:center; color:var(--pp-muted); font-size:11.5px; padding:8px 0 0; }
 
   /* Compact/expand toggle + status filter chips */
-  .view-toggle-row { display:flex; justify-content:flex-end; margin-bottom:10px; }
-  .view-toggle-btn { font-size:12px; font-weight:600; padding:6px 12px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--white); color:var(--text-muted); cursor:pointer; display:flex; align-items:center; gap:6px; font-family:'Inter',sans-serif; }
+  .controls-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .controls-actions { display:flex; gap:6px; flex-shrink:0; }
+  .view-toggle-btn { width:34px; height:34px; font-size:14px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--white); color:var(--text-muted); cursor:pointer; display:flex; align-items:center; justify-content:center; font-family:'Inter',sans-serif; }
   .view-toggle-btn:active { background:var(--bg); }
-  .filter-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
-  .filter-chip { font-size:11.5px; font-weight:600; padding:5px 11px; border-radius:99px; border:1.5px solid var(--border-strong); background:var(--white); color:var(--text-muted); cursor:pointer; font-family:'Inter',sans-serif; }
+  .filter-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .filter-chip { font-size:12px; font-weight:700; width:30px; height:30px; border-radius:50%; border:1.5px solid var(--border-strong); background:var(--white); color:var(--text-muted); cursor:pointer; font-family:'Inter',sans-serif; display:flex; align-items:center; justify-content:center; }
   .filter-chip.active { border-color:var(--purple); color:var(--purple); background:#F5F0FE; }
 
   /* Compact order card */
@@ -383,13 +384,15 @@
       </div>
       <button class="btn-search-sm" onclick="encBuscar()">Search</button>
     </div>
-    <div class="view-toggle-row">
-      <button class="view-toggle-btn" id="viewToggleBtn" onclick="toggleGlobalView()"><i class="ti ti-arrows-maximize"></i> View all</button>
+    <div class="controls-row">
+      <div class="filter-chips" id="statusFilterChips"></div>
+      <div class="controls-actions">
+        <button class="view-toggle-btn" id="viewToggleBtn" onclick="toggleGlobalView()" title="View all"><i class="ti ti-arrows-maximize"></i></button>
+        <button class="view-toggle-btn" id="dailySummaryBtn" onclick="goDailySummary()" title="Download today's summary"><i class="ti ti-file-spreadsheet"></i></button>
+      </div>
     </div>
-    <div class="filter-chips" id="statusFilterChips"></div>
     <p class="section-label">Today's orders</p>
     <div class="orders-list" id="orders-list"></div>
-    <button class="btn-back" id="dailySummaryBtn" style="width:100%;margin-top:14px;" onclick="goDailySummary()"><i class="ti ti-file-spreadsheet"></i> Download today's summary</button>
     <div id="past-section" style="display:none;">
       <p class="section-label" style="margin-top:1.25rem;">Previous orders</p>
       <div class="orders-list" id="past-list"></div>
@@ -801,9 +804,8 @@ function toggleGlobalView() {
   globalViewMode = globalViewMode === 'compact' ? 'expanded' : 'compact';
   expandedOrders.clear(); // el toggle general manda: limpia las expansiones manuales
   const btn = document.getElementById('viewToggleBtn');
-  btn.innerHTML = globalViewMode === 'compact'
-    ? '<i class="ti ti-arrows-maximize"></i> View all'
-    : '<i class="ti ti-arrows-minimize"></i> View less';
+  btn.innerHTML = globalViewMode === 'compact' ? '<i class="ti ti-arrows-maximize"></i>' : '<i class="ti ti-arrows-minimize"></i>';
+  btn.title = globalViewMode === 'compact' ? 'View all' : 'View less';
   renderOrdenes();
 }
 
@@ -816,9 +818,9 @@ function toggleStatusFilter(idx) {
 
 function renderStatusFilterChips() {
   const wrap = document.getElementById('statusFilterChips');
-  wrap.innerHTML = LABELS.map((l, i) => {
+  wrap.innerHTML = LETTERS.map((letter, i) => {
     const idx = i + 1;
-    return `<button class="filter-chip${statusFilter.has(idx) ? ' active' : ''}" onclick="toggleStatusFilter(${idx})">${l}</button>`;
+    return `<button class="filter-chip${statusFilter.has(idx) ? ' active' : ''}" onclick="toggleStatusFilter(${idx})" title="${LABELS[i]}">${letter}</button>`;
   }).join('');
 }
 
