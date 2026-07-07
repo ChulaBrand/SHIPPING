@@ -81,7 +81,7 @@
   /* order cards */
   .order-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:1rem; }
   .order-card.highlight { border:2px solid var(--green-dark); }
-  .order-card.locked { opacity:.65; }
+  .order-card.locked, .order-card-compact.locked { opacity:.65; }
   .order-num { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-faint); margin-bottom:2px; }
   .order-cliente { font-size:15px; font-weight:600; margin-bottom:2px; }
   .order-producto-lbl { font-size:12px; color:var(--text-muted); margin-bottom:10px; }
@@ -236,6 +236,28 @@
   .pp-table th { background:var(--pp-purple); color:#fff; }
   .pp-table tr:nth-child(even) td { background:#F3EEF9; }
   .pp-footer { text-align:center; color:var(--pp-muted); font-size:11.5px; padding:8px 0 0; }
+
+  /* Compact/expand toggle + status filter chips */
+  .view-toggle-row { display:flex; justify-content:flex-end; margin-bottom:10px; }
+  .view-toggle-btn { font-size:12px; font-weight:600; padding:6px 12px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--white); color:var(--text-muted); cursor:pointer; display:flex; align-items:center; gap:6px; font-family:'Inter',sans-serif; }
+  .view-toggle-btn:active { background:var(--bg); }
+  .filter-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+  .filter-chip { font-size:11.5px; font-weight:600; padding:5px 11px; border-radius:99px; border:1.5px solid var(--border-strong); background:var(--white); color:var(--text-muted); cursor:pointer; font-family:'Inter',sans-serif; }
+  .filter-chip.active { border-color:var(--purple); color:var(--purple); background:#F5F0FE; }
+
+  /* Compact order card */
+  .order-card-compact { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:.75rem 1rem; display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; }
+  .order-card-compact:hover { border-color:var(--border-strong); }
+  .order-card-compact .oc-left { min-width:0; }
+  .order-card-compact .oc-num { font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--text-faint); }
+  .order-card-compact .oc-cliente { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .status-pill { font-size:11px; font-weight:600; padding:4px 10px; border-radius:99px; white-space:nowrap; flex-shrink:0; }
+
+  /* Daily summary preview */
+  .summary-table { width:100%; border-collapse:collapse; font-size:12px; background:var(--white); border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden; margin-bottom:14px; }
+  .summary-table th { background:var(--green-dark); color:#fff; text-align:left; padding:8px; font-size:10px; text-transform:uppercase; letter-spacing:.03em; }
+  .summary-table td { padding:7px 8px; border-bottom:1px solid var(--border); vertical-align:top; }
+  .summary-table tr:nth-child(even) td { background:var(--bg); }
 </style>
 </head>
 <body>
@@ -361,12 +383,31 @@
       </div>
       <button class="btn-search-sm" onclick="encBuscar()">Search</button>
     </div>
+    <div class="view-toggle-row">
+      <button class="view-toggle-btn" id="viewToggleBtn" onclick="toggleGlobalView()"><i class="ti ti-arrows-maximize"></i> View all</button>
+    </div>
+    <div class="filter-chips" id="statusFilterChips"></div>
     <p class="section-label">Today's orders</p>
     <div class="orders-list" id="orders-list"></div>
+    <button class="btn-back" id="dailySummaryBtn" style="width:100%;margin-top:14px;" onclick="goDailySummary()"><i class="ti ti-file-spreadsheet"></i> Download today's summary</button>
     <div id="past-section" style="display:none;">
       <p class="section-label" style="margin-top:1.25rem;">Previous orders</p>
       <div class="orders-list" id="past-list"></div>
     </div>
+  </div>
+
+  <!-- DAILY SUMMARY PREVIEW -->
+  <div class="screen" id="screen-daily-summary">
+    <div class="top-bar">
+      <p class="top-bar-title">Today's Summary</p>
+      <button class="btn-back" onclick="show('screen-enc')">← Back</button>
+    </div>
+    <p class="section-label" id="dailySummaryCount"></p>
+    <table class="summary-table" id="dailySummaryTable">
+      <thead><tr><th>Orden</th><th>Cliente</th><th>Productos</th><th>Estatus</th><th>Hora</th><th>Por</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <button class="btn-primary" id="downloadSummaryBtn"><i class="ti ti-download"></i> Download Excel</button>
   </div>
 
   <!-- PAPAYA PALLET REPORT (standalone tool, runs 100% in the browser, no server calls) -->
@@ -434,6 +475,12 @@ const BANNER_ICONS= ["📥","🕐","✅","🚧","📦","🚛"];
 
 // per-product status, in-memory for this session: { "orden": [1,2,1,...] }
 const productState = {};
+// modo de vista del panel del clerk: 'compact' (default) o 'expanded' (todas abiertas)
+let globalViewMode = 'compact';
+// órdenes abiertas individualmente a mano, sin importar el modo global
+const expandedOrders = new Set();
+// filtro por estatus activo (vacío = mostrar todos)
+const statusFilter = new Set();
 
 function todayStr() {
   const d = new Date();
@@ -681,8 +728,20 @@ async function loadOrdenes() {
 
 function buildClerkCard(o) {
   const locked = isOlderThan48h(o.actualizado);
-  const prods = parseProductos(o.productos);
   const est = parseInt(o.estatus) || 1;
+  const isExpanded = globalViewMode === 'expanded' || expandedOrders.has(String(o.orden));
+
+  if (!isExpanded) {
+    return `<div class="order-card-compact${locked ? ' locked' : ''}" id="card-${o.orden}" onclick="toggleCardExpand('${o.orden}')">
+      <div class="oc-left">
+        <p class="oc-num">Order #${o.orden}${locked ? ' · <span class="locked-badge">Locked</span>' : ''}</p>
+        <p class="oc-cliente">${o.cliente}</p>
+      </div>
+      <span class="status-pill ${BANNER_CLS[est - 1]}">${BANNER_ICONS[est - 1]} ${LABELS[est - 1]}</span>
+    </div>`;
+  }
+
+  const prods = parseProductos(o.productos);
 
   if (!productState[o.orden] || productState[o.orden].length !== prods.length) {
     if (Array.isArray(o.productEstatus) && o.productEstatus.length === prods.length) {
@@ -701,7 +760,7 @@ function buildClerkCard(o) {
       const circles = LETTERS.slice(0, 3).map((letter, ci) => {
         const idx = ci + 1;
         const activeCls = pStat === idx ? ` active p${idx}` : '';
-        const clickAttr = locked ? '' : `onclick="setProductStatus('${o.orden}',${i},${idx})"`;
+        const clickAttr = locked ? '' : `onclick="event.stopPropagation();setProductStatus('${o.orden}',${i},${idx})"`;
         return `<div class="pcircle${activeCls}${locked ? ' disabled' : ''}" ${clickAttr}>${letter}</div>`;
       }).join('');
       return `<div class="product-item"><span class="product-name">${p}</span><div class="pcircle-row">${circles}</div></div>`;
@@ -713,19 +772,54 @@ function buildClerkCard(o) {
 
   const btns = LABELS.map((l, i) => {
     const idx = i + 1;
-    return `<button class="sbtn${est === idx ? ' ' + SEL[i] : ''}" onclick="setOrderStatus('${o.orden}',${idx})" ${locked ? 'disabled' : ''}><span class="sbtn-letter">${LETTERS[i]}</span><span class="sbtn-text">${l}</span></button>`;
+    return `<button class="sbtn${est === idx ? ' ' + SEL[i] : ''}" onclick="event.stopPropagation();setOrderStatus('${o.orden}',${idx})" ${locked ? 'disabled' : ''}><span class="sbtn-letter">${LETTERS[i]}</span><span class="sbtn-text">${l}</span></button>`;
   }).join('');
 
   return `<div class="order-card${locked ? ' locked' : ''}" id="card-${o.orden}">
-    <div style="margin-bottom:10px;">
-      <p class="order-num">Order #${o.orden}${locked ? '<span class="locked-badge">Locked</span>' : ''}</p>
-      <p class="order-cliente">${o.cliente}</p>
+    <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;cursor:pointer;" onclick="toggleCardExpand('${o.orden}')">
+      <div>
+        <p class="order-num">Order #${o.orden}${locked ? '<span class="locked-badge">Locked</span>' : ''}</p>
+        <p class="order-cliente">${o.cliente}</p>
+      </div>
+      <i class="ti ti-chevron-up" style="color:var(--text-faint);font-size:18px;flex-shrink:0;"></i>
     </div>
     ${checklistHtml}
     ${warnHtml}
     <div class="status-btns">${btns}</div>
     <p class="status-desc-lbl" id="desc-${o.orden}">${DESCS[est - 1]}</p>
   </div>`;
+}
+
+function toggleCardExpand(orden) {
+  const key = String(orden);
+  if (expandedOrders.has(key)) expandedOrders.delete(key);
+  else expandedOrders.add(key);
+  renderOrdenes();
+}
+
+function toggleGlobalView() {
+  globalViewMode = globalViewMode === 'compact' ? 'expanded' : 'compact';
+  expandedOrders.clear(); // el toggle general manda: limpia las expansiones manuales
+  const btn = document.getElementById('viewToggleBtn');
+  btn.innerHTML = globalViewMode === 'compact'
+    ? '<i class="ti ti-arrows-maximize"></i> View all'
+    : '<i class="ti ti-arrows-minimize"></i> View less';
+  renderOrdenes();
+}
+
+function toggleStatusFilter(idx) {
+  if (statusFilter.has(idx)) statusFilter.delete(idx);
+  else statusFilter.add(idx);
+  renderStatusFilterChips();
+  renderOrdenes();
+}
+
+function renderStatusFilterChips() {
+  const wrap = document.getElementById('statusFilterChips');
+  wrap.innerHTML = LABELS.map((l, i) => {
+    const idx = i + 1;
+    return `<button class="filter-chip${statusFilter.has(idx) ? ' active' : ''}" onclick="toggleStatusFilter(${idx})">${l}</button>`;
+  }).join('');
 }
 
 // Product circle click (O/P/R only). While the order hasn't shipped yet (still O/P/R),
@@ -771,10 +865,11 @@ async function pushOrderStatus(orden, estatus) {
 
 function renderOrdenes() {
   const today=todayStr();
-  const visible=ordenes.filter(o=>!isOlderThan48h(o.actualizado));
+  const visible=ordenes.filter(o=>!isOlderThan48h(o.actualizado)).filter(o=>!statusFilter.size || statusFilter.has(parseInt(o.estatus)||1));
   const todayOrders=visible.filter(o=>o.fecha===today);
   const pastOrders=visible.filter(o=>o.fecha!==today);
   const list=document.getElementById('orders-list');
+  if (!document.getElementById('statusFilterChips').children.length) renderStatusFilterChips();
   list.innerHTML='';
   if(!todayOrders.length){ list.innerHTML='<div class="empty-state"><i class="ti ti-inbox"></i>No orders today</div>'; }
   else todayOrders.forEach(o=>{list.innerHTML+=buildClerkCard(o);});
@@ -1390,6 +1485,82 @@ function buildXlsxBlob(title, rows, flags) {
   return new Blob([zipBytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 }
 
+// Resumen del día: reutiliza el mismo motor de Excel (buildZip/xlsxCell) del reporte de papaya,
+// pero con las columnas del tracker de embarques en vez de las de pallets.
+function buildDailySummaryXlsxBlob(title, rows) {
+  const rowsXml = [];
+  rowsXml.push(`<row r="1">${xlsxCell(1, 1, title, 1)}</row>`);
+  const headers = ["ORDEN", "CLIENTE", "PRODUCTOS", "ESTATUS", "HORA", "POR"];
+  rowsXml.push(`<row r="3">${headers.map((h, i) => xlsxCell(i + 1, 3, h, 2)).join("")}</row>`);
+
+  let r = 4;
+  rows.forEach((row, i) => {
+    const idx = i + 1;
+    const baseStyle = (idx % 2 === 0) ? 4 : 3;
+    const cells = xlsxCell(1, r, row.orden, baseStyle) +
+      xlsxCell(2, r, row.cliente, baseStyle) +
+      xlsxCell(3, r, row.productos, baseStyle) +
+      xlsxCell(4, r, row.estatusLabel, baseStyle) +
+      xlsxCell(5, r, row.hora, baseStyle) +
+      xlsxCell(6, r, row.por, baseStyle);
+    rowsXml.push(`<row r="${r}">${cells}</row>`);
+    r++;
+  });
+
+  const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
+    `<cols><col min="1" max="1" width="14" customWidth="1"/>` +
+    `<col min="2" max="2" width="26" customWidth="1"/>` +
+    `<col min="3" max="3" width="42" customWidth="1"/>` +
+    `<col min="4" max="4" width="16" customWidth="1"/>` +
+    `<col min="5" max="5" width="12" customWidth="1"/>` +
+    `<col min="6" max="6" width="14" customWidth="1"/></cols>` +
+    `<sheetData>${rowsXml.join("")}</sheetData>` +
+    `<mergeCells count="1"><mergeCell ref="A1:F1"/></mergeCells>` +
+    `</worksheet>`;
+
+  const enc = new TextEncoder();
+  const files = [
+    { name: "[Content_Types].xml", content: enc.encode(XLSX_CONTENT_TYPES) },
+    { name: "_rels/.rels", content: enc.encode(XLSX_RELS) },
+    { name: "xl/workbook.xml", content: enc.encode(XLSX_WORKBOOK) },
+    { name: "xl/_rels/workbook.xml.rels", content: enc.encode(XLSX_WORKBOOK_RELS) },
+    { name: "xl/styles.xml", content: enc.encode(XLSX_STYLES) },
+    { name: "xl/worksheets/sheet1.xml", content: enc.encode(sheetXml) },
+  ];
+  const zipBytes = buildZip(files);
+  return new Blob([zipBytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+}
+
+let dailySummaryRows = [];
+function goDailySummary() {
+  const today = todayStr();
+  const active = ordenes.filter(o => o.fecha === today || o.actualizado === today);
+  dailySummaryRows = active.map(o => {
+    const est = parseInt(o.estatus) || 1;
+    return {
+      orden: o.orden, cliente: o.cliente, productos: o.productos,
+      estatusLabel: LABELS[est - 1] || o.estatus, hora: o.hora || '', por: o.actualizadoPor || ''
+    };
+  });
+  document.getElementById('dailySummaryCount').textContent = `${dailySummaryRows.length} orders active today`;
+  const tbody = document.querySelector('#dailySummaryTable tbody');
+  tbody.innerHTML = dailySummaryRows.length
+    ? dailySummaryRows.map(r => `<tr><td>${r.orden}</td><td>${r.cliente}</td><td>${r.productos}</td><td>${r.estatusLabel}</td><td>${r.hora}</td><td>${r.por}</td></tr>`).join('')
+    : '<tr><td colspan="6" style="text-align:center;color:var(--text-faint);">No orders active today</td></tr>';
+  show('screen-daily-summary');
+}
+document.getElementById('downloadSummaryBtn').addEventListener('click', () => {
+  if (!dailySummaryRows.length) { showToast('No orders to download'); return; }
+  const today = todayStr();
+  const blob = buildDailySummaryXlsxBlob(`CHULA BRAND - DAILY SUMMARY ${today}`, dailySummaryRows);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `Daily_Summary_${today}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
 // UI wiring — IDs con prefijo "papaya" para no chocar con el resto del app
 const papayaDropzone = document.getElementById("papayaDropzone");
 const papayaFileInput = document.getElementById("papayaFileInput");
@@ -1545,6 +1716,12 @@ async function sendAndSyncDraft() {
 papayaSendDraftBtn.addEventListener("click", sendAndSyncDraft);
 
 prefetchUsers(); // arranca desde que carga la página, para que "Clerk" abra instantáneo
+
+// Auto-refresh de la lista de órdenes cada 30s, solo mientras el Shipping Panel está activo
+setInterval(() => {
+  const encScreen = document.getElementById('screen-enc');
+  if (encScreen && encScreen.classList.contains('active') && currentUser) loadOrdenes();
+}, 30000);
 </script>
 </body>
 </html>
