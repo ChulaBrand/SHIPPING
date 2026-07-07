@@ -20,6 +20,8 @@
   }
   body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:2rem 1rem 4rem; }
   .container { width:100%; max-width:420px; }
+  @media (min-width:640px) { .container { max-width:560px; } body { font-size:16px; } }
+  @media (min-width:1024px) { .container { max-width:680px; } body { padding-top:3rem; } }
   .logo-row { display:flex; align-items:center; gap:10px; margin-bottom:2.5rem; }
   .logo-mark { width:36px; height:36px; background:var(--purple); border-radius:9px; display:flex; align-items:center; justify-content:center; overflow:hidden; }
   .logo-mark svg { width:36px; height:36px; }
@@ -346,9 +348,6 @@
       <p class="top-bar-title">Shipping panel</p>
       <button class="btn-back" onclick="goRol()">Sign out</button>
     </div>
-    <button class="btn-sync" onclick="syncDraft()">
-      <i class="ti ti-refresh"></i> Sync from Draft
-    </button>
     <p class="section-label">Find order</p>
     <div class="search-card">
       <div style="display:flex;flex:1;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);overflow:hidden;">
@@ -806,17 +805,6 @@ function renderOrdenes() {
     pastList.innerHTML='';
     pastOrders.forEach(o=>{pastList.innerHTML+=buildClerkCard(o);});
   } else { pastSection.style.display='none'; }
-}
-
-async function syncDraft() {
-  const btn=document.querySelector('.btn-sync');
-  btn.innerHTML='<span class="spinner"></span>Syncing...'; btn.disabled=true;
-  try {
-    await fetch(API,{method:'POST',body:JSON.stringify({pin:PIN,action:'syncDraft'})});
-    await loadOrdenes();
-    showToast('Synced from Draft ✓');
-  } catch(e){ showToast('Sync error — check connection'); }
-  btn.innerHTML='<i class="ti ti-refresh"></i> Sync from Draft'; btn.disabled=false;
 }
 
 // ── UPLOAD PDF → DRAFT ──────────────────────────────────
@@ -1599,9 +1587,17 @@ async function handlePapayaFile(file) {
       return;
     }
     papayaLastRows = rows; papayaLastFlags = flags;
-    // Filas para el Draft (orden/cliente/productos), del mismo parseo completo — no solo lo de papaya
+    // Filas para el Draft (orden/cliente/productos), del mismo parseo completo — no solo lo de papaya.
+    // Agrupa líneas con la misma descripción y suma sus cantidades (algunas órdenes traen el mismo
+    // producto repetido varias veces, por tarima, en vez de una sola línea con el total).
     papayaLastDraftRows = orders.map(o => {
-      const productos = o.products.filter(([qty]) => qty !== null).map(([qty, desc]) => `${qty} ${desc}`).join(', ');
+      const combined = new Map();
+      for (const [qty, desc] of o.products) {
+        if (qty === null) continue;
+        const key = desc.trim();
+        combined.set(key, (combined.get(key) || 0) + qty);
+      }
+      const productos = [...combined.entries()].map(([desc, qty]) => `${qty} ${desc}`).join(', ');
       return { orden: o.sp, cliente: o.name, productos };
     }).filter(r => r.productos);
     renderPapayaResults(rows, flags);
@@ -1690,7 +1686,7 @@ papayaSendDraftBtn.addEventListener("click", async () => {
     const result2 = await res2.json();
     if (result2.error) { showToast(`Se guardó el Draft, pero el sync falló: ${result2.error}`); return; }
 
-    showToast(`${result.count} órdenes enviadas y sincronizadas ✓`);
+    showToast(`${result.count} órdenes enviadas, sincronizadas y Draft limpiado ✓`);
   } catch (e) { showToast('Connection error'); }
   papayaSendDraftBtn.disabled = false;
   papayaSendDraftBtn.textContent = original;
