@@ -372,6 +372,7 @@
     <div class="top-bar">
       <p class="top-bar-title">Shipping Panel</p>
       <div style="display:flex;gap:8px;">
+        <button class="btn-back" onclick="loadOrdenes()">⟳ Refresh</button>
         <button class="btn-back" onclick="goPapayaUpload('screen-enc')">Upload</button>
         <button class="btn-back" onclick="goRol()">Sign out</button>
       </div>
@@ -516,7 +517,12 @@ function prefetchUsers() {
 }
 let papayaReturnScreen = 'screen-rol';
 function goPapayaUpload(returnScreen) { papayaReturnScreen = returnScreen || 'screen-rol'; show('screen-papaya-upload'); }
-function goPapayaBack() { show(papayaReturnScreen); }
+function goPapayaBack() {
+  show(papayaReturnScreen);
+  // Si regresamos al Shipping Panel, recargar las órdenes automáticamente
+  // (evita tener que hacer un refresh completo de la página, que saca del login)
+  if (papayaReturnScreen === 'screen-enc' && currentUser) loadOrdenes();
+}
 function goRol() { pinVal=""; updateDots(); currentUser=null; selectedUser=null; adminPinVal=''; show('screen-rol'); prefetchUsers(); }
 function goChofer() {
   document.getElementById('error-msg').style.display='none';
@@ -971,6 +977,9 @@ async function extractLines(arrayBuffer) {
       let text = line.map(it => it.str).join(" ").replace(/\s{2,}/g, " ").trim();
       if (!text) continue;
       if (text.startsWith("SALES ORDERS") || text.startsWith("DATE TIME")) continue;
+      if (text.toLowerCase().includes("ibarra")) {
+        console.log("[DEBUG Ibarra line]", JSON.stringify(text));
+      }
       lines.push(text);
     }
   }
@@ -1049,16 +1058,19 @@ function classifyPapayaLine(desc) {
   return [null, null, null];
 }
 
-function shortenClientName(rawName, note) {
+function shortenClientName(rawName, note, sp) {
   let name = rawName.trim();
 
   if (name.toLowerCase() === "ibarra") {
     if (note) {
       const m = note.match(/^([A-Za-z&.\s']+)/);
       let sub = (m ? m[1] : note).trim().replace(/-$/, "").trim();
-      return sub === sub.toUpperCase() ? titleCase(sub) : sub;
+      if (sub) return sub === sub.toUpperCase() ? titleCase(sub) : sub;
     }
-    return name;
+    // No se pudo identificar el sub-cliente en el PDF: en vez de dejar "Ibarra" a secas
+    // (lo cual hace que varios pedidos sin nombre se vean idénticos y se puedan fusionar
+    // por error), se agrega el número de SP para que cada uno quede único e identificable.
+    return sp ? `Ibarra (${sp})` : name;
   }
 
   let m = name.match(/^([A-Z][A-Za-z .]*?),?\s*([A-Z]{2})\s+(GROC|FDC|MDC)\b/);
@@ -1106,7 +1118,10 @@ function buildReportRows(orders) {
       papayaTypes.set(key, (papayaTypes.get(key) || 0) + qty);
     }
     if (!hasPapaya) continue;
-    const shortName = shortenClientName(o.name, o.note);
+    const shortName = shortenClientName(o.name, o.note, o.sp);
+    if (o.name.trim().toLowerCase() === "ibarra") {
+      console.log("[DEBUG Ibarra order]", JSON.stringify({ sp: o.sp, note: o.note, shortName }));
+    }
     parsed.push({ sp: o.sp, cliente_full: o.name, cliente_corto: shortName, note: o.note, papaya_types: papayaTypes });
   }
 
