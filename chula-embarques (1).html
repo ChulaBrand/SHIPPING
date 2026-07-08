@@ -1,0 +1,1741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Chula Brand — Embarques</title>
+<link rel="icon" type="image/png" href="icons/favicon-32.png" />
+
+<!-- PWA: manifest -->
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#3B0F1A" />
+
+<!-- PWA: soporte iOS/Safari -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Chula" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
+  :root {
+    --green-dark: #1B3A2D; --green-mid: #7EC845; --purple: #5B21B6;
+    --bg: #F7F5F0; --white: #fff; --text: #1a1a1a;
+    --text-muted: #6b7280; --text-faint: #9ca3af;
+    --border: rgba(0,0,0,0.10); --border-strong: rgba(0,0,0,0.18);
+    --radius: 12px; --radius-sm: 8px;
+  }
+  body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:2rem 1rem 4rem; }
+  .container { width:100%; max-width:420px; }
+  @media (min-width:640px) {
+    .container { max-width:600px; }
+    body { font-size:16px; }
+    .role-btn { padding:2.5rem 1.25rem 2.25rem; }
+    .role-icon-wrap { width:68px; height:68px; }
+    .role-icon { font-size:32px; }
+    .role-title { font-size:17px; }
+    .role-desc { font-size:13.5px; }
+    .user-select-btn { padding:2.25rem 1.25rem; font-size:16.5px; }
+    .user-select-btn i { font-size:30px; }
+    .page-title { font-size:28px; }
+    .page-sub { font-size:15px; }
+  }
+  @media (min-width:1024px) {
+    .container { max-width:760px; }
+    body { padding-top:3.5rem; }
+    .role-grid { gap:20px; }
+  }
+  .logo-row { display:flex; align-items:center; gap:10px; margin-bottom:2.5rem; }
+  .logo-mark { width:52px; height:52px; border-radius:11px; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .logo-mark svg { width:52px; height:52px; }
+  .logo-text { font-size:13px; font-weight:600; letter-spacing:.10em; text-transform:uppercase; color:var(--text-muted); }
+  .logo-text span { color:var(--text); }
+  .screen { display:none; } .screen.active { display:block; }
+  .page-title { font-size:24px; font-weight:500; margin-bottom:4px; }
+  .page-sub { font-size:15px; color:var(--text-muted); margin-bottom:2rem; }
+  .role-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; }
+  .role-btn { background:var(--white); border:1.5px solid var(--border); border-radius:16px; padding:2rem 1rem 1.75rem; cursor:pointer; text-align:center; transition:border-color .15s,transform .1s,box-shadow .15s; }
+  .role-btn:hover { border-color:var(--purple); box-shadow:0 6px 16px rgba(91,42,134,.10); } .role-btn:active { transform:scale(.97); }
+  .role-icon-wrap { width:56px; height:56px; border-radius:50%; background:#F5F0FE; display:flex; align-items:center; justify-content:center; margin:0 auto 12px; }
+  .role-icon { font-size:26px; color:var(--purple); margin-bottom:0; display:block; }
+  .role-title { font-size:15px; font-weight:700; margin-bottom:4px; }
+  .role-desc { font-size:12.5px; color:var(--text-faint); line-height:1.4; }
+  .top-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; }
+  .top-bar-title { font-size:17px; font-weight:600; }
+  .btn-back { background:none; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px; color:var(--text-muted); cursor:pointer; padding:5px 12px; font-family:'Inter',sans-serif; }
+  .pin-wrap { max-width:280px; margin:0 auto; text-align:center; }
+  .pin-title { font-size:17px; font-weight:600; margin-bottom:6px; }
+  .pin-sub { font-size:13px; color:var(--text-muted); margin-bottom:1.75rem; }
+  .pin-dots { display:flex; justify-content:center; gap:14px; margin-bottom:1.75rem; }
+  .pin-dot { width:15px; height:15px; border-radius:50%; border:2px solid var(--border-strong); background:var(--bg); transition:all .15s; }
+  .pin-dot.filled { background:var(--green-dark); border-color:var(--green-dark); }
+  .pin-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px; }
+  .pkey { height:54px; font-size:20px; font-weight:500; background:var(--white); border:1px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; color:var(--text); font-family:'Inter',sans-serif; }
+  .pkey:active { background:var(--bg); transform:scale(.95); }
+  .pkey.del { font-size:16px; color:var(--text-muted); }
+  .pin-error { font-size:13px; color:#dc2626; min-height:20px; margin-bottom:10px; }
+  .inp { font-family:'IBM Plex Mono',monospace; font-size:16px; width:100%; padding:0 14px; height:48px; background:var(--white); color:var(--text); border:1px solid var(--border); border-radius:var(--radius-sm); outline:none; margin-bottom:10px; }
+  .inp:focus { border-color:var(--green-dark); }
+  .inp-sm { font-family:'IBM Plex Mono',monospace; font-size:13px; flex:1; padding:0 11px; height:42px; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:var(--radius-sm); outline:none; min-width:0; }
+  .inp-sm.txt { font-family:'Inter',sans-serif; }
+  .btn-primary { width:100%; height:48px; font-size:15px; font-weight:600; background:var(--green-dark); color:#fff; border:none; border-radius:var(--radius-sm); cursor:pointer; font-family:'Inter',sans-serif; }
+  .btn-primary:active { transform:scale(.98); }
+  .btn-search-sm { height:42px; padding:0 16px; font-size:13px; font-weight:600; background:var(--green-dark); color:#fff; border:none; border-radius:var(--radius-sm); cursor:pointer; white-space:nowrap; font-family:'Inter',sans-serif; }
+  .section-label { font-size:11px; font-weight:600; color:var(--text-faint); text-transform:uppercase; letter-spacing:.09em; margin-bottom:10px; }
+  .search-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:1rem; margin-bottom:1.5rem; display:flex; gap:8px; }
+  .orders-list { display:flex; flex-direction:column; gap:10px; }
+  .results-list { display:flex; flex-direction:column; gap:10px; margin-top:4px; }
+  /* order cards */
+  .order-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:1rem; }
+  .order-card.highlight { border:2px solid var(--green-dark); }
+  .order-card.locked, .order-card-compact.locked { opacity:.65; }
+  .order-num { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-faint); margin-bottom:2px; }
+  .order-cliente { font-size:15px; font-weight:600; margin-bottom:2px; }
+  .order-producto-lbl { font-size:12px; color:var(--text-muted); margin-bottom:10px; }
+  .highlight-badge { display:inline-block; font-size:10px; font-weight:600; background:var(--green-dark); color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
+  .locked-badge { display:inline-block; font-size:10px; font-weight:600; background:#6b7280; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
+  .producto-row { display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--bg); border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:1rem; }
+  .producto-row i { font-size:15px; color:var(--text-faint); }
+  .producto-row span { font-size:13px; color:var(--text); font-weight:500; }
+  /* tracker */
+  .track-steps { display:flex; align-items:center; margin-bottom:6px; }
+  .step { flex:1; display:flex; flex-direction:column; align-items:center; position:relative; }
+  .step-dot { width:24px; height:24px; border-radius:50%; border:2px solid var(--border-strong); background:var(--bg); display:flex; align-items:center; justify-content:center; font-size:11px; z-index:1; color:var(--text-faint); transition:all .2s; }
+  .step-dot.done { background:var(--green-dark); border-color:var(--green-dark); color:#fff; }
+  .step-dot.s1 { background:#F3E8FF; border-color:#C084FC; color:#7E22CE; }
+  .step-dot.s2 { background:#DBEAFE; border-color:#93C5FD; color:#1E40AF; }
+  .step-dot.s3 { background:#FEF9C3; border-color:#FDE047; color:#854D0E; }
+  .step-dot.s4 { background:#FAEEDA; border-color:#EF9F27; color:#854F0B; }
+  .step-dot.s5 { background:#EAF3DE; border-color:#97C459; color:#3B6D11; }
+  .step-dot.s6 { background:#EDE9FE; border-color:#A78BFA; color:#5B21B6; }
+  .step-line { position:absolute; top:12px; left:calc(50% + 12px); right:calc(-50% + 12px); height:2px; background:var(--border-strong); z-index:0; }
+  .step-line.done { background:var(--green-dark); }
+  .step:last-child .step-line { display:none; }
+  .step-labels { display:flex; margin-bottom:8px; }
+  .step-label { flex:1; text-align:center; font-size:8px; color:var(--text-faint); padding:0 1px; line-height:1.3; }
+  .step-label.active { color:var(--text); font-weight:600; }
+  /* status banner */
+  .status-banner { display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border-radius:var(--radius-sm); margin-bottom:1rem; }
+  .status-banner-icon { font-size:20px; flex-shrink:0; margin-top:1px; }
+  .status-banner-label { font-size:13px; font-weight:600; margin-bottom:2px; }
+  .status-banner-desc { font-size:12px; line-height:1.4; opacity:.85; }
+  .sb-1{background:#F3E8FF;color:#7E22CE;} .sb-2{background:#DBEAFE;color:#1E40AF;}
+  .sb-3{background:#FEF9C3;color:#854D0E;} .sb-4{background:#FAEEDA;color:#854F0B;}
+  .sb-5{background:#EAF3DE;color:#3B6D11;} .sb-6{background:#EDE9FE;color:#5B21B6;}
+  /* partial ready banner for driver */
+  .partial-banner { background:#FEF3C7; color:#92400E; border-radius:var(--radius-sm); padding:8px 12px; font-size:12px; margin-bottom:10px; }
+  .partial-banner strong { display:block; font-size:13px; margin-bottom:4px; }
+  .partial-item { display:flex; align-items:center; gap:6px; margin-top:4px; font-size:12px; }
+  .partial-item.ready { color:#3B6D11; } .partial-item.pending { color:#92400E; }
+  .meta-row { display:flex; justify-content:space-between; border-top:1px solid var(--border); padding-top:1rem; margin-top:.25rem; }
+  .meta-label { font-size:12px; color:var(--text-faint); }
+  .meta-val { font-size:12px; color:var(--text-muted); font-weight:500; }
+  .error-msg { font-size:13px; color:#dc2626; margin:10px 0 0; display:none; }
+  /* clerk status btns — 3+3 grid */
+  .status-btns { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:8px; }
+  .sbtn { height:40px; font-size:11px; font-weight:500; border:2px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; background:var(--bg); color:var(--text-muted); font-family:'Inter',sans-serif; line-height:1.2; padding:0 4px; }
+  .sbtn:active { transform:scale(.97); }
+  .sbtn.sel-1{background:#F3E8FF;color:#7E22CE;border-color:#C084FC;font-weight:600;}
+  .sbtn.sel-2{background:#DBEAFE;color:#1E40AF;border-color:#93C5FD;font-weight:600;}
+  .sbtn.sel-3{background:#FEF9C3;color:#854D0E;border-color:#FDE047;font-weight:600;}
+  .sbtn.sel-4{background:#FAEEDA;color:#854F0B;border-color:#EF9F27;font-weight:600;}
+  .sbtn.sel-5{background:#EAF3DE;color:#3B6D11;border-color:#97C459;font-weight:600;}
+  .sbtn.sel-6{background:#EDE9FE;color:#5B21B6;border-color:#A78BFA;font-weight:600;}
+  .sbtn:disabled { opacity:.45; cursor:not-allowed; }
+  .sbtn-letter { display:block; font-size:9px; font-weight:700; opacity:.6; letter-spacing:.06em; margin-bottom:2px; }
+  .sbtn-text { display:block; }
+  /* checklist / per-product status circles */
+  .checklist { display:flex; flex-direction:column; gap:10px; margin-bottom:10px; padding:10px 12px; background:var(--bg); border-radius:var(--radius-sm); border:1px solid var(--border); }
+  .checklist-title { font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:2px; }
+  .product-item { display:flex; flex-direction:column; gap:6px; }
+  .product-name { font-size:12.5px; color:var(--text); line-height:1.3; }
+  .pcircle-row { display:flex; gap:5px; }
+  .pcircle { width:24px; height:24px; border-radius:50%; border:2px solid var(--border-strong); background:var(--white); display:flex; align-items:center; justify-content:center; font-size:9.5px; font-weight:700; color:var(--text-faint); cursor:pointer; font-family:'IBM Plex Mono',monospace; flex-shrink:0; }
+  .pcircle:active { transform:scale(.92); }
+  .pcircle.active.p1{background:#F3E8FF;border-color:#C084FC;color:#7E22CE;}
+  .pcircle.active.p2{background:#DBEAFE;border-color:#93C5FD;color:#1E40AF;}
+  .pcircle.active.p3{background:#FEF9C3;border-color:#FDE047;color:#854D0E;}
+  .pcircle.active.p4{background:#FAEEDA;border-color:#EF9F27;color:#854F0B;}
+  .pcircle.active.p5{background:#EAF3DE;border-color:#97C459;color:#3B6D11;}
+  .pcircle.active.p6{background:#EDE9FE;border-color:#A78BFA;color:#5B21B6;}
+  .pcircle.disabled { cursor:default; opacity:.55; }
+  .driver-product-row { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:12.5px; padding:3px 0; }
+  .driver-product-row span:first-child { color:var(--text); }
+  .driver-product-badge { font-size:9.5px; font-weight:700; padding:3px 8px; border-radius:99px; white-space:nowrap; }
+  .driver-product-badge.not-shipped { background:#FEE2E2; color:#B91C1C; }
+  .status-desc-lbl { font-size:11px; color:var(--text-faint); font-style:italic; text-align:center; min-height:16px; }
+  .warn-note { font-size:11px; color:#92400E; background:#FEF3C7; border:1px solid #FDE68A; border-radius:var(--radius-sm); padding:6px 10px; text-align:center; margin-bottom:8px; }
+  .user-select-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:1.75rem 1rem; background:var(--white); border:1.5px solid var(--border); border-radius:16px; cursor:pointer; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; color:var(--text); text-align:center; transition:border-color .15s,transform .1s,box-shadow .15s; }
+  .user-select-btn:hover { border-color:var(--purple); box-shadow:0 6px 16px rgba(91,42,134,.10); }
+  .user-select-btn:active { transform:scale(.97); }
+  .user-select-btn i { font-size:26px; color:var(--purple); }
+  .admin-user-row { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--white); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:8px; }
+  .admin-user-row .name { font-weight:600; font-size:14px; }
+  .admin-user-row .inactive { color:var(--text-faint); text-decoration:line-through; }
+  .admin-toggle-btn { font-size:11.5px; font-weight:600; padding:6px 12px; border-radius:99px; cursor:pointer; border:1px solid var(--border-strong); background:var(--white); }
+  .admin-toggle-btn.is-active { color:var(--green-dark); border-color:var(--green-dark); }
+  .admin-toggle-btn.is-inactive { color:#B91C1C; border-color:#FCA5A5; background:#FEF2F2; }
+  .client-header { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; margin-bottom:10px; display:flex; align-items:center; gap:10px; }
+  .client-header i { font-size:18px; color:var(--text-muted); }
+  .client-header-name { font-size:14px; font-weight:600; }
+  .client-header-sub { font-size:12px; color:var(--text-faint); }
+  .day-divider { font-size:11px; font-weight:600; color:var(--text-faint); text-transform:uppercase; letter-spacing:.08em; padding:6px 0 4px; border-top:1px solid var(--border); margin-top:4px; }
+  .empty-state { text-align:center; padding:2.5rem 0; color:var(--text-faint); font-size:14px; line-height:2; }
+  .empty-state i { font-size:28px; display:block; margin-bottom:6px; }
+  .toast { position:fixed; bottom:2rem; left:50%; transform:translateX(-50%) translateY(80px); background:var(--green-dark); color:#fff; font-size:13px; font-weight:500; padding:10px 20px; border-radius:99px; transition:transform .3s; white-space:nowrap; z-index:99; }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+  .spinner { display:inline-block; width:15px; height:15px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; vertical-align:-3px; margin-right:6px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  /* upload-status: usado por el panel de Admin (mensajes de agregar usuario) */
+  .upload-status { font-size:13px; font-family:'IBM Plex Mono',monospace; text-align:center; margin-bottom:12px; display:none; }
+  .upload-status.show { display:block; }
+  .upload-status.err { color:#dc2626; }
+  .upload-status.ok { color:var(--green-dark); }
+  .upload-status.loading { color:var(--purple); }
+
+  /* Papaya pallet report tool — estilos aislados con prefijo pp- para no chocar con el resto del app */
+  #screen-papaya-upload.pp-tool {
+    --pp-purple: #5B2A86;
+    --pp-purple-dark: #3E1D5E;
+    --pp-papaya: #FF8C42;
+    --pp-bg: #F7F5FA;
+    --pp-card: #FFFFFF;
+    --pp-border: #E3DDEC;
+    --pp-text: #2B2233;
+    --pp-muted: #756B85;
+    --pp-red: #B3261E;
+    margin: -2rem -1rem 0;
+    padding: 1.25rem 1rem 2.5rem;
+    background: var(--pp-bg);
+    min-height: calc(100vh);
+    color: var(--pp-text);
+  }
+  .pp-header {
+    background: linear-gradient(135deg, var(--pp-purple), var(--pp-purple-dark));
+    color: #fff; padding: 20px 18px; border-radius: 14px; margin-bottom: 16px;
+  }
+  .pp-header h1 { margin: 6px 0 0; font-size: 18px; line-height:1.3; }
+  .pp-header p { margin: 6px 0 0; opacity: .85; font-size: 12.5px; }
+  .pp-card { background: var(--pp-card); border: 1px solid var(--pp-border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .pp-dropzone { border: 2px dashed var(--pp-purple); border-radius: 12px; padding: 32px 16px; text-align: center; cursor: pointer; transition: background .15s; background: #FBF9FD; }
+  .pp-dropzone.drag { background: #F0E9F7; }
+  .pp-dropzone .pp-icon { font-size: 36px; }
+  .pp-dropzone strong { display:block; margin-top:8px; font-size:14px; }
+  .pp-dropzone p { margin: 6px 0 0; color: var(--pp-muted); font-size: 12.5px; }
+  .pp-status { font-size: 13px; color: var(--pp-muted); margin-top: 10px; min-height:1em; }
+  .pp-btn { background: var(--pp-purple); color: #fff; border: none; border-radius: 8px; padding: 10px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .pp-btn:hover { background: var(--pp-purple-dark); }
+  .pp-btn:disabled { background: #C9C1D3; cursor: not-allowed; }
+  .pp-btn.pp-secondary { background: var(--pp-papaya); }
+  .pp-btn.pp-secondary:hover { background: #E5762B; }
+  .pp-btn.pp-outline { background: #fff; color: var(--pp-purple); border: 2px solid var(--pp-purple); }
+  .pp-btn.pp-outline:hover { background: #FBF9FD; }
+  .pp-summary { font-size: 14px; margin: 0 0 14px; color: var(--pp-muted); }
+  .pp-summary b { color: var(--pp-purple); }
+  .pp-actions { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .pp-sheets-box { margin-top: 12px; }
+  .pp-sheets-text { width:100%; height:180px; font-family:Consolas,Monaco,monospace; font-size:12px; border:1px solid var(--pp-border); border-radius:8px; padding:10px; resize:vertical; background:#FAFAFA; color:var(--pp-text); margin-bottom:8px; display:block; }
+  .pp-copy-status { margin-left:8px; font-size:12.5px; color:var(--pp-purple); }
+  .pp-flags { margin:10px 0; }
+  .pp-flags .flag { color: var(--pp-red); font-size:12.5px; font-style:italic; margin-bottom:4px; }
+  .pp-table { width:100%; border-collapse:collapse; font-size:13px; margin-top:10px; }
+  .pp-table th, .pp-table td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--pp-border); }
+  .pp-table th { background:var(--pp-purple); color:#fff; }
+  .pp-table tr:nth-child(even) td { background:#F3EEF9; }
+  .pp-footer { text-align:center; color:var(--pp-muted); font-size:11.5px; padding:8px 0 0; }
+
+  /* Compact/expand toggle + status filter chips */
+  .controls-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .controls-actions { display:flex; gap:6px; flex-shrink:0; }
+  .view-toggle-btn { width:34px; height:34px; font-size:14px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--white); color:var(--text-muted); cursor:pointer; display:flex; align-items:center; justify-content:center; font-family:'Inter',sans-serif; }
+  .view-toggle-btn:active { background:var(--bg); }
+  .filter-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .filter-chip { font-size:12px; font-weight:700; width:30px; height:30px; border-radius:50%; border:1.5px solid var(--border-strong); background:var(--white); color:var(--text-muted); cursor:pointer; font-family:'Inter',sans-serif; display:flex; align-items:center; justify-content:center; }
+  .filter-chip.active { border-color:var(--purple); color:var(--purple); background:#F5F0FE; }
+
+  /* Compact order card */
+  .order-card-compact { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:.75rem 1rem; display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; }
+  .order-card-compact:hover { border-color:var(--border-strong); }
+  .order-card-compact .oc-left { min-width:0; }
+  .order-card-compact .oc-num { font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--text-faint); }
+  .order-card-compact .oc-cliente { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .status-pill { font-size:11px; font-weight:600; padding:4px 10px; border-radius:99px; white-space:nowrap; flex-shrink:0; }
+
+  /* Daily summary preview */
+  .summary-table { width:100%; border-collapse:collapse; font-size:12px; background:var(--white); border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden; margin-bottom:14px; }
+  .summary-table th { background:var(--green-dark); color:#fff; text-align:left; padding:8px; font-size:10px; text-transform:uppercase; letter-spacing:.03em; }
+  .summary-table td { padding:7px 8px; border-bottom:1px solid var(--border); vertical-align:top; }
+  .summary-table tr:nth-child(even) td { background:var(--bg); }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo-row">
+    <div class="logo-mark">
+      <img src="icons/icon-192.png" alt="Chula Brand" style="width:100%;height:100%;object-fit:contain;" />
+    </div>
+    <span class="logo-text">Chula Brand — <span onclick="toggleAdminBtn()" style="cursor:pointer;">Embarques</span></span>
+  </div>
+
+  <!-- ROL -->
+  <div class="screen active" id="screen-rol">
+    <p class="page-title">Welcome</p>
+    <p class="page-sub">How are you accessing today?</p>
+    <div class="role-grid">
+      <div class="role-btn" onclick="goChofer()">
+        <div class="role-icon-wrap"><i class="ti ti-truck role-icon"></i></div>
+        <p class="role-title">Driver / Client</p>
+        <p class="role-desc">Check order status</p>
+      </div>
+      <div class="role-btn" onclick="goUserSelect()">
+        <div class="role-icon-wrap"><i class="ti ti-clipboard-list role-icon"></i></div>
+        <p class="role-title">Shipping Clerk</p>
+        <p class="role-desc">Update orders</p>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:center;gap:10px;margin-top:22px;">
+      <button class="btn-back" onclick="goPapayaUpload()">Upload</button>
+      <button class="btn-back" id="hiddenAdminBtn" onclick="goAdminPin()" style="display:none;">Admin</button>
+    </div>
+  </div>
+
+  <!-- USER SELECT -->
+  <div class="screen" id="screen-user-select">
+    <div class="top-bar"><span></span><button class="btn-back" onclick="goRol()">← Back</button></div>
+    <p class="pin-title" style="text-align:center;">Who are you?</p>
+    <p class="pin-sub" style="text-align:center;">Select your name</p>
+    <div class="role-grid" id="user-select-list" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:16px;"></div>
+  </div>
+
+  <!-- PIN -->
+  <div class="screen" id="screen-pin">
+    <div class="top-bar"><span></span><button class="btn-back" onclick="goRol()">← Back</button></div>
+    <div class="pin-wrap">
+      <p class="pin-title" id="pin-title">Clerk access</p>
+      <p class="pin-sub" id="pin-sub">Enter your 4-digit PIN</p>
+      <div class="pin-dots">
+        <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
+        <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
+      </div>
+      <div class="pin-pad">
+        <button class="pkey" onclick="pinKey('1')">1</button><button class="pkey" onclick="pinKey('2')">2</button><button class="pkey" onclick="pinKey('3')">3</button>
+        <button class="pkey" onclick="pinKey('4')">4</button><button class="pkey" onclick="pinKey('5')">5</button><button class="pkey" onclick="pinKey('6')">6</button>
+        <button class="pkey" onclick="pinKey('7')">7</button><button class="pkey" onclick="pinKey('8')">8</button><button class="pkey" onclick="pinKey('9')">9</button>
+        <button class="pkey" onclick="pinKey('')"></button><button class="pkey" onclick="pinKey('0')">0</button>
+        <button class="pkey del" onclick="pinDel()"><i class="ti ti-backspace"></i></button>
+      </div>
+      <p class="pin-error" id="pin-error">Incorrect PIN. Try again.</p>
+    </div>
+  </div>
+
+  <!-- ADMIN PANEL -->
+  <div class="screen" id="screen-admin">
+    <div class="top-bar">
+      <p class="top-bar-title">Admin — Users</p>
+      <button class="btn-back" onclick="goRol()">← Back</button>
+    </div>
+    <div class="checklist" style="margin-bottom:16px;">
+      <p class="checklist-title">Add user</p>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <input id="admin-new-name" type="text" placeholder="Name" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'Inter',sans-serif;font-size:14px;">
+        <input id="admin-new-pin" type="text" inputmode="numeric" maxlength="4" placeholder="4-digit PIN" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;">
+        <button class="btn-primary" onclick="adminAddUser()">Add user</button>
+      </div>
+      <p class="upload-status show" id="admin-add-status" style="display:none;"></p>
+    </div>
+    <p class="section-label">Users</p>
+    <div id="admin-user-list"></div>
+  </div>
+
+  <!-- CHOFER -->
+  <div class="screen" id="screen-chofer">
+    <div class="top-bar">
+      <p class="top-bar-title">Check Order</p>
+      <button class="btn-back" onclick="goRol()">← Back</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+      <div style="display:flex;flex:1;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--white);overflow:hidden;">
+        <span style="padding:0 10px;height:48px;display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--text-faint);background:var(--bg);border-right:1px solid var(--border);white-space:nowrap;">SP00</span>
+        <input id="orden-input" type="text" placeholder="Order #" maxlength="16" style="flex:1;border:none;outline:none;padding:0 12px;height:48px;font-family:'IBM Plex Mono',monospace;font-size:16px;color:var(--text);background:var(--white);" />
+      </div>
+      <button class="btn-primary" id="btn-buscar" onclick="buscar()" style="width:auto;padding:0 18px;white-space:nowrap;">Search</button>
+    </div>
+    <p class="error-msg" id="error-msg"><i class="ti ti-alert-circle"></i> Order not found.</p>
+    <div class="results-list" id="results-list"></div>
+  </div>
+
+  <!-- ENCARGADO -->
+  <div class="screen" id="screen-enc">
+    <div class="top-bar">
+      <p class="top-bar-title">Shipping Panel</p>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-back" onclick="goPapayaUpload('screen-enc')">Upload</button>
+        <button class="btn-back" onclick="goRol()">Sign out</button>
+      </div>
+    </div>
+    <p class="section-label">Find order</p>
+    <div class="search-card">
+      <div style="display:flex;flex:1;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);overflow:hidden;">
+        <span style="padding:0 8px;height:42px;display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-faint);background:var(--border);white-space:nowrap;border-right:1px solid var(--border);">SP00</span>
+        <input id="enc-search" type="text" placeholder="Order or customer" maxlength="40" style="flex:1;border:none;outline:none;padding:0 10px;height:42px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);background:var(--bg);min-width:0;" />
+      </div>
+      <button class="btn-search-sm" onclick="encBuscar()">Search</button>
+    </div>
+    <div class="controls-row">
+      <div class="filter-chips" id="statusFilterChips"></div>
+      <div class="controls-actions">
+        <button class="view-toggle-btn" id="viewToggleBtn" onclick="toggleGlobalView()" title="View all"><i class="ti ti-arrows-maximize"></i></button>
+        <button class="view-toggle-btn" id="dailySummaryBtn" onclick="goDailySummary()" title="Download today's summary"><i class="ti ti-file-spreadsheet"></i></button>
+      </div>
+    </div>
+    <p class="section-label">Today's orders</p>
+    <div class="orders-list" id="orders-list"></div>
+    <div id="past-section" style="display:none;">
+      <p class="section-label" style="margin-top:1.25rem;">Previous orders</p>
+      <div class="orders-list" id="past-list"></div>
+    </div>
+  </div>
+
+  <!-- DAILY SUMMARY PREVIEW -->
+  <div class="screen" id="screen-daily-summary">
+    <div class="top-bar">
+      <p class="top-bar-title">Today's Summary</p>
+      <button class="btn-back" onclick="show('screen-enc')">← Back</button>
+    </div>
+    <p class="section-label" id="dailySummaryCount"></p>
+    <table class="summary-table" id="dailySummaryTable">
+      <thead><tr><th>Orden</th><th>Cliente</th><th>Productos</th><th>Estatus</th><th>Hora</th><th>Por</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <button class="btn-primary" id="downloadSummaryBtn"><i class="ti ti-download"></i> Download Excel</button>
+  </div>
+
+  <!-- PAPAYA PALLET REPORT (standalone tool, runs 100% in the browser, no server calls) -->
+  <div class="screen pp-tool" id="screen-papaya-upload">
+    <div class="top-bar">
+      <p class="top-bar-title">Upload PDF</p>
+      <button class="btn-back" onclick="goPapayaBack()">← Back</button>
+    </div>
+    <div class="pp-header">
+      <h1>🥭 Chula Brand — Reporte de Papaya</h1>
+      <p>Sube el PDF de "Sales Orders Not Shipped". Todo corre en tu navegador, no se sube nada a ningún servidor.</p>
+    </div>
+
+    <div class="pp-card">
+      <div class="pp-dropzone" id="papayaDropzone">
+        <div class="pp-icon">📄</div>
+        <strong>Haz clic aquí o arrastra el PDF</strong>
+        <p>Ejemplo: SALES ORDERS NOT SHIPPED FOR 07/06/26.pdf</p>
+        <input type="file" id="papayaFileInput" accept="application/pdf" style="display:none;">
+      </div>
+      <div class="pp-status" id="papayaStatus"></div>
+    </div>
+
+    <div class="pp-card" id="papayaResultsCard" style="display:none;">
+      <div id="papayaSummary" class="pp-summary"></div>
+      <div class="pp-actions">
+        <button class="pp-btn" id="papayaSendDraftBtn">📤 Send + Sync to Draft</button>
+        <button class="pp-btn pp-secondary" id="papayaDownloadExcelBtn">⬇ Excel</button>
+        <button class="pp-btn pp-secondary" id="papayaDownloadWordBtn">⬇ Word</button>
+        <button class="pp-btn pp-outline" id="papayaResetBtn">Procesar otro PDF</button>
+      </div>
+      <div id="papayaFlags" class="pp-flags"></div>
+      <table class="pp-table" id="papayaResultsTable">
+        <thead><tr><th>#</th><th>PALLETS</th><th>CLIENTE</th><th>COLOR Y TAMAÑO</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="pp-footer">Chula Brand · Reporte de Papaya · procesamiento 100% local en tu navegador</p>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbwJ8viClBTNp-fOnZ4mYlwDobAWSdKX1rD05E3OIN-y9yIXXBLVeeRbuMo5hYJssI_cuQ/exec";
+const PIN = "6Nzj0kVi22556jQWd5oMPjqHNQNrxCYE";
+let pinVal = "";
+let ordenes = [];
+let choferOrdenes = [];
+
+const LABELS = ["Order Received","Processing","Ready","Waiting for dock","Loading","Departed"];
+const DESCS  = [
+  "Order has been received in the system",
+  "Order received, being prepared",
+  "Order is ready, waiting for driver",
+  "Driver arrived, waiting for an available dock",
+  "Truck is at the dock, loading in progress",
+  "Truck has left the facility"
+];
+const ICONS   = ["ti-inbox","ti-loader","ti-circle-check","ti-road","ti-forklift","ti-truck"];
+const SEL     = ["sel-1","sel-2","sel-3","sel-4","sel-5","sel-6"];
+const LETTERS = ["O","P","R","W","L","D"];
+const DOT_CLS = ["s1","s2","s3","s4","s5","s6"];
+const BANNER_CLS  = ["sb-1","sb-2","sb-3","sb-4","sb-5","sb-6"];
+const BANNER_ICONS= ["📥","🕐","✅","🚧","📦","🚛"];
+
+// per-product status, in-memory for this session: { "orden": [1,2,1,...] }
+const productState = {};
+// modo de vista del panel del clerk: 'compact' (default) o 'expanded' (todas abiertas)
+let globalViewMode = 'compact';
+// órdenes abiertas individualmente a mano, sin importar el modo global
+const expandedOrders = new Set();
+// filtro por estatus activo (vacío = mostrar todos)
+const statusFilter = new Set();
+
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function yesterdayStr() {
+  const d = new Date(); d.setDate(d.getDate()-1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function formatLastUpdated(hora, fecha) {
+  if(!hora || hora==='—' || hora==='undefined') return '—';
+  const today = todayStr();
+  const yesterday = yesterdayStr();
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  if(!fecha || fecha===today) return 'Today, '+hora;
+  if(fecha===yesterday) return 'Yesterday, '+hora;
+  const parts = String(fecha).split('-');
+  if(parts.length===3) return months[parseInt(parts[1])-1]+' '+parseInt(parts[2])+', '+hora;
+  return hora;
+}
+function isOlderThan48h(fecha) {
+  if(!fecha) return false;
+  return (new Date() - new Date(fecha)) / 3600000 > 48;
+}
+
+function show(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+let usersPromise = null;
+function prefetchUsers() {
+  usersPromise = fetch(`${API}?action=getUsers`).then(r => r.json()).catch(() => null);
+}
+let papayaReturnScreen = 'screen-rol';
+function goPapayaUpload(returnScreen) { papayaReturnScreen = returnScreen || 'screen-rol'; show('screen-papaya-upload'); }
+function goPapayaBack() { show(papayaReturnScreen); }
+function goRol() { pinVal=""; updateDots(); currentUser=null; selectedUser=null; adminPinVal=''; show('screen-rol'); prefetchUsers(); }
+function goChofer() {
+  document.getElementById('error-msg').style.display='none';
+  document.getElementById('results-list').innerHTML='';
+  document.getElementById('orden-input').value='';
+  loadChoferData(); show('screen-chofer');
+}
+
+let pinMode = 'clerk'; // 'clerk' or 'admin'
+let selectedUser = null;
+let currentUser = null;
+let adminPinVal = '';
+
+async function goUserSelect() {
+  show('screen-user-select');
+  const list = document.getElementById('user-select-list');
+  list.innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i>Loading...</div>';
+  try {
+    if (!usersPromise) prefetchUsers(); // por si el prefetch inicial no alcanzó a correr
+    const names = await usersPromise;
+    if (!Array.isArray(names) || !names.length) { list.innerHTML = '<div class="empty-state"><i class="ti ti-user-off"></i>No active users. Ask an admin to add you.</div>'; return; }
+    list.innerHTML = names.map(n => `<div class="user-select-btn" onclick="selectUser('${n.replace(/'/g,"\\'")}')"><i class="ti ti-user"></i> ${n}</div>`).join('');
+  } catch (e) { list.innerHTML = '<div class="empty-state"><i class="ti ti-alert-circle"></i>Connection error.</div>'; }
+}
+
+function selectUser(name) {
+  selectedUser = name;
+  pinMode = 'clerk';
+  document.getElementById('pin-title').textContent = 'Clerk access';
+  document.getElementById('pin-sub').textContent = 'Enter PIN for ' + name;
+  goPin();
+}
+
+function toggleAdminBtn() {
+  const btn = document.getElementById('hiddenAdminBtn');
+  btn.style.display = (btn.style.display === 'none') ? 'inline-block' : 'none';
+}
+function goAdminPin() {
+  pinMode = 'admin';
+  document.getElementById('pin-title').textContent = 'Admin access';
+  document.getElementById('pin-sub').textContent = 'Enter admin PIN';
+  goPin();
+}
+
+function goPin() { pinVal=""; updateDots(); document.getElementById('pin-error').style.display='none'; show('screen-pin'); }
+function updateDots() { for(let i=0;i<4;i++) document.getElementById('pd'+i).className='pin-dot'+(i<pinVal.length?' filled':''); }
+function pinKey(k) {
+  if(!k||pinVal.length>=4) return;
+  pinVal+=k; updateDots();
+  if(pinVal.length===4) setTimeout(async ()=>{
+    if (pinMode === 'admin') {
+      try {
+        const res = await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'adminLogin', adminPin: pinVal }) });
+        const result = await res.json();
+        if (result.success) { adminPinVal = pinVal; show('screen-admin'); loadAdminUsers(); }
+        else { document.getElementById('pin-error').style.display='block'; pinVal=""; updateDots(); }
+      } catch(e){ document.getElementById('pin-error').style.display='block'; pinVal=""; updateDots(); }
+    } else {
+      try {
+        const res = await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'loginUser', name: selectedUser, userPin: pinVal }) });
+        const result = await res.json();
+        if (result.success) {
+          currentUser = selectedUser; show('screen-enc');
+          if (Array.isArray(result.orders)) { ordenes = result.orders; renderOrdenes(); } // ya vinieron en la misma respuesta del login
+          else { loadOrdenes(); } // respaldo por si el servidor no las mandó
+        }
+        else { document.getElementById('pin-error').style.display='block'; pinVal=""; updateDots(); }
+      } catch(e){ document.getElementById('pin-error').style.display='block'; pinVal=""; updateDots(); }
+    }
+  },200);
+}
+function pinDel() { pinVal=pinVal.slice(0,-1); updateDots(); }
+document.addEventListener('keydown', e => {
+  if(!document.getElementById('screen-pin').classList.contains('active')) return;
+  if(e.key >= '0' && e.key <= '9') { pinKey(e.key); }
+  else if(e.key === 'Backspace') { pinDel(); }
+});
+
+// ── ADMIN PANEL ──────────────────────────────────
+async function loadAdminUsers() {
+  const list = document.getElementById('admin-user-list');
+  list.innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i>Loading...</div>';
+  try {
+    const res = await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'adminGetUsers', adminPin: adminPinVal }) });
+    const users = await res.json();
+    if (users.error) { list.innerHTML = `<div class="empty-state"><i class="ti ti-alert-circle"></i>${users.error}</div>`; return; }
+    if (!users.length) { list.innerHTML = '<div class="empty-state"><i class="ti ti-users"></i>No users yet.</div>'; return; }
+    list.innerHTML = users.map(u => `
+      <div class="admin-user-row">
+        <span class="name${u.active?'':' inactive'}">${u.name}</span>
+        <span class="admin-toggle-btn ${u.active?'is-active':'is-inactive'}" onclick="adminToggleUser('${u.name.replace(/'/g,"\\'")}', ${!u.active})">${u.active?'Active':'Inactive'}</span>
+      </div>`).join('');
+  } catch(e) { list.innerHTML = '<div class="empty-state"><i class="ti ti-alert-circle"></i>Connection error.</div>'; }
+}
+
+async function adminAddUser() {
+  const nameEl = document.getElementById('admin-new-name');
+  const pinEl = document.getElementById('admin-new-pin');
+  const statusEl = document.getElementById('admin-add-status');
+  const name = nameEl.value.trim();
+  const userPin = pinEl.value.trim();
+  statusEl.style.display = 'block';
+  if (!name || !/^[0-9]{4}$/.test(userPin)) { statusEl.textContent = 'Enter a name and a 4-digit PIN.'; statusEl.className = 'upload-status show err'; return; }
+  statusEl.textContent = 'Adding...'; statusEl.className = 'upload-status show loading';
+  try {
+    const res = await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'adminAddUser', adminPin: adminPinVal, name, userPin }) });
+    const result = await res.json();
+    if (result.error) { statusEl.textContent = result.error; statusEl.className = 'upload-status show err'; return; }
+    nameEl.value = ''; pinEl.value = '';
+    statusEl.textContent = '✓ User added.'; statusEl.className = 'upload-status show ok';
+    loadAdminUsers();
+  } catch(e) { statusEl.textContent = 'Connection error.'; statusEl.className = 'upload-status show err'; }
+}
+
+async function adminToggleUser(name, active) {
+  try {
+    await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'adminToggleUser', adminPin: adminPinVal, name, active }) });
+    loadAdminUsers();
+  } catch(e) { showToast('Connection error.'); }
+}
+
+
+let choferDataPromise = null; // se usa en buscar() para esperar a que choferOrdenes esté listo
+async function loadChoferData() {
+  choferDataPromise = (async () => {
+    try { const r=await fetch(`${API}?action=getAll&pin=${PIN}`); const all=await r.json(); choferOrdenes = Array.isArray(all) ? all.filter(o=>!isOlderThan48h(o.actualizado)) : []; } catch(e){ choferOrdenes=[]; }
+  })();
+  return choferDataPromise;
+}
+
+function buildTracker(est) {
+  const steps = ICONS.map((icon,i)=>{
+    let dc='step-dot'; if(i+1<est) dc+=' done'; else if(i+1===est) dc+=' '+DOT_CLS[i];
+    return `<div class="step"><div class="${dc}"><i class="ti ${icon}"></i></div>${i<5?`<div class="step-line${i+1<est?' done':''}"></div>`:''}</div>`;
+  }).join('');
+  const lbls = LABELS.map((l,i)=>`<span class="step-label${i+1===est?' active':''}">${l}</span>`).join('');
+  return `<div class="track-steps">${steps}</div><div class="step-labels">${lbls}</div>`;
+}
+
+function parseProductos(str) {
+  if(!str) return [];
+  return String(str).split(',').map(s=>s.trim()).filter(Boolean);
+}
+
+// Driver card — shows each product's individual status when available
+function renderDriverCard(o, highlighted) {
+  const est = parseInt(o.estatus)||1;
+  const locked = isOlderThan48h(o.actualizado);
+  const prods = parseProductos(o.productos);
+  const statuses = (productState[o.orden] && productState[o.orden].length===prods.length)
+    ? productState[o.orden]
+    : (Array.isArray(o.productEstatus) && o.productEstatus.length===prods.length ? o.productEstatus : prods.map(()=>Math.min(est, 3)));
+
+  let productsHtml = '';
+  if(prods.length > 0) {
+    const rows = prods.map((p,i)=>{
+      const s = Math.min(statuses[i], 3);
+      const notShipped = est === 6 && s < 3;
+      const label = notShipped ? 'Not shipped' : LABELS[s-1];
+      const badge = notShipped ? `<span class="driver-product-badge not-shipped">⚠ ${label}</span>` : `<span class="driver-product-badge ${SEL[s-1]}">${LETTERS[s-1]} · ${label}</span>`;
+      return `<div class="driver-product-row"><span>${p}</span>${badge}</div>`;
+    }).join('');
+    productsHtml = `<div class="checklist"><p class="checklist-title">Products</p>${rows}</div>`;
+  }
+
+  const banner = `<div class="status-banner ${BANNER_CLS[est-1]}">
+    <span class="status-banner-icon">${BANNER_ICONS[est-1]}</span>
+    <div><p class="status-banner-label">${LABELS[est-1]}</p><p class="status-banner-desc">${DESCS[est-1]}</p></div>
+  </div>`;
+  const lockedTag = locked ? '<span class="locked-badge">Locked</span>' : '';
+
+  return `<div class="order-card${highlighted?' highlight':''}${locked?' locked':''}">
+    <p class="order-num" style="margin-bottom:4px;">Order #${o.orden}${highlighted?'<span class="highlight-badge">Your order</span>':''}${lockedTag}</p>
+    ${productsHtml}${banner}
+    ${buildTracker(est)}
+    <div class="meta-row"><span class="meta-label">Last updated</span><span class="meta-val">${formatLastUpdated(o.hora, o.actualizado || o.fecha)}</span></div>
+  </div>`;
+}
+
+async function buscar() {
+  const raw = document.getElementById('orden-input').value.trim();
+  if(!raw) return;
+  const val = 'SP00' + raw.replace(/^SP00/i, '');
+  const errEl=document.getElementById('error-msg'), list=document.getElementById('results-list'), btn=document.getElementById('btn-buscar');
+  errEl.style.display='none'; list.innerHTML='';
+  btn.innerHTML='<span class="spinner"></span>Searching...'; btn.disabled=true;
+  try {
+    const res=await fetch(`${API}?action=getOrder&orden=${encodeURIComponent(val)}`);
+    const found=await res.json();
+    if (choferDataPromise) await choferDataPromise; // asegura que choferOrdenes ya esté listo antes de filtrar
+    btn.innerHTML='Search'; btn.disabled=false;
+    if(found.error || isOlderThan48h(found.actualizado)){ errEl.style.display='block'; return; }
+    const clientOrders=choferOrdenes.filter(o=>o.cliente===found.cliente);
+    const toShow=clientOrders.length>0?clientOrders:[found];
+    let html='';
+    if(toShow.length>1) html+=`<div class="client-header"><i class="ti ti-user"></i><div><p class="client-header-name">${found.cliente}</p><p class="client-header-sub">${toShow.length} orders today</p></div></div>`;
+    html+=renderDriverCard(found,true);
+    toShow.filter(o=>String(o.orden)!==String(found.orden)).forEach(o=>{html+=renderDriverCard(o,false);});
+    list.innerHTML=html;
+  } catch(e){ btn.innerHTML='Search'; btn.disabled=false; errEl.textContent='Connection error.'; errEl.style.display='block'; }
+}
+document.getElementById('orden-input').addEventListener('keydown',e=>{if(e.key==='Enter')buscar();});
+
+// ── CLERK ────────────────────────────────────────────────
+async function loadOrdenes() {
+  const list=document.getElementById('orders-list');
+  list.innerHTML='<div class="empty-state"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i>Loading...</div>';
+  try {
+    const r=await fetch(`${API}?action=getAll&pin=${PIN}`); ordenes=await r.json(); renderOrdenes();
+  } catch(e){ list.innerHTML='<div class="empty-state">Connection error</div>'; }
+}
+
+function buildClerkCard(o) {
+  const locked = isOlderThan48h(o.actualizado);
+  const est = parseInt(o.estatus) || 1;
+  const isExpanded = globalViewMode === 'expanded' || expandedOrders.has(String(o.orden));
+
+  if (!isExpanded) {
+    return `<div class="order-card-compact${locked ? ' locked' : ''}" id="card-${o.orden}" onclick="toggleCardExpand('${o.orden}')">
+      <div class="oc-left">
+        <p class="oc-num">Order #${o.orden}${locked ? ' · <span class="locked-badge">Locked</span>' : ''}</p>
+        <p class="oc-cliente">${o.cliente}</p>
+      </div>
+      <span class="status-pill ${BANNER_CLS[est - 1]}">${BANNER_ICONS[est - 1]} ${LABELS[est - 1]}</span>
+    </div>`;
+  }
+
+  const prods = parseProductos(o.productos);
+
+  if (!productState[o.orden] || productState[o.orden].length !== prods.length) {
+    if (Array.isArray(o.productEstatus) && o.productEstatus.length === prods.length) {
+      productState[o.orden] = o.productEstatus.slice(); // recupera el detalle guardado en el servidor
+    } else {
+      productState[o.orden] = prods.length ? prods.map(() => Math.min(est, 3)) : [Math.min(est, 3)];
+    }
+  }
+  const minProd = prods.length ? Math.min(...productState[o.orden]) : est;
+  const incomplete = prods.length > 0 && est > 3 && productState[o.orden].some(s => s < 3);
+
+  let checklistHtml = '';
+  if (prods.length > 0) {
+    const items = prods.map((p, i) => {
+      const pStat = productState[o.orden][i];
+      const circles = LETTERS.slice(0, 3).map((letter, ci) => {
+        const idx = ci + 1;
+        const activeCls = pStat === idx ? ` active p${idx}` : '';
+        const clickAttr = locked ? '' : `onclick="event.stopPropagation();setProductStatus('${o.orden}',${i},${idx})"`;
+        return `<div class="pcircle${activeCls}${locked ? ' disabled' : ''}" ${clickAttr}>${letter}</div>`;
+      }).join('');
+      return `<div class="product-item"><span class="product-name">${p}</span><div class="pcircle-row">${circles}</div></div>`;
+    }).join('');
+    checklistHtml = `<div class="checklist"><p class="checklist-title">Products</p>${items}</div>`;
+  }
+
+  const warnHtml = incomplete ? `<p class="warn-note">⚠️ Order moved ahead — not all products are Ready yet</p>` : '';
+
+  const btns = LABELS.map((l, i) => {
+    const idx = i + 1;
+    return `<button class="sbtn${est === idx ? ' ' + SEL[i] : ''}" onclick="event.stopPropagation();setOrderStatus('${o.orden}',${idx})" ${locked ? 'disabled' : ''}><span class="sbtn-letter">${LETTERS[i]}</span><span class="sbtn-text">${l}</span></button>`;
+  }).join('');
+
+  return `<div class="order-card${locked ? ' locked' : ''}" id="card-${o.orden}">
+    <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;cursor:pointer;" onclick="toggleCardExpand('${o.orden}')">
+      <div>
+        <p class="order-num">Order #${o.orden}${locked ? '<span class="locked-badge">Locked</span>' : ''}</p>
+        <p class="order-cliente">${o.cliente}</p>
+      </div>
+      <i class="ti ti-chevron-up" style="color:var(--text-faint);font-size:18px;flex-shrink:0;"></i>
+    </div>
+    ${checklistHtml}
+    ${warnHtml}
+    <div class="status-btns">${btns}</div>
+    <p class="status-desc-lbl" id="desc-${o.orden}">${DESCS[est - 1]}</p>
+  </div>`;
+}
+
+function toggleCardExpand(orden) {
+  const key = String(orden);
+  if (expandedOrders.has(key)) expandedOrders.delete(key);
+  else expandedOrders.add(key);
+  renderOrdenes();
+}
+
+function toggleGlobalView() {
+  globalViewMode = globalViewMode === 'compact' ? 'expanded' : 'compact';
+  expandedOrders.clear(); // el toggle general manda: limpia las expansiones manuales
+  const btn = document.getElementById('viewToggleBtn');
+  btn.innerHTML = globalViewMode === 'compact' ? '<i class="ti ti-arrows-maximize"></i>' : '<i class="ti ti-arrows-minimize"></i>';
+  btn.title = globalViewMode === 'compact' ? 'View all' : 'View less';
+  renderOrdenes();
+}
+
+function toggleStatusFilter(idx) {
+  if (statusFilter.has(idx)) statusFilter.delete(idx);
+  else statusFilter.add(idx);
+  renderStatusFilterChips();
+  renderOrdenes();
+}
+
+function renderStatusFilterChips() {
+  const wrap = document.getElementById('statusFilterChips');
+  wrap.innerHTML = LETTERS.map((letter, i) => {
+    const idx = i + 1;
+    return `<button class="filter-chip${statusFilter.has(idx) ? ' active' : ''}" onclick="toggleStatusFilter(${idx})" title="${LABELS[i]}">${letter}</button>`;
+  }).join('');
+}
+
+// Product circle click (O/P/R only). While the order hasn't shipped yet (still O/P/R),
+// order status auto-syncs to the slowest product. Once the order is already Waiting for
+// dock / Loading / Departed, editing a product no longer pulls the order status backward —
+// it just records that product's own prep status for the record.
+function setProductStatus(orden, idx, status) {
+  if (!productState[orden]) return;
+  productState[orden][idx] = status;
+  const o = ordenes.find(x => String(x.orden) === String(orden));
+  if (!o) return;
+  const currentEst = parseInt(o.estatus) || 1;
+  if (currentEst <= 3) {
+    const prods = parseProductos(o.productos);
+    const minProd = prods.length ? Math.min(...productState[orden]) : status;
+    o.estatus = minProd;
+    pushOrderStatus(orden, minProd);
+  } else {
+    const card = document.getElementById('card-' + orden);
+    if (card) card.outerHTML = buildClerkCard(o);
+    pushOrderStatus(orden, o.estatus); // el estatus general no cambia, pero sí se persiste el detalle por producto
+  }
+}
+
+// Order-level button click: fully manual, never blocked, doesn't touch product circles
+function setOrderStatus(orden, status) {
+  const o = ordenes.find(x => String(x.orden) === String(orden));
+  if (!o) return;
+  o.estatus = status;
+  pushOrderStatus(orden, status);
+}
+
+async function pushOrderStatus(orden, estatus) {
+  const o = ordenes.find(x => String(x.orden) === String(orden));
+  const card = document.getElementById('card-' + orden);
+  if (card && o) card.outerHTML = buildClerkCard(o);
+  showToast('Status updated ✓');
+  const body = { pin: PIN, action: 'updateStatus', orden, estatus, usuario: currentUser };
+  if (productState[orden]) body.productEstatus = productState[orden]; // persiste el detalle por producto
+  try { await fetch(API, { method: 'POST', body: JSON.stringify(body) }); }
+  catch (e) { showToast('Sync error — check connection'); }
+}
+
+function renderOrdenes() {
+  const today=todayStr();
+  const visible=ordenes.filter(o=>!isOlderThan48h(o.actualizado)).filter(o=>!statusFilter.size || statusFilter.has(parseInt(o.estatus)||1));
+  const todayOrders=visible.filter(o=>o.fecha===today);
+  const pastOrders=visible.filter(o=>o.fecha!==today);
+  const list=document.getElementById('orders-list');
+  if (!document.getElementById('statusFilterChips').children.length) renderStatusFilterChips();
+  list.innerHTML='';
+  if(!todayOrders.length){ list.innerHTML='<div class="empty-state"><i class="ti ti-inbox"></i>No orders today</div>'; }
+  else todayOrders.forEach(o=>{list.innerHTML+=buildClerkCard(o);});
+  const pastSection=document.getElementById('past-section');
+  const pastList=document.getElementById('past-list');
+  if(pastOrders.length>0){
+    pastSection.style.display='block';
+    pastList.innerHTML='';
+    pastOrders.forEach(o=>{pastList.innerHTML+=buildClerkCard(o);});
+  } else { pastSection.style.display='none'; }
+}
+
+function encBuscar() {
+  const raw=document.getElementById('enc-search').value.trim();
+  if(!raw){ renderOrdenes(); return; }
+  const isNum = /^[0-9]+$/.test(raw);
+  const val = isNum ? 'SP00'+raw : raw.toLowerCase();
+  const exact = ordenes.find(o=>String(o.orden).toLowerCase()===val.toLowerCase());
+  const list=document.getElementById('orders-list');
+  list.innerHTML='';
+  document.getElementById('past-section').style.display='none';
+  const filtered = exact ? [exact] : ordenes.filter(o=>!isOlderThan48h(o.actualizado) && (String(o.orden).toLowerCase().includes(val.toLowerCase())||o.cliente.toLowerCase().includes(val.toLowerCase())));
+  if(!filtered.length){ list.innerHTML='<div class="empty-state"><i class="ti ti-search-off"></i>No match found</div>'; return; }
+  filtered.forEach(o=>{list.innerHTML+=buildClerkCard(o);});
+}
+document.getElementById('enc-search').addEventListener('keydown',e=>{if(e.key==='Enter')encBuscar();});
+
+function showToast(msg) {
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ===========================================================================
+// PAPAYA PALLET REPORT — standalone tool, corre 100% en el navegador
+// (todo este bloque viene del tool aparte "papaya_report", integrado tal cual
+// con IDs prefijados "papaya" para no chocar con el resto del app)
+// ===========================================================================
+if (typeof pdfjsLib !== "undefined") {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+} else {
+  console.warn("pdf.js no cargó (revisa tu conexión a internet)");
+}
+
+const SAMS_DIVISOR_CLIENTS = new Set([
+  "terrell", "paul's valley", "harrisonville", "cocoa",
+  "johnstown", "mankato", "robert", "monroe", "cheyenne", "r&r produce"
+]);
+const STANDARD_DIVISOR = 48, SAMS_DIVISOR = 40, HEB_DIVISOR = 60;
+
+const NAME_STRIP_PATTERNS = [
+  /,?\s*Sales Corp\.?\s*$/,
+  /,?\s*L\.?L\.?C\.?\s*$/,
+  /,?\s*Inc\.?\s*$/,
+  /,?\s*Corp\.?\s*$/,
+  /,?\s*Co\.?\s*$/,
+  /,?\s*Ltd\.?\s*$/,
+  /,?\s*W\.?W\.?,?\s*Inc\.?\s*$/,
+];
+const REDUNDANT_WORD_STRIPS = [
+  [/\bWholesale Produce\b/, ""],
+  [/\bWholesale\b/, ""],
+  [/\bCompany\b/, ""],
+];
+const NAME_OVERRIDES = {
+  "a. garcia trucking & produce": "A. Garcia Trucking",
+  "s. katzman produce": "S. Katzman",
+  "sweet seasons maryland": "Sweet Seasons",
+  "ch robinson w.w.": "CH Robinson",
+};
+
+async function extractLines(arrayBuffer) {
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const lines = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    const items = content.items
+      .map(it => ({ str: it.str, x: it.transform[4], y: it.transform[5] }))
+      .filter(it => it.str.trim().length > 0);
+    items.sort((a, b) => (b.y - a.y) || (a.x - b.x));
+
+    const pageLines = [];
+    let currentY = null, currentLine = [];
+    for (const it of items) {
+      if (currentY === null || Math.abs(it.y - currentY) > 2) {
+        if (currentLine.length) pageLines.push(currentLine);
+        currentLine = [it];
+        currentY = it.y;
+      } else {
+        currentLine.push(it);
+      }
+    }
+    if (currentLine.length) pageLines.push(currentLine);
+
+    for (const line of pageLines) {
+      line.sort((a, b) => a.x - b.x);
+      let text = line.map(it => it.str).join(" ").replace(/\s{2,}/g, " ").trim();
+      if (!text) continue;
+      if (text.startsWith("SALES ORDERS") || text.startsWith("DATE TIME")) continue;
+      lines.push(text);
+    }
+  }
+  return lines;
+}
+
+const ORDER_HEADER_RE = /^(\d{2}\/\d{2}\/\d{2})\s+(?:\d{1,2}:\d{2}\s+)?(.+?)\s+(\d+)\s+(SP\d+)\s+([DF])\s+([A-Z]+)\s+([\d,]+)(.*)$/;
+const QTY_PRODUCT_RE = /^([\d,]+)?\s*(.+)$/;
+
+function parseOrders(lines) {
+  const orders = [];
+  let current = null;
+  for (const line of lines) {
+    const m = line.match(ORDER_HEADER_RE);
+    if (m) {
+      if (current) orders.push(current);
+      const [, date, name, stnum, sp, status, spn, units, rest] = m;
+      current = {
+        date, name: name.trim(), stnum, sp, status, spn,
+        units: units.replace(/,/g, ""), note: rest.trim(), products: []
+      };
+    } else if (current !== null) {
+      const qm = line.match(QTY_PRODUCT_RE);
+      if (qm) {
+        const qtyStr = qm[1], desc = qm[2];
+        const qty = qtyStr ? parseInt(qtyStr.replace(/,/g, ""), 10) : null;
+        current.products.push([qty, desc.trim()]);
+      }
+    }
+  }
+  if (current) orders.push(current);
+
+  // A veces el "note" (ej. sub-cliente como CANTU, MARVIN, MR WHOLESALE) queda en su propia
+  // línea del PDF en vez de pegado al encabezado, y termina clasificado como un producto fantasma
+  // (sin cantidad). Lo detectamos aquí y lo recuperamos como note en vez de dejarlo como producto.
+  const KNOWN_PRODUCT_RE = /^(papaya|limes?|pineapples?|bananas?|avocados?|cucumbers?|fresh|aloe|plantains?)\b/i;
+  for (const o of orders) {
+    if (!o.note && o.products.length) {
+      const [qty, desc] = o.products[0];
+      if (qty === null && desc && desc.length <= 30 && !KNOWN_PRODUCT_RE.test(desc)) {
+        o.note = desc;
+        o.products.shift();
+      }
+    }
+  }
+
+  return orders;
+}
+
+function classifyPapayaLine(desc) {
+  if (!desc.toLowerCase().startsWith("papaya")) return [null, null, null];
+
+  if (desc.toLowerCase().includes("maradol") && desc.toLowerCase().includes("heb")) {
+    return ["heb", null, null];
+  }
+
+  let m = desc.match(/(\d+)\s*Count/i);
+  if ((desc.includes("38 Lb") || desc.includes("40 Lbs")) && m) {
+    return ["literal", `${m[1]} COUNT`, null];
+  }
+
+  if (/32\s*Lb/i.test(desc) && !/\d+\s*Count/i.test(desc)) {
+    return ["nocode", null, null];
+  }
+
+  let color = null;
+  if (/\b1\/2\b/.test(desc)) color = "½";
+  else if (/\b3\/4\b/.test(desc)) color = "¾";
+  else if (/\bA\b/.test(desc)) color = "A";
+
+  const sizeM = desc.match(/(\d+)\s*Count/i);
+  const size = sizeM ? sizeM[1] : null;
+
+  if (color && size) return ["color_size", color, size];
+  if (color && !size) return ["nocode_color", color, null];
+  return [null, null, null];
+}
+
+function shortenClientName(rawName, note, sp) {
+  let name = rawName.trim();
+
+  if (name.toLowerCase() === "ibarra") {
+    if (note) {
+      const m = note.match(/^([A-Za-z&.\s']+)/);
+      let sub = (m ? m[1] : note).trim().replace(/-$/, "").trim();
+      if (sub) return sub === sub.toUpperCase() ? titleCase(sub) : sub;
+    }
+    // No se pudo identificar el sub-cliente en el PDF: en vez de dejar "Ibarra" a secas
+    // (lo cual hace que varios pedidos sin nombre se vean idénticos y se puedan fusionar
+    // por error), se agrega el número de SP para que cada uno quede único e identificable.
+    return sp ? `Ibarra (${sp})` : name;
+  }
+
+  let m = name.match(/^([A-Z][A-Za-z .]*?),?\s*([A-Z]{2})\s+(GROC|FDC|MDC)\b/);
+  if (m) return `${titleCase(m[1].trim())} ${m[2].trim()}`;
+
+  let m3 = name.match(/^([A-Za-z'.\s]+?)\s+(?:DC\s+)?\d{3,5}$/);
+  if (m3 && name.split(" ")[0].toLowerCase() !== "all") {
+    return m3[1].trim();
+  }
+
+  let cleaned = name;
+  for (const pat of NAME_STRIP_PATTERNS) cleaned = cleaned.replace(pat, "").trim().replace(/,$/, "").trim();
+  for (const [pat, repl] of REDUNDANT_WORD_STRIPS) cleaned = cleaned.replace(pat, repl).trim();
+  cleaned = cleaned.replace(/\s{2,}/g, " ").trim().replace(/,$/, "").trim();
+
+  if (NAME_OVERRIDES[cleaned.toLowerCase()]) return NAME_OVERRIDES[cleaned.toLowerCase()];
+  return cleaned;
+}
+
+function titleCase(s) {
+  return s.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function divisorFor(clientKey, isHeb) {
+  if (isHeb) return HEB_DIVISOR;
+  if (SAMS_DIVISOR_CLIENTS.has(clientKey)) return SAMS_DIVISOR;
+  return STANDARD_DIVISOR;
+}
+
+function buildReportRows(orders) {
+  const parsed = [];
+  for (const o of orders) {
+    const papayaTypes = new Map();
+    let hasPapaya = false;
+    for (const [qty, desc] of o.products) {
+      const [kind, a, b] = classifyPapayaLine(desc);
+      if (kind === null || qty === null) continue;
+      hasPapaya = true;
+      let key;
+      if (kind === "color_size") key = `color_size|${a}|${b}`;
+      else if (kind === "literal") key = `literal|${a}`;
+      else if (kind === "heb") key = "heb";
+      else if (kind === "nocode") key = "nocode";
+      else if (kind === "nocode_color") key = `nocode_color|${a}`;
+      papayaTypes.set(key, (papayaTypes.get(key) || 0) + qty);
+    }
+    if (!hasPapaya) continue;
+    const shortName = shortenClientName(o.name, o.note, o.sp);
+    parsed.push({ sp: o.sp, cliente_full: o.name, cliente_corto: shortName, note: o.note, papaya_types: papayaTypes });
+  }
+
+  const groups = new Map();
+  for (const p of parsed) {
+    if (!groups.has(p.cliente_corto)) groups.set(p.cliente_corto, []);
+    groups.get(p.cliente_corto).push(p);
+  }
+
+  const entries = [];
+  for (const [name, group] of groups.entries()) {
+    if (group.length === 1) {
+      const g = group[0];
+      entries.push({ sp: g.sp, cliente_full: g.cliente_full, cliente_corto: name, base_name: name, papaya_types: g.papaya_types });
+      continue;
+    }
+    const distinctNotes = new Set(group.filter(g => g.note).map(g => g.note));
+    if (distinctNotes.size === group.length) {
+      for (const g of group) {
+        entries.push({ sp: g.sp, cliente_full: g.cliente_full, cliente_corto: name, base_name: name, papaya_types: g.papaya_types });
+      }
+    } else {
+      const combined = new Map();
+      const sps = [];
+      for (const g of group) {
+        sps.push(g.sp);
+        for (const [k, v] of g.papaya_types.entries()) combined.set(k, (combined.get(k) || 0) + v);
+      }
+      entries.push({ sp: sps.join(" + "), cliente_full: group[0].cliente_full, cliente_corto: name, base_name: name, papaya_types: combined });
+    }
+  }
+
+  const rows = [], flags = [];
+  for (const e of entries) {
+    const papayaTypes = e.papaya_types;
+    const clientKey = e.base_name.toLowerCase(); // usa el nombre base (sin el sufijo aclarador) para no perder el divisor especial
+    const isHeb = [...papayaTypes.keys()].some(k => k === "heb");
+    const divisor = divisorFor(clientKey, isHeb);
+
+    let totalBoxes = 0;
+    for (const v of papayaTypes.values()) totalBoxes += v;
+    const multiType = [...papayaTypes.values()].filter(v => v > 0).length > 1;
+
+    const codeParts = [];
+    for (const [key, boxes] of papayaTypes.entries()) {
+      const pallets_this = Math.floor(boxes / divisor);
+      let label;
+      const parts = key.split("|");
+      if (parts[0] === "color_size") label = `${parts[1]}-${parts[2]}`;
+      else if (parts[0] === "literal") label = parts[1];
+      else if (parts[0] === "heb" || parts[0] === "nocode") label = "¾-";
+      else if (parts[0] === "nocode_color") label = `${parts[1]}-`;
+      else label = "?";
+      if (multiType && parts[0] !== "literal" && parts[0] !== "heb") {
+        codeParts.push(`${pallets_this}-${label}`);
+      } else {
+        codeParts.push(label);
+      }
+    }
+
+    let code = codeParts.join(" ");
+    const totalPallets = Math.floor(totalBoxes / divisor);
+    const remainder = totalBoxes % divisor;
+
+    let palletsDisplay;
+    if (remainder) {
+      palletsDisplay = `${totalPallets} (${remainder} BXS)`;
+      if (!multiType) code = `${code} (${remainder} BXS)`;
+    } else {
+      palletsDisplay = String(totalPallets);
+    }
+
+    rows.push({
+      sp: e.sp, cliente_full: e.cliente_full, cliente_corto: e.cliente_corto,
+      pallets: palletsDisplay, pallets_num: totalPallets, remainder, codigo: code, total_boxes: totalBoxes
+    });
+
+    if (remainder && totalPallets === 0) {
+      flags.push(`${e.cliente_corto} (${e.sp}): ${totalBoxes} cajas no llegan a 1 pallet completo — revisar.`);
+    }
+  }
+  return [rows, flags];
+}
+
+function crc32(bytes) {
+  let table = crc32.table;
+  if (!table) {
+    table = crc32.table = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      table[n] = c >>> 0;
+    }
+  }
+  let crc = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) crc = table[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+function buildZip(files) {
+  const localParts = [], centralParts = [];
+  let offset = 0;
+  const dosTime = 0, dosDate = 0x21;
+  const enc = new TextEncoder();
+
+  for (const f of files) {
+    const nameBytes = enc.encode(f.name);
+    const data = f.content;
+    const crc = crc32(data);
+    const size = data.length;
+
+    const localHeader = new ArrayBuffer(30);
+    const lv = new DataView(localHeader);
+    lv.setUint32(0, 0x04034b50, true);
+    lv.setUint16(4, 20, true);
+    lv.setUint16(6, 0, true);
+    lv.setUint16(8, 0, true);
+    lv.setUint16(10, dosTime, true);
+    lv.setUint16(12, dosDate, true);
+    lv.setUint32(14, crc, true);
+    lv.setUint32(18, size, true);
+    lv.setUint32(22, size, true);
+    lv.setUint16(26, nameBytes.length, true);
+    lv.setUint16(28, 0, true);
+    localParts.push(new Uint8Array(localHeader), nameBytes, data);
+
+    const centralHeader = new ArrayBuffer(46);
+    const cv = new DataView(centralHeader);
+    cv.setUint32(0, 0x02014b50, true);
+    cv.setUint16(4, 20, true);
+    cv.setUint16(6, 20, true);
+    cv.setUint16(8, 0, true);
+    cv.setUint16(10, 0, true);
+    cv.setUint16(12, dosTime, true);
+    cv.setUint16(14, dosDate, true);
+    cv.setUint32(16, crc, true);
+    cv.setUint32(20, size, true);
+    cv.setUint32(24, size, true);
+    cv.setUint16(28, nameBytes.length, true);
+    cv.setUint16(30, 0, true);
+    cv.setUint16(32, 0, true);
+    cv.setUint16(34, 0, true);
+    cv.setUint16(36, 0, true);
+    cv.setUint32(38, 0, true);
+    cv.setUint32(42, offset, true);
+    centralParts.push(new Uint8Array(centralHeader), nameBytes);
+
+    offset += localHeader.byteLength + nameBytes.length + data.length;
+  }
+
+  const centralStart = offset;
+  let centralSize = 0;
+  for (const p of centralParts) centralSize += p.length;
+
+  const eocd = new ArrayBuffer(22);
+  const ev = new DataView(eocd);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(8, files.length, true);
+  ev.setUint16(10, files.length, true);
+  ev.setUint32(12, centralSize, true);
+  ev.setUint32(16, centralStart, true);
+
+  const allParts = [...localParts, ...centralParts, new Uint8Array(eocd)];
+  let totalLen = 0;
+  for (const p of allParts) totalLen += p.length;
+  const out = new Uint8Array(totalLen);
+  let pos = 0;
+  for (const p of allParts) { out.set(p, pos); pos += p.length; }
+  return out;
+}
+
+const DOCX_CONTENT_TYPES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+<Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
+</Types>`;
+
+const DOCX_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+
+const DOCX_DOC_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>
+</Relationships>`;
+
+const DOCX_STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="20"/></w:rPr></w:rPrDefault></w:docDefaults>
+<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>
+</w:styles>`;
+
+const DOCX_NUMBERING = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:abstractNum w:abstractNumId="0">
+<w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="&#9679;"/><w:lvlJc w:val="left"/>
+<w:pPr><w:ind w:left="720" w:hanging="360"/></w:pPr>
+<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:hint="default"/></w:rPr></w:lvl>
+</w:abstractNum>
+<w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num>
+</w:numbering>`;
+
+function xmlEsc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function docxRun(text, size) {
+  return `<w:r><w:rPr><w:b/><w:i/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="${size || 20}"/></w:rPr><w:t xml:space="preserve">${xmlEsc(text)}</w:t></w:r>`;
+}
+function docxTab() {
+  return `<w:r><w:rPr><w:b/><w:i/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="20"/></w:rPr><w:tab/></w:r>`;
+}
+function docxBulletParagraph(pallets, cliente, codigo) {
+  return `<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>` +
+    `<w:tabs><w:tab w:val="left" w:pos="2300"/><w:tab w:val="left" w:pos="5100"/></w:tabs>` +
+    `<w:spacing w:after="60"/></w:pPr>` +
+    docxRun(pallets) + docxTab() + docxRun(cliente) + docxTab() + docxRun(codigo) + `</w:p>`;
+}
+function docxTitleParagraph(text) {
+  return `<w:p><w:pPr><w:spacing w:after="200"/></w:pPr>` +
+    `<w:r><w:rPr><w:b/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/></w:rPr>` +
+    `<w:t xml:space="preserve">${xmlEsc(text)}</w:t></w:r></w:p>`;
+}
+
+function buildDocxBlob(title, rows) {
+  let body = docxTitleParagraph(title);
+  for (const r of rows) body += docxBulletParagraph(r.pallets, r.cliente_corto, r.codigo);
+  body += `<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="900" w:bottom="900" w:left="900" w:right="900"/></w:sectPr>`;
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}</w:body></w:document>`;
+
+  const enc = new TextEncoder();
+  const files = [
+    { name: "[Content_Types].xml", content: enc.encode(DOCX_CONTENT_TYPES) },
+    { name: "_rels/.rels", content: enc.encode(DOCX_RELS) },
+    { name: "word/_rels/document.xml.rels", content: enc.encode(DOCX_DOC_RELS) },
+    { name: "word/styles.xml", content: enc.encode(DOCX_STYLES) },
+    { name: "word/numbering.xml", content: enc.encode(DOCX_NUMBERING) },
+    { name: "word/document.xml", content: enc.encode(documentXml) },
+  ];
+  const zipBytes = buildZip(files);
+  return new Blob([zipBytes], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+}
+
+const XLSX_CONTENT_TYPES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+</Types>`;
+
+const XLSX_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`;
+
+const XLSX_WORKBOOK = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheets><sheet name="Papaya" sheetId="1" r:id="rId1"/></sheets>
+</workbook>`;
+
+const XLSX_WORKBOOK_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+
+const XLSX_STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<fonts count="4">
+<font><sz val="11"/><name val="Arial"/></font>
+<font><b/><sz val="14"/><color rgb="FFFFFFFF"/><name val="Arial"/></font>
+<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Arial"/></font>
+<font><b/><sz val="11"/><name val="Arial"/></font>
+</fonts>
+<fills count="5">
+<fill><patternFill patternType="none"/></fill>
+<fill><patternFill patternType="gray125"/></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FF1F3864"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FF2E5395"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFD9E2F3"/><bgColor indexed="64"/></patternFill></fill>
+</fills>
+<borders count="2">
+<border><left/><right/><top/><bottom/><diagonal/></border>
+<border><left style="thin"><color rgb="FFAAAAAA"/></left><right style="thin"><color rgb="FFAAAAAA"/></right><top style="thin"><color rgb="FFAAAAAA"/></top><bottom style="thin"><color rgb="FFAAAAAA"/></bottom><diagonal/></border>
+</borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="8">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
+<xf numFmtId="0" fontId="2" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>
+<xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFill="1" applyBorder="1"/>
+<xf numFmtId="0" fontId="3" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"/>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>
+<xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>
+</cellXfs>
+</styleSheet>`;
+
+function xlsxColLetter(n) {
+  let s = "";
+  while (n > 0) {
+    const r = (n - 1) % 26;
+    s = String.fromCharCode(65 + r) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
+}
+function xlsxEsc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function xlsxCell(col, row, value, style, isNum) {
+  const ref = `${xlsxColLetter(col)}${row}`;
+  const s = style || 0;
+  if (isNum) return `<c r="${ref}" s="${s}"><v>${value}</v></c>`;
+  return `<c r="${ref}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${xlsxEsc(value)}</t></is></c>`;
+}
+
+function buildXlsxBlob(title, rows, flags) {
+  const rowsXml = [];
+  rowsXml.push(`<row r="1">${xlsxCell(1, 1, title, 1)}</row>`);
+  const headers = ["#", "PALLETS", "CLIENTE", "COLOR Y TAMAÑO"];
+  rowsXml.push(`<row r="3">${headers.map((h, i) => xlsxCell(i + 1, 3, h, 2)).join("")}</row>`);
+
+  let r = 4, total = 0;
+  rows.forEach((row, i) => {
+    const idx = i + 1;
+    const baseStyle = (idx % 2 === 0) ? 4 : 3;
+    const palletsStyle = (idx % 2 === 0) ? 7 : 6;
+    const cells = xlsxCell(1, r, idx, baseStyle, true) +
+      xlsxCell(2, r, row.pallets, palletsStyle) +
+      xlsxCell(3, r, row.cliente_corto, baseStyle) +
+      xlsxCell(4, r, row.codigo, baseStyle);
+    rowsXml.push(`<row r="${r}">${cells}</row>`);
+    total += row.pallets_num;
+    r++;
+  });
+
+  const totalCells = xlsxCell(1, r, "TOTAL", 5) + xlsxCell(2, r, total, 6, true) + xlsxCell(3, r, "", 3) + xlsxCell(4, r, "", 3);
+  rowsXml.push(`<row r="${r}">${totalCells}</row>`);
+  r += 2;
+
+  if (flags && flags.length) {
+    rowsXml.push(`<row r="${r}">${xlsxCell(1, r, "REVISAR:", 5)}</row>`);
+    r++;
+    for (const f of flags) {
+      rowsXml.push(`<row r="${r}">${xlsxCell(1, r, "- " + f, 0)}</row>`);
+      r++;
+    }
+  }
+
+  const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
+    `<cols><col min="1" max="1" width="6" customWidth="1"/>` +
+    `<col min="2" max="2" width="16" customWidth="1"/>` +
+    `<col min="3" max="3" width="32" customWidth="1"/>` +
+    `<col min="4" max="4" width="42" customWidth="1"/></cols>` +
+    `<sheetData>${rowsXml.join("")}</sheetData>` +
+    `<mergeCells count="1"><mergeCell ref="A1:D1"/></mergeCells>` +
+    `</worksheet>`;
+
+  const enc = new TextEncoder();
+  const files = [
+    { name: "[Content_Types].xml", content: enc.encode(XLSX_CONTENT_TYPES) },
+    { name: "_rels/.rels", content: enc.encode(XLSX_RELS) },
+    { name: "xl/workbook.xml", content: enc.encode(XLSX_WORKBOOK) },
+    { name: "xl/_rels/workbook.xml.rels", content: enc.encode(XLSX_WORKBOOK_RELS) },
+    { name: "xl/styles.xml", content: enc.encode(XLSX_STYLES) },
+    { name: "xl/worksheets/sheet1.xml", content: enc.encode(sheetXml) },
+  ];
+  const zipBytes = buildZip(files);
+  return new Blob([zipBytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+}
+
+// Resumen del día: reutiliza el mismo motor de Excel (buildZip/xlsxCell) del reporte de papaya,
+// pero con las columnas del tracker de embarques en vez de las de pallets.
+function buildDailySummaryXlsxBlob(title, rows) {
+  const rowsXml = [];
+  rowsXml.push(`<row r="1">${xlsxCell(1, 1, title, 1)}</row>`);
+  const headers = ["ORDEN", "CLIENTE", "PRODUCTOS", "ESTATUS", "HORA", "POR"];
+  rowsXml.push(`<row r="3">${headers.map((h, i) => xlsxCell(i + 1, 3, h, 2)).join("")}</row>`);
+
+  let r = 4;
+  rows.forEach((row, i) => {
+    const idx = i + 1;
+    const baseStyle = (idx % 2 === 0) ? 4 : 3;
+    const cells = xlsxCell(1, r, row.orden, baseStyle) +
+      xlsxCell(2, r, row.cliente, baseStyle) +
+      xlsxCell(3, r, row.productos, baseStyle) +
+      xlsxCell(4, r, row.estatusLabel, baseStyle) +
+      xlsxCell(5, r, row.hora, baseStyle) +
+      xlsxCell(6, r, row.por, baseStyle);
+    rowsXml.push(`<row r="${r}">${cells}</row>`);
+    r++;
+  });
+
+  const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
+    `<cols><col min="1" max="1" width="14" customWidth="1"/>` +
+    `<col min="2" max="2" width="26" customWidth="1"/>` +
+    `<col min="3" max="3" width="42" customWidth="1"/>` +
+    `<col min="4" max="4" width="16" customWidth="1"/>` +
+    `<col min="5" max="5" width="12" customWidth="1"/>` +
+    `<col min="6" max="6" width="14" customWidth="1"/></cols>` +
+    `<sheetData>${rowsXml.join("")}</sheetData>` +
+    `<mergeCells count="1"><mergeCell ref="A1:F1"/></mergeCells>` +
+    `</worksheet>`;
+
+  const enc = new TextEncoder();
+  const files = [
+    { name: "[Content_Types].xml", content: enc.encode(XLSX_CONTENT_TYPES) },
+    { name: "_rels/.rels", content: enc.encode(XLSX_RELS) },
+    { name: "xl/workbook.xml", content: enc.encode(XLSX_WORKBOOK) },
+    { name: "xl/_rels/workbook.xml.rels", content: enc.encode(XLSX_WORKBOOK_RELS) },
+    { name: "xl/styles.xml", content: enc.encode(XLSX_STYLES) },
+    { name: "xl/worksheets/sheet1.xml", content: enc.encode(sheetXml) },
+  ];
+  const zipBytes = buildZip(files);
+  return new Blob([zipBytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+}
+
+let dailySummaryRows = [];
+function goDailySummary() {
+  const today = todayStr();
+  const active = ordenes.filter(o => o.fecha === today || o.actualizado === today);
+  dailySummaryRows = active.map(o => {
+    const est = parseInt(o.estatus) || 1;
+    return {
+      orden: o.orden, cliente: o.cliente, productos: o.productos,
+      estatusLabel: LABELS[est - 1] || o.estatus, hora: o.hora || '', por: o.actualizadoPor || ''
+    };
+  });
+  document.getElementById('dailySummaryCount').textContent = `${dailySummaryRows.length} orders active today`;
+  const tbody = document.querySelector('#dailySummaryTable tbody');
+  tbody.innerHTML = dailySummaryRows.length
+    ? dailySummaryRows.map(r => `<tr><td>${r.orden}</td><td>${r.cliente}</td><td>${r.productos}</td><td>${r.estatusLabel}</td><td>${r.hora}</td><td>${r.por}</td></tr>`).join('')
+    : '<tr><td colspan="6" style="text-align:center;color:var(--text-faint);">No orders active today</td></tr>';
+  show('screen-daily-summary');
+}
+document.getElementById('downloadSummaryBtn').addEventListener('click', () => {
+  if (!dailySummaryRows.length) { showToast('No orders to download'); return; }
+  const today = todayStr();
+  const blob = buildDailySummaryXlsxBlob(`CHULA BRAND - DAILY SUMMARY ${today}`, dailySummaryRows);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `Daily_Summary_${today}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// UI wiring — IDs con prefijo "papaya" para no chocar con el resto del app
+const papayaDropzone = document.getElementById("papayaDropzone");
+const papayaFileInput = document.getElementById("papayaFileInput");
+const papayaStatusEl = document.getElementById("papayaStatus");
+const papayaResultsCard = document.getElementById("papayaResultsCard");
+const papayaSummaryEl = document.getElementById("papayaSummary");
+const papayaFlagsEl = document.getElementById("papayaFlags");
+const papayaTbody = document.querySelector("#papayaResultsTable tbody");
+const papayaDownloadExcelBtn = document.getElementById("papayaDownloadExcelBtn");
+const papayaDownloadWordBtn = document.getElementById("papayaDownloadWordBtn");
+const papayaResetBtn = document.getElementById("papayaResetBtn");
+
+const papayaSendDraftBtn = document.getElementById("papayaSendDraftBtn");
+let papayaLastRows = [], papayaLastFlags = [], papayaLastFileName = "reporte", papayaLastDraftRows = [];
+
+papayaDropzone.addEventListener("click", () => papayaFileInput.click());
+papayaDropzone.addEventListener("dragover", e => { e.preventDefault(); papayaDropzone.classList.add("drag"); });
+papayaDropzone.addEventListener("dragleave", () => papayaDropzone.classList.remove("drag"));
+papayaDropzone.addEventListener("drop", e => {
+  e.preventDefault();
+  papayaDropzone.classList.remove("drag");
+  if (e.dataTransfer.files.length) handlePapayaFile(e.dataTransfer.files[0]);
+});
+papayaFileInput.addEventListener("change", () => {
+  if (papayaFileInput.files.length) handlePapayaFile(papayaFileInput.files[0]);
+});
+papayaResetBtn.addEventListener("click", () => {
+  papayaResultsCard.style.display = "none";
+  papayaStatusEl.textContent = "";
+  papayaFileInput.value = "";
+  papayaLastDraftRows = [];
+});
+
+async function handlePapayaFile(file) {
+  if (file.type !== "application/pdf") {
+    papayaStatusEl.textContent = "Ese archivo no es un PDF.";
+    return;
+  }
+  if (typeof pdfjsLib === "undefined") {
+    papayaStatusEl.textContent = "No se pudo cargar la librería para leer PDFs (revisa tu conexión a internet y recarga la página).";
+    return;
+  }
+  papayaLastFileName = file.name.replace(/\.pdf$/i, "");
+  papayaStatusEl.textContent = "Leyendo PDF...";
+  papayaResultsCard.style.display = "none";
+  try {
+    const buf = await file.arrayBuffer();
+    const lines = await extractLines(buf);
+    const orders = parseOrders(lines);
+    if (!orders.length) {
+      papayaStatusEl.textContent = "No se encontraron órdenes en este PDF.";
+      return;
+    }
+
+    // Filas para el Draft (orden/cliente/productos) — de TODAS las órdenes del PDF,
+    // tengan o no papaya, para que "Send + Sync" no dependa del reporte de pallets.
+    // Agrupa líneas con la misma descripción y suma sus cantidades (algunas órdenes traen el mismo
+    // producto repetido varias veces, por tarima, en vez de una sola línea con el total).
+    papayaLastDraftRows = orders.map(o => {
+      const combined = new Map();
+      for (const [qty, desc] of o.products) {
+        if (qty === null) continue;
+        const key = desc.trim();
+        combined.set(key, (combined.get(key) || 0) + qty);
+      }
+      const productos = [...combined.entries()].map(([desc, qty]) => `${qty} ${desc}`).join(', ');
+      return { orden: o.sp, cliente: o.name, productos };
+    }).filter(r => r.productos);
+
+    const [rows, flags] = buildReportRows(orders);
+    papayaLastRows = rows; papayaLastFlags = flags;
+    renderPapayaResults(rows, flags);
+    papayaStatusEl.textContent = rows.length ? "Listo." : "Listo — este PDF no trae papaya, pero ya puedes mandar las órdenes al Draft.";
+    sendAndSyncDraft(); // se manda solo, no depende de que alguien se acuerde de picarle
+  } catch (err) {
+    console.error(err);
+    papayaStatusEl.textContent = "Error al procesar el PDF: " + err.message;
+  }
+}
+
+function renderPapayaResults(rows, flags) {
+  if (!rows.length) {
+    papayaSummaryEl.innerHTML = `Este PDF no trae líneas de papaya — no hay reporte de pallets que mostrar, pero las órdenes ya están listas para <b>Send + Sync to Draft</b>.`;
+  } else {
+    const total = rows.reduce((s, r) => s + r.pallets_num, 0);
+    papayaSummaryEl.innerHTML = `<b>${rows.length}</b> órdenes con papaya &nbsp;·&nbsp; <b>${total}</b> pallets totales`;
+  }
+
+  papayaTbody.innerHTML = "";
+  rows.forEach((r, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${i + 1}</td><td>${r.pallets}</td><td>${r.cliente_corto}</td><td>${r.codigo}</td>`;
+    papayaTbody.appendChild(tr);
+  });
+
+  papayaFlagsEl.innerHTML = "";
+  if (flags.length) {
+    const title = document.createElement("div");
+    title.innerHTML = "<b style='color:#B3261E'>REVISAR:</b>";
+    papayaFlagsEl.appendChild(title);
+    flags.forEach(f => {
+      const d = document.createElement("div");
+      d.className = "flag";
+      d.textContent = "- " + f;
+      papayaFlagsEl.appendChild(d);
+    });
+  }
+
+  papayaResultsCard.style.display = "block";
+}
+
+papayaDownloadExcelBtn.addEventListener("click", () => {
+  const blob = buildXlsxBlob(`CHULA BRAND - PAPAYA REPORT ${papayaLastFileName}`, papayaLastRows, papayaLastFlags);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `Papaya_Report_${papayaLastFileName}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+papayaDownloadWordBtn.addEventListener("click", () => {
+  const blob = buildDocxBlob(`CHULA BRAND - PAPAYA REPORT ${papayaLastFileName}`, papayaLastRows);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `Papaya_Report_${papayaLastFileName}.docx`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// Manda las órdenes al Draft y sincroniza — se llama sola en cuanto termina de leer el PDF
+// (ver handlePapayaFile), y también queda disponible en el botón por si hay que reintentar a mano.
+async function sendAndSyncDraft() {
+  if (!papayaLastDraftRows.length) { showToast('No hay órdenes para enviar'); return; }
+  const original = papayaSendDraftBtn.textContent;
+  papayaSendDraftBtn.disabled = true;
+  try {
+    papayaSendDraftBtn.textContent = 'Enviando al Draft...';
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ pin: PIN, action: 'writeDraft', rows: papayaLastDraftRows }) });
+    const result = await res.json();
+    if (result.error) { showToast('Error: ' + result.error); return; }
+
+    papayaSendDraftBtn.textContent = 'Sincronizando...';
+    const res2 = await fetch(API, { method: 'POST', body: JSON.stringify({ pin: PIN, action: 'syncDraft' }) });
+    const result2 = await res2.json();
+    if (result2.error) { showToast(`Se guardó el Draft, pero el sync falló: ${result2.error}`); return; }
+
+    showToast(`${result.count} órdenes enviadas, sincronizadas y Draft limpiado ✓`);
+  } catch (e) { showToast('Connection error — usa el botón para reintentar'); }
+  papayaSendDraftBtn.disabled = false;
+  papayaSendDraftBtn.textContent = original;
+}
+
+papayaSendDraftBtn.addEventListener("click", sendAndSyncDraft);
+
+prefetchUsers(); // arranca desde que carga la página, para que "Clerk" abra instantáneo
+
+// Auto-refresh de la lista de órdenes cada 30s, solo mientras el Shipping Panel está activo
+setInterval(() => {
+  const encScreen = document.getElementById('screen-enc');
+  if (encScreen && encScreen.classList.contains('active') && currentUser) loadOrdenes();
+}, 60000);
+
+// Registro del Service Worker para modo PWA (instalable en iPad/celular)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch((err) => {
+      console.log('Service Worker no se pudo registrar:', err);
+    });
+  });
+}
+</script>
+</body>
+</html>
