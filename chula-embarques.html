@@ -98,7 +98,11 @@
   .highlight-badge { display:inline-block; font-size:10px; font-weight:600; background:var(--green-dark); color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
   .locked-badge { display:inline-block; font-size:10px; font-weight:600; background:#6b7280; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
   .overdue-badge { display:inline-block; font-size:10px; font-weight:600; background:#DC2626; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
+  .soon-badge { display:inline-block; font-size:10px; font-weight:600; background:#EA580C; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
   .order-card-compact.overdue { border-color:#DC2626; border-width:1.5px; }
+  .order-card-compact.soon { border-color:#EA580C; border-width:1.5px; }
+  .order-card.overdue-expanded { border-color:#DC2626; border-width:1.5px; }
+  .order-card.soon-expanded { border-color:#EA580C; border-width:1.5px; }
   .expected-ready-row { display:flex; align-items:center; justify-content:space-between; gap:8px; background:#F7F5F0; border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; margin-bottom:10px; }
   .expected-ready-row label { font-size:12px; color:var(--text-muted); font-weight:500; }
   .expected-ready-row input[type="datetime-local"] { font-family:'Inter',sans-serif; font-size:12.5px; border:1px solid var(--border); border-radius:6px; padding:4px 6px; color:var(--text); background:#fff; }
@@ -516,15 +520,19 @@ function isOlderThan48h(fecha) {
 }
 
 // "Expected ready" — lo pone el Shipping Clerk manualmente; si queda vacío, no se
-// muestra nada (ni al chofer ni como aviso). Solo se marca "overdue" si ya pasó
-// la hora esperada Y la orden todavía no llega a "Ready" (estatus 3).
-function isOverdue(o) {
-  if (!o.expectedReady) return false;
+// muestra nada (ni al chofer ni como aviso). Una vez que el pedido llega a "Ready"
+// (estatus 3) o más adelante, ya no aplica — ni el aviso ni el campo se muestran más.
+// Devuelve: 'overdue' (ya se pasó la hora), 'soon' (falta 1h o menos), o null (todo bien / no aplica).
+function expectedReadyState(o) {
+  if (!o.expectedReady) return null;
   const est = parseInt(o.estatus) || 1;
-  if (est >= 3) return false;
+  if (est >= 3) return null;
   const d = new Date(o.expectedReady);
-  if (isNaN(d)) return false;
-  return new Date() > d;
+  if (isNaN(d)) return null;
+  const diffMs = d - new Date();
+  if (diffMs < 0) return 'overdue';
+  if (diffMs <= 3600000) return 'soon';
+  return null;
 }
 function formatExpectedReady(val) {
   if (!val) return '';
@@ -732,7 +740,7 @@ function renderDriverCard(o, highlighted) {
     <div><p class="status-banner-label">${LABELS[est-1]}</p><p class="status-banner-desc">${DESCS[est-1]}</p></div>
   </div>`;
   const lockedTag = locked ? '<span class="locked-badge">Locked</span>' : '';
-  const expectedReadyRow = o.expectedReady
+  const expectedReadyRow = (o.expectedReady && est < 3)
     ? `<div class="meta-row"><span class="meta-label">Expected ready</span><span class="meta-val">${formatExpectedReady(o.expectedReady)}</span></div>`
     : '';
 
@@ -784,10 +792,12 @@ function buildClerkCard(o) {
   const isExpanded = globalViewMode === 'expanded' || expandedOrders.has(String(o.orden));
 
   if (!isExpanded) {
-    const overdue = isOverdue(o);
-    return `<div class="order-card-compact${locked ? ' locked' : ''}${overdue ? ' overdue' : ''}" id="card-${o.orden}" onclick="toggleCardExpand('${o.orden}')">
+    const erState = expectedReadyState(o);
+    const erBadge = erState === 'overdue' ? ' · <span class="overdue-badge">⚠ Overdue</span>'
+      : erState === 'soon' ? ' · <span class="soon-badge">🕒 Soon</span>' : '';
+    return `<div class="order-card-compact${locked ? ' locked' : ''}${erState ? ' ' + erState : ''}" id="card-${o.orden}" onclick="toggleCardExpand('${o.orden}')">
       <div class="oc-left">
-        <p class="oc-num">Order #${o.orden}${locked ? ' · <span class="locked-badge">Locked</span>' : ''}${overdue ? ' · <span class="overdue-badge">⚠ Overdue</span>' : ''}</p>
+        <p class="oc-num">Order #${o.orden}${locked ? ' · <span class="locked-badge">Locked</span>' : ''}${erBadge}</p>
         <p class="oc-cliente">${o.cliente}</p>
       </div>
       <span class="status-pill ${BANNER_CLS[est - 1]}">${BANNER_ICONS[est - 1]} ${LABELS[est - 1]}</span>
@@ -823,20 +833,25 @@ function buildClerkCard(o) {
 
   const warnHtml = incomplete ? `<p class="warn-note">⚠️ Order moved ahead — not all products are Ready yet</p>` : '';
 
-  const expectedReadyRow = `<div class="expected-ready-row" onclick="event.stopPropagation();">
+  // Una vez que el pedido llega a "Ready" o más adelante, ya no tiene caso seguir
+  // mostrando/editando el campo de "Expected ready" — el pedido ya cumplió su propósito.
+  const erState = expectedReadyState(o);
+  const erBadgeExpanded = erState === 'overdue' ? '<span class="overdue-badge">⚠ Overdue</span>'
+    : erState === 'soon' ? '<span class="soon-badge">🕒 Soon</span>' : '';
+  const expectedReadyRow = est < 3 ? `<div class="expected-ready-row" onclick="event.stopPropagation();">
     <label for="er-${o.orden}">Expected ready</label>
     <input type="datetime-local" id="er-${o.orden}" value="${o.expectedReady || ''}" ${locked ? 'disabled' : ''} onchange="setExpectedReady('${o.orden}', this.value)" />
-  </div>`;
+  </div>` : '';
 
   const btns = LABELS.map((l, i) => {
     const idx = i + 1;
     return `<button class="sbtn${est === idx ? ' ' + SEL[i] : ''}" onclick="event.stopPropagation();setOrderStatus('${o.orden}',${idx})" ${locked ? 'disabled' : ''}><span class="sbtn-letter">${LETTERS[i]}</span><span class="sbtn-text">${l}</span></button>`;
   }).join('');
 
-  return `<div class="order-card${locked ? ' locked' : ''}" id="card-${o.orden}">
+  return `<div class="order-card${locked ? ' locked' : ''}${erState ? ' ' + erState + '-expanded' : ''}" id="card-${o.orden}">
     <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;cursor:pointer;" onclick="toggleCardExpand('${o.orden}')">
       <div>
-        <p class="order-num">Order #${o.orden}${locked ? '<span class="locked-badge">Locked</span>' : ''}</p>
+        <p class="order-num">Order #${o.orden}${locked ? '<span class="locked-badge">Locked</span>' : ''}${erBadgeExpanded}</p>
         <p class="order-cliente">${o.cliente}</p>
       </div>
       <i class="ti ti-chevron-up" style="color:var(--text-faint);font-size:18px;flex-shrink:0;"></i>
@@ -1778,11 +1793,11 @@ papayaSendDraftBtn.addEventListener("click", sendAndSyncDraft);
 
 prefetchUsers(); // arranca desde que carga la página, para que "Clerk" abra instantáneo
 
-// Auto-refresh de la lista de órdenes cada 30s, solo mientras el Shipping Panel está activo
+// Auto-refresh de la lista de órdenes cada 2 min, solo mientras el Shipping Panel está activo
 setInterval(() => {
   const encScreen = document.getElementById('screen-enc');
   if (encScreen && encScreen.classList.contains('active') && currentUser) loadOrdenes();
-}, 60000);
+}, 120000);
 
 // Registro del Service Worker para modo PWA (instalable en iPad/celular)
 if ('serviceWorker' in navigator) {
