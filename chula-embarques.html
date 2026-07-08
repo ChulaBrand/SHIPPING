@@ -97,6 +97,11 @@
   .order-producto-lbl { font-size:12px; color:var(--text-muted); margin-bottom:10px; }
   .highlight-badge { display:inline-block; font-size:10px; font-weight:600; background:var(--green-dark); color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
   .locked-badge { display:inline-block; font-size:10px; font-weight:600; background:#6b7280; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
+  .overdue-badge { display:inline-block; font-size:10px; font-weight:600; background:#DC2626; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
+  .order-card-compact.overdue { border-color:#DC2626; border-width:1.5px; }
+  .expected-ready-row { display:flex; align-items:center; justify-content:space-between; gap:8px; background:#F7F5F0; border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; margin-bottom:10px; }
+  .expected-ready-row label { font-size:12px; color:var(--text-muted); font-weight:500; }
+  .expected-ready-row input[type="datetime-local"] { font-family:'Inter',sans-serif; font-size:12.5px; border:1px solid var(--border); border-radius:6px; padding:4px 6px; color:var(--text); background:#fff; }
   .producto-row { display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--bg); border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:1rem; }
   .producto-row i { font-size:15px; color:var(--text-faint); }
   .producto-row span { font-size:13px; color:var(--text); font-weight:500; }
@@ -372,7 +377,7 @@
     <div class="top-bar">
       <p class="top-bar-title">Shipping Panel</p>
       <div style="display:flex;gap:8px;">
-        <button class="btn-back" onclick="loadOrdenes()">⟳ Refresh</button>
+        <button class="btn-back" onclick="loadOrdenes()" title="Refresh" style="padding:5px 9px;"><i class="ti ti-refresh"></i></button>
         <button class="btn-back" onclick="goPapayaUpload('screen-enc')">Upload</button>
         <button class="btn-back" onclick="goRol()">Sign out</button>
       </div>
@@ -508,6 +513,40 @@ function formatLastUpdated(hora, fecha) {
 function isOlderThan48h(fecha) {
   if(!fecha) return false;
   return (new Date() - new Date(fecha)) / 3600000 > 48;
+}
+
+// "Expected ready" — lo pone el Shipping Clerk manualmente; si queda vacío, no se
+// muestra nada (ni al chofer ni como aviso). Solo se marca "overdue" si ya pasó
+// la hora esperada Y la orden todavía no llega a "Ready" (estatus 3).
+function isOverdue(o) {
+  if (!o.expectedReady) return false;
+  const est = parseInt(o.estatus) || 1;
+  if (est >= 3) return false;
+  const d = new Date(o.expectedReady);
+  if (isNaN(d)) return false;
+  return new Date() > d;
+}
+function formatExpectedReady(val) {
+  if (!val) return '';
+  const d = new Date(val);
+  if (isNaN(d)) return String(val);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let h = d.getHours(), m = d.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12; if (h === 0) h = 12;
+  const mm = String(m).padStart(2, '0');
+  return `${months[d.getMonth()]} ${d.getDate()}, ${h}:${mm} ${ampm}`;
+}
+async function setExpectedReady(orden, value) {
+  const o = ordenes.find(x => String(x.orden) === String(orden));
+  if (o) {
+    o.expectedReady = value;
+    const card = document.getElementById('card-' + orden);
+    if (card) card.outerHTML = buildClerkCard(o);
+  }
+  try {
+    await fetch(API, { method: 'POST', body: JSON.stringify({ pin: PIN, action: 'setExpectedReady', orden, expectedReady: value }) });
+  } catch (e) { showToast('Connection error — no se guardó la hora esperada'); }
 }
 
 function show(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
@@ -693,11 +732,15 @@ function renderDriverCard(o, highlighted) {
     <div><p class="status-banner-label">${LABELS[est-1]}</p><p class="status-banner-desc">${DESCS[est-1]}</p></div>
   </div>`;
   const lockedTag = locked ? '<span class="locked-badge">Locked</span>' : '';
+  const expectedReadyRow = o.expectedReady
+    ? `<div class="meta-row"><span class="meta-label">Expected ready</span><span class="meta-val">${formatExpectedReady(o.expectedReady)}</span></div>`
+    : '';
 
   return `<div class="order-card${highlighted?' highlight':''}${locked?' locked':''}">
     <p class="order-num" style="margin-bottom:4px;">Order #${o.orden}${highlighted?'<span class="highlight-badge">Your order</span>':''}${lockedTag}</p>
     ${productsHtml}${banner}
     ${buildTracker(est)}
+    ${expectedReadyRow}
     <div class="meta-row"><span class="meta-label">Last updated</span><span class="meta-val">${formatLastUpdated(o.hora, o.actualizado || o.fecha)}</span></div>
   </div>`;
 }
@@ -741,9 +784,10 @@ function buildClerkCard(o) {
   const isExpanded = globalViewMode === 'expanded' || expandedOrders.has(String(o.orden));
 
   if (!isExpanded) {
-    return `<div class="order-card-compact${locked ? ' locked' : ''}" id="card-${o.orden}" onclick="toggleCardExpand('${o.orden}')">
+    const overdue = isOverdue(o);
+    return `<div class="order-card-compact${locked ? ' locked' : ''}${overdue ? ' overdue' : ''}" id="card-${o.orden}" onclick="toggleCardExpand('${o.orden}')">
       <div class="oc-left">
-        <p class="oc-num">Order #${o.orden}${locked ? ' · <span class="locked-badge">Locked</span>' : ''}</p>
+        <p class="oc-num">Order #${o.orden}${locked ? ' · <span class="locked-badge">Locked</span>' : ''}${overdue ? ' · <span class="overdue-badge">⚠ Overdue</span>' : ''}</p>
         <p class="oc-cliente">${o.cliente}</p>
       </div>
       <span class="status-pill ${BANNER_CLS[est - 1]}">${BANNER_ICONS[est - 1]} ${LABELS[est - 1]}</span>
@@ -779,6 +823,11 @@ function buildClerkCard(o) {
 
   const warnHtml = incomplete ? `<p class="warn-note">⚠️ Order moved ahead — not all products are Ready yet</p>` : '';
 
+  const expectedReadyRow = `<div class="expected-ready-row" onclick="event.stopPropagation();">
+    <label for="er-${o.orden}">Expected ready</label>
+    <input type="datetime-local" id="er-${o.orden}" value="${o.expectedReady || ''}" ${locked ? 'disabled' : ''} onchange="setExpectedReady('${o.orden}', this.value)" />
+  </div>`;
+
   const btns = LABELS.map((l, i) => {
     const idx = i + 1;
     return `<button class="sbtn${est === idx ? ' ' + SEL[i] : ''}" onclick="event.stopPropagation();setOrderStatus('${o.orden}',${idx})" ${locked ? 'disabled' : ''}><span class="sbtn-letter">${LETTERS[i]}</span><span class="sbtn-text">${l}</span></button>`;
@@ -793,6 +842,7 @@ function buildClerkCard(o) {
       <i class="ti ti-chevron-up" style="color:var(--text-faint);font-size:18px;flex-shrink:0;"></i>
     </div>
     ${checklistHtml}
+    ${expectedReadyRow}
     ${warnHtml}
     <div class="status-btns">${btns}</div>
     <p class="status-desc-lbl" id="desc-${o.orden}">${DESCS[est - 1]}</p>
@@ -1732,7 +1782,7 @@ prefetchUsers(); // arranca desde que carga la página, para que "Clerk" abra in
 setInterval(() => {
   const encScreen = document.getElementById('screen-enc');
   if (encScreen && encScreen.classList.contains('active') && currentUser) loadOrdenes();
-}, 120000);
+}, 60000);
 
 // Registro del Service Worker para modo PWA (instalable en iPad/celular)
 if ('serviceWorker' in navigator) {
