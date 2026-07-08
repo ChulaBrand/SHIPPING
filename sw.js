@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chula-embarques-v3';
+const CACHE_NAME = 'chula-embarques-v4';
 const urlsToCache = [
   './chula-embarques.html',
   './manifest.json',
