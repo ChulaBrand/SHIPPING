@@ -99,10 +99,21 @@
   .locked-badge { display:inline-block; font-size:10px; font-weight:600; background:#6b7280; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
   .overdue-badge { display:inline-block; font-size:10px; font-weight:600; background:#DC2626; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
   .soon-badge { display:inline-block; font-size:10px; font-weight:600; background:#CA8A04; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
+  .stalled-badge { display:inline-block; font-size:10px; font-weight:600; background:#2563EB; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
   .order-card-compact.overdue { border-color:#DC2626; border-width:1.5px; }
   .order-card-compact.soon { border-color:#CA8A04; border-width:1.5px; }
+  .order-card-compact.stalled { border-color:#2563EB; border-width:1.5px; }
   .order-card.overdue-expanded { border-color:#DC2626; border-width:1.5px; }
   .order-card.soon-expanded { border-color:#CA8A04; border-width:1.5px; }
+  .order-card.stalled-expanded { border-color:#2563EB; border-width:1.5px; }
+  .attention-counts { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:1rem; }
+  .attention-count-chip { display:flex; align-items:center; gap:5px; font-size:12.5px; font-weight:600; padding:6px 12px; border-radius:99px; border:1.5px solid; cursor:pointer; background:#fff; font-family:'Inter',sans-serif; }
+  .attention-count-chip.overdue { border-color:#DC2626; color:#DC2626; }
+  .attention-count-chip.soon { border-color:#CA8A04; color:#CA8A04; }
+  .attention-count-chip.stalled { border-color:#2563EB; color:#2563EB; }
+  .attention-count-chip.overdue.active { background:#DC2626; color:#fff; }
+  .attention-count-chip.soon.active { background:#CA8A04; color:#fff; }
+  .attention-count-chip.stalled.active { background:#2563EB; color:#fff; }
   .expected-ready-row { display:flex; align-items:center; justify-content:space-between; gap:8px; background:#F7F5F0; border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; margin-bottom:10px; }
   .expected-ready-row label { font-size:12px; color:var(--text-muted); font-weight:500; }
   .expected-ready-row input[type="datetime-local"] { font-family:'Inter',sans-serif; font-size:12.5px; border:1px solid var(--border); border-radius:6px; padding:4px 6px; color:var(--text); background:#fff; }
@@ -401,8 +412,17 @@
         <button class="view-toggle-btn" id="dailySummaryBtn" onclick="goDailySummary()" title="Download today's summary"><i class="ti ti-file-spreadsheet"></i></button>
       </div>
     </div>
+    <div class="attention-counts" id="attentionCounts"></div>
+    <div id="attention-section" style="display:none;">
+      <p class="section-label" style="color:#B91C1C;">⚠️ Needs Attention</p>
+      <div class="orders-list" id="attention-list"></div>
+    </div>
     <p class="section-label">Today's orders</p>
     <div class="orders-list" id="orders-list"></div>
+    <div id="departed-section" style="display:none;">
+      <p class="section-label" style="margin-top:1.25rem;">📦 Departed</p>
+      <div class="orders-list" id="departed-list"></div>
+    </div>
     <div id="past-section" style="display:none;">
       <p class="section-label" style="margin-top:1.25rem;">Previous orders</p>
       <div class="orders-list" id="past-list"></div>
@@ -533,6 +553,56 @@ function expectedReadyState(o) {
   if (diffMs < 0) return 'overdue';
   if (diffMs <= 3600000) return 'soon';
   return null;
+}
+
+// "Stalled" — el pedido lleva 4 horas o más sin que nadie le cambie el estatus.
+// No depende de ninguna fecha que alguien haya puesto (a diferencia de overdue/soon),
+// solo de cuánto tiempo lleva "quieto". No aplica a pedidos ya Departed (est 6).
+const STALLED_HOURS = 4;
+function parseHoraAMPM(hora) {
+  if (!hora) return null;
+  const m = String(hora).trim().match(/^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/);
+  if (!m) return null;
+  let h = parseInt(m[1], 10);
+  const min = parseInt(m[2], 10);
+  const ampm = m[3].toUpperCase();
+  if (ampm === 'PM' && h !== 12) h += 12;
+  if (ampm === 'AM' && h === 12) h = 0;
+  return { h, min };
+}
+// Reconstruye fecha+hora del último cambio combinando "Actualizado" (fecha) + "Hora".
+// Aproximado (asume que quien lo ve está en la misma zona horaria del negocio),
+// igual que ya asume el resto de la app para el bloqueo de 48h.
+function getLastChangeDate(o) {
+  const dateStr = o.actualizado || o.fecha;
+  if (!dateStr) return null;
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d)) return null;
+  const t = parseHoraAMPM(o.hora);
+  if (t) d.setHours(t.h, t.min, 0, 0);
+  return d;
+}
+function isStalled(o) {
+  const est = parseInt(o.estatus) || 1;
+  if (est >= 6) return false;
+  const last = getLastChangeDate(o);
+  if (!last) return false;
+  return (new Date() - last) / 3600000 >= STALLED_HOURS;
+}
+
+// Prioridad cuando aplica más de una: Overdue > Stalled > Soon
+function attentionState(o) {
+  const er = expectedReadyState(o);
+  if (er === 'overdue') return 'overdue';
+  if (isStalled(o)) return 'stalled';
+  if (er === 'soon') return 'soon';
+  return null;
+}
+function attentionBadgeHtml(state) {
+  if (state === 'overdue') return '<span class="overdue-badge">⚠ Overdue</span>';
+  if (state === 'stalled') return '<span class="stalled-badge">⏸ Stalled</span>';
+  if (state === 'soon') return '<span class="soon-badge">🕒 Soon</span>';
+  return '';
 }
 function formatExpectedReady(val) {
   if (!val) return '';
@@ -792,12 +862,11 @@ function buildClerkCard(o) {
   const isExpanded = globalViewMode === 'expanded' || expandedOrders.has(String(o.orden));
 
   if (!isExpanded) {
-    const erState = expectedReadyState(o);
-    const erBadge = erState === 'overdue' ? ' · <span class="overdue-badge">⚠ Overdue</span>'
-      : erState === 'soon' ? ' · <span class="soon-badge">🕒 Soon</span>' : '';
-    return `<div class="order-card-compact${locked ? ' locked' : ''}${erState ? ' ' + erState : ''}" id="card-${o.orden}" onclick="toggleCardExpand('${o.orden}')">
+    const state = attentionState(o);
+    const badge = state ? ' · ' + attentionBadgeHtml(state) : '';
+    return `<div class="order-card-compact${locked ? ' locked' : ''}${state ? ' ' + state : ''}" id="card-${o.orden}" onclick="toggleCardExpand('${o.orden}')">
       <div class="oc-left">
-        <p class="oc-num">Order #${o.orden}${locked ? ' · <span class="locked-badge">Locked</span>' : ''}${erBadge}</p>
+        <p class="oc-num">Order #${o.orden}${locked ? ' · <span class="locked-badge">Locked</span>' : ''}${badge}</p>
         <p class="oc-cliente">${o.cliente}</p>
       </div>
       <span class="status-pill ${BANNER_CLS[est - 1]}">${BANNER_ICONS[est - 1]} ${LABELS[est - 1]}</span>
@@ -835,9 +904,8 @@ function buildClerkCard(o) {
 
   // Una vez que el pedido llega a "Ready" o más adelante, ya no tiene caso seguir
   // mostrando/editando el campo de "Expected ready" — el pedido ya cumplió su propósito.
-  const erState = expectedReadyState(o);
-  const erBadgeExpanded = erState === 'overdue' ? '<span class="overdue-badge">⚠ Overdue</span>'
-    : erState === 'soon' ? '<span class="soon-badge">🕒 Soon</span>' : '';
+  const state = attentionState(o);
+  const badgeExpanded = state ? attentionBadgeHtml(state) : '';
   const expectedReadyRow = est < 3 ? `<div class="expected-ready-row" onclick="event.stopPropagation();">
     <label for="er-${o.orden}">Expected ready</label>
     <input type="datetime-local" id="er-${o.orden}" value="${o.expectedReady || ''}" ${locked ? 'disabled' : ''} onchange="setExpectedReady('${o.orden}', this.value)" />
@@ -848,10 +916,10 @@ function buildClerkCard(o) {
     return `<button class="sbtn${est === idx ? ' ' + SEL[i] : ''}" onclick="event.stopPropagation();setOrderStatus('${o.orden}',${idx})" ${locked ? 'disabled' : ''}><span class="sbtn-letter">${LETTERS[i]}</span><span class="sbtn-text">${l}</span></button>`;
   }).join('');
 
-  return `<div class="order-card${locked ? ' locked' : ''}${erState ? ' ' + erState + '-expanded' : ''}" id="card-${o.orden}">
+  return `<div class="order-card${locked ? ' locked' : ''}${state ? ' ' + state + '-expanded' : ''}" id="card-${o.orden}">
     <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;cursor:pointer;" onclick="toggleCardExpand('${o.orden}')">
       <div>
-        <p class="order-num">Order #${o.orden}${locked ? '<span class="locked-badge">Locked</span>' : ''}${erBadgeExpanded}</p>
+        <p class="order-num">Order #${o.orden}${locked ? '<span class="locked-badge">Locked</span>' : ''}${badgeExpanded}</p>
         <p class="order-cliente">${o.cliente}</p>
       </div>
       <i class="ti ti-chevron-up" style="color:var(--text-faint);font-size:18px;flex-shrink:0;"></i>
@@ -936,23 +1004,78 @@ async function pushOrderStatus(orden, estatus) {
   catch (e) { showToast('Sync error — check connection'); }
 }
 
+let attentionFilterState = null;
+function toggleAttentionFilter(state) {
+  attentionFilterState = (attentionFilterState === state) ? null : state;
+  renderOrdenes();
+}
+function renderAttentionCounts(attention) {
+  const counts = { overdue: 0, stalled: 0, soon: 0 };
+  attention.forEach(a => counts[a.state]++);
+  if (attentionFilterState && !counts[attentionFilterState]) attentionFilterState = null;
+  const wrap = document.getElementById('attentionCounts');
+  const cfg = [['overdue', '🔴', 'Overdue'], ['soon', '🟡', 'Soon'], ['stalled', '🔵', 'Stalled']];
+  const visible = cfg.filter(([k]) => counts[k] > 0);
+  wrap.innerHTML = visible.map(([k, dot, label]) => {
+    const active = attentionFilterState === k ? ' active' : '';
+    return `<button class="attention-count-chip ${k}${active}" onclick="toggleAttentionFilter('${k}')">${dot} ${counts[k]} ${label}</button>`;
+  }).join('');
+}
+
 function renderOrdenes() {
-  const today=todayStr();
-  const visible=ordenes.filter(o=>!isOlderThan48h(o.actualizado)).filter(o=>!statusFilter.size || statusFilter.has(parseInt(o.estatus)||1));
-  const todayOrders=visible.filter(o=>o.fecha===today);
-  const pastOrders=visible.filter(o=>o.fecha!==today);
-  const list=document.getElementById('orders-list');
+  const today = todayStr();
+  const visible = ordenes.filter(o => !isOlderThan48h(o.actualizado)).filter(o => !statusFilter.size || statusFilter.has(parseInt(o.estatus) || 1));
+
+  // Clasifica cada orden en: Departed (est 6, va al fondo) / Needs Attention
+  // (overdue, stalled o soon — ya no aparece también en Today/Past, para no duplicar)
+  // / el resto normal.
+  const attention = [], departed = [], rest = [];
+  for (const o of visible) {
+    const est = parseInt(o.estatus) || 1;
+    if (est === 6) { departed.push(o); continue; }
+    const state = attentionState(o);
+    if (state) { attention.push({ o, state }); continue; }
+    rest.push(o);
+  }
+  const PRIORITY = { overdue: 0, stalled: 1, soon: 2 };
+  attention.sort((a, b) => PRIORITY[a.state] - PRIORITY[b.state]);
+  renderAttentionCounts(attention);
+  const attentionToShow = attentionFilterState ? attention.filter(a => a.state === attentionFilterState) : attention;
+
+  const todayOrders = rest.filter(o => o.fecha === today);
+  const pastOrders = rest.filter(o => o.fecha !== today);
+
   if (!document.getElementById('statusFilterChips').children.length) renderStatusFilterChips();
-  list.innerHTML='';
-  if(!todayOrders.length){ list.innerHTML='<div class="empty-state"><i class="ti ti-inbox"></i>No orders today</div>'; }
-  else todayOrders.forEach(o=>{list.innerHTML+=buildClerkCard(o);});
-  const pastSection=document.getElementById('past-section');
-  const pastList=document.getElementById('past-list');
-  if(pastOrders.length>0){
-    pastSection.style.display='block';
-    pastList.innerHTML='';
-    pastOrders.forEach(o=>{pastList.innerHTML+=buildClerkCard(o);});
-  } else { pastSection.style.display='none'; }
+
+  const attSection = document.getElementById('attention-section');
+  const attList = document.getElementById('attention-list');
+  if (attentionToShow.length) {
+    attSection.style.display = 'block';
+    attList.innerHTML = attentionToShow.map(a => buildClerkCard(a.o)).join('');
+  } else {
+    attSection.style.display = 'none';
+  }
+
+  const list = document.getElementById('orders-list');
+  list.innerHTML = '';
+  if (!todayOrders.length) { list.innerHTML = '<div class="empty-state"><i class="ti ti-inbox"></i>No orders today</div>'; }
+  else todayOrders.forEach(o => { list.innerHTML += buildClerkCard(o); });
+
+  const departedSection = document.getElementById('departed-section');
+  const departedList = document.getElementById('departed-list');
+  if (departed.length > 0) {
+    departedSection.style.display = 'block';
+    departedList.innerHTML = '';
+    departed.forEach(o => { departedList.innerHTML += buildClerkCard(o); });
+  } else { departedSection.style.display = 'none'; }
+
+  const pastSection = document.getElementById('past-section');
+  const pastList = document.getElementById('past-list');
+  if (pastOrders.length > 0) {
+    pastSection.style.display = 'block';
+    pastList.innerHTML = '';
+    pastOrders.forEach(o => { pastList.innerHTML += buildClerkCard(o); });
+  } else { pastSection.style.display = 'none'; }
 }
 
 function encBuscar() {
@@ -964,6 +1087,9 @@ function encBuscar() {
   const list=document.getElementById('orders-list');
   list.innerHTML='';
   document.getElementById('past-section').style.display='none';
+  document.getElementById('attention-section').style.display='none';
+  document.getElementById('departed-section').style.display='none';
+  document.getElementById('attentionCounts').innerHTML='';
   const filtered = exact ? [exact] : ordenes.filter(o=>!isOlderThan48h(o.actualizado) && (String(o.orden).toLowerCase().includes(val.toLowerCase())||o.cliente.toLowerCase().includes(val.toLowerCase())));
   if(!filtered.length){ list.innerHTML='<div class="empty-state"><i class="ti ti-search-off"></i>No match found</div>'; return; }
   filtered.forEach(o=>{list.innerHTML+=buildClerkCard(o);});
