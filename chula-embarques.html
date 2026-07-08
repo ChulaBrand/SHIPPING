@@ -1732,7 +1732,7 @@ prefetchUsers(); // arranca desde que carga la página, para que "Clerk" abra in
 setInterval(() => {
   const encScreen = document.getElementById('screen-enc');
   if (encScreen && encScreen.classList.contains('active') && currentUser) loadOrdenes();
-}, 60000);
+}, 120000);
 
 // Registro del Service Worker para modo PWA (instalable en iPad/celular)
 if ('serviceWorker' in navigator) {
