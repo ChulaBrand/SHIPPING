@@ -977,9 +977,6 @@ async function extractLines(arrayBuffer) {
       let text = line.map(it => it.str).join(" ").replace(/\s{2,}/g, " ").trim();
       if (!text) continue;
       if (text.startsWith("SALES ORDERS") || text.startsWith("DATE TIME")) continue;
-      if (text.toLowerCase().includes("ibarra")) {
-        console.log("[DEBUG Ibarra line]", JSON.stringify(text));
-      }
       lines.push(text);
     }
   }
@@ -1119,9 +1116,6 @@ function buildReportRows(orders) {
     }
     if (!hasPapaya) continue;
     const shortName = shortenClientName(o.name, o.note, o.sp);
-    if (o.name.trim().toLowerCase() === "ibarra") {
-      console.log("[DEBUG Ibarra order]", JSON.stringify({ sp: o.sp, note: o.note, shortName }));
-    }
     parsed.push({ sp: o.sp, cliente_full: o.name, cliente_corto: shortName, note: o.note, papaya_types: papayaTypes });
   }
 
@@ -1644,7 +1638,7 @@ async function handlePapayaFile(file) {
         combined.set(key, (combined.get(key) || 0) + qty);
       }
       const productos = [...combined.entries()].map(([desc, qty]) => `${qty} ${desc}`).join(', ');
-      return { orden: o.sp, cliente: o.name, productos };
+      return { orden: o.sp, cliente: shortenClientName(o.name, o.note, o.sp), productos };
     }).filter(r => r.productos);
 
     const [rows, flags] = buildReportRows(orders);
