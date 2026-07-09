@@ -141,7 +141,7 @@
   .chart-legend-list { display:flex; flex-wrap:wrap; gap:6px 12px; margin-top:8px; }
   .chart-legend-item { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--text-muted); }
   .chart-legend-dot { width:9px; height:9px; border-radius:2px; flex-shrink:0; }
-  .kpi-panel { margin-bottom:14px; }
+  .kpi-panel { }
   .panel-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
   .panel-title-row .panel-title { margin-bottom:0; }
   .mini-dropdown-wrap { position:relative; }
@@ -439,38 +439,38 @@
         </div>
       </div>
     </div>
-    <div class="kpi-panel">
-      <div class="panel-title-row">
-        <p class="panel-title">Summary</p>
-        <div class="mini-dropdown-wrap">
-          <button class="mini-filter-btn" onclick="togglePanelDropdown('core')" title="Filter this indicator">⋯</button>
-          <div class="dropdown-panel mini" id="panel-dd-core">
-            <button class="dropdown-option" data-range="day" onclick="setPanelRange('core','day')">Day</button>
-            <button class="dropdown-option" data-range="week" onclick="setPanelRange('core','week')">Week</button>
-            <button class="dropdown-option" data-range="month" onclick="setPanelRange('core','month')">Month</button>
-          </div>
-        </div>
-      </div>
-      <div class="kpi-grid" id="kpis-core"></div>
-    </div>
-
-    <div class="kpi-panel">
-      <div class="panel-title-row">
-        <p class="panel-title">Boxes</p>
-        <div class="mini-dropdown-wrap">
-          <button class="mini-filter-btn" onclick="togglePanelDropdown('boxes')" title="Filter this indicator">⋯</button>
-          <div class="dropdown-panel mini" id="panel-dd-boxes">
-            <button class="dropdown-option" data-range="day" onclick="setPanelRange('boxes','day')">Day</button>
-            <button class="dropdown-option" data-range="week" onclick="setPanelRange('boxes','week')">Week</button>
-            <button class="dropdown-option" data-range="month" onclick="setPanelRange('boxes','month')">Month</button>
-          </div>
-        </div>
-      </div>
-      <div class="kpi-grid" id="kpis-boxes"></div>
-    </div>
-
     <div class="analytics-panel-grid">
-      <div class="analytics-panel">
+      <div class="kpi-panel analytics-panel" id="analytics-panel-core">
+        <div class="panel-title-row">
+          <p class="panel-title">Summary</p>
+          <div class="mini-dropdown-wrap">
+            <button class="mini-filter-btn" onclick="togglePanelDropdown('core')" title="Filter this indicator">⋯</button>
+            <div class="dropdown-panel mini" id="panel-dd-core">
+              <button class="dropdown-option" data-range="day" onclick="setPanelRange('core','day')">Day</button>
+              <button class="dropdown-option" data-range="week" onclick="setPanelRange('core','week')">Week</button>
+              <button class="dropdown-option" data-range="month" onclick="setPanelRange('core','month')">Month</button>
+            </div>
+          </div>
+        </div>
+        <div class="kpi-grid" id="kpis-core"></div>
+      </div>
+
+      <div class="kpi-panel analytics-panel" id="analytics-panel-boxes">
+        <div class="panel-title-row">
+          <p class="panel-title">Boxes</p>
+          <div class="mini-dropdown-wrap">
+            <button class="mini-filter-btn" onclick="togglePanelDropdown('boxes')" title="Filter this indicator">⋯</button>
+            <div class="dropdown-panel mini" id="panel-dd-boxes">
+              <button class="dropdown-option" data-range="day" onclick="setPanelRange('boxes','day')">Day</button>
+              <button class="dropdown-option" data-range="week" onclick="setPanelRange('boxes','week')">Week</button>
+              <button class="dropdown-option" data-range="month" onclick="setPanelRange('boxes','month')">Month</button>
+            </div>
+          </div>
+        </div>
+        <div class="kpi-grid" id="kpis-boxes"></div>
+      </div>
+
+      <div class="analytics-panel" id="analytics-panel-status">
         <div class="panel-title-row">
           <p class="panel-title">Orders by Status</p>
           <div class="mini-dropdown-wrap">
@@ -484,7 +484,7 @@
         </div>
         <canvas id="chartStatus"></canvas>
       </div>
-      <div class="analytics-panel">
+      <div class="analytics-panel" id="analytics-panel-product">
         <div class="panel-title-row">
           <p class="panel-title">Boxes by Product</p>
           <div class="mini-dropdown-wrap">
@@ -499,7 +499,7 @@
         <canvas id="chartProduct"></canvas>
         <div class="chart-legend-list" id="productLegend"></div>
       </div>
-      <div class="analytics-panel">
+      <div class="analytics-panel" id="analytics-panel-day">
         <div class="panel-title-row">
           <p class="panel-title">Departed per Day</p>
           <div class="mini-dropdown-wrap">
@@ -513,7 +513,7 @@
         </div>
         <canvas id="chartDay"></canvas>
       </div>
-      <div class="analytics-panel">
+      <div class="analytics-panel" id="analytics-panel-complete">
         <div class="panel-title-row">
           <p class="panel-title">Complete vs Incomplete</p>
           <div class="mini-dropdown-wrap">
@@ -527,7 +527,7 @@
         </div>
         <canvas id="chartComplete"></canvas>
       </div>
-      <div class="analytics-panel">
+      <div class="analytics-panel" id="analytics-panel-shipped">
         <div class="panel-title-row">
           <p class="panel-title">Shipped vs Not Shipped</p>
           <div class="mini-dropdown-wrap">
@@ -541,7 +541,7 @@
         </div>
         <div id="shippedGauge"></div>
       </div>
-      <div class="analytics-panel">
+      <div class="analytics-panel" id="analytics-panel-person">
         <div class="panel-title-row">
           <p class="panel-title">Activity by Person</p>
           <div class="mini-dropdown-wrap">
@@ -579,6 +579,12 @@
     </div>
     <p class="section-label">Users</p>
     <div id="admin-user-list"></div>
+
+    <p class="section-label" style="margin-top:1.5rem;">Data Analysis layout</p>
+    <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:8px;">Usa ▲▼ para acomodar el orden de los paneles, y el menú para el rango que ven por default.</p>
+    <div id="admin-analytics-list"></div>
+    <button class="btn-primary" style="margin-top:10px;" onclick="saveAdminAnalyticsConfig()">Save layout</button>
+    <p class="upload-status show" id="admin-analytics-status" style="display:none;"></p>
   </div>
 
   <!-- CHOFER -->
@@ -943,7 +949,7 @@ function pinKey(k) {
       try {
         const res = await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'adminLogin', adminPin: pinVal }) });
         const result = await res.json();
-        if (result.success) { adminPinVal = pinVal; show('screen-admin'); loadAdminUsers(); }
+        if (result.success) { adminPinVal = pinVal; show('screen-admin'); loadAdminUsers(); loadAdminAnalyticsConfig(); }
         else { document.getElementById('pin-error').style.display='block'; pinVal=""; updateDots(); }
       } catch(e){ document.getElementById('pin-error').style.display='block'; pinVal=""; updateDots(); }
     } else {
@@ -1048,6 +1054,60 @@ async function adminToggleUser(name, active) {
   } catch(e) { showToast('Connection error.'); }
 }
 
+// ── Data Analysis layout (Admin) ──
+let analyticsAdminConfig = [];
+const ANALYTICS_PANEL_LABELS = { core: 'Summary', boxes: 'Boxes', status: 'Orders by Status', product: 'Boxes by Product', day: 'Departed per Day', complete: 'Complete vs Incomplete', shipped: 'Shipped vs Not Shipped', person: 'Activity by Person' };
+async function loadAdminAnalyticsConfig() {
+  const list = document.getElementById('admin-analytics-list');
+  list.innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i>Loading...</div>';
+  try {
+    const res = await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'getAnalyticsConfig' }) });
+    const config = await res.json();
+    analyticsAdminConfig = (Array.isArray(config) ? config : []).slice().sort((a, b) => a.order - b.order);
+    renderAdminAnalyticsConfig();
+  } catch (e) { list.innerHTML = '<div class="empty-state"><i class="ti ti-alert-circle"></i>Connection error.</div>'; }
+}
+function renderAdminAnalyticsConfig() {
+  const list = document.getElementById('admin-analytics-list');
+  list.innerHTML = analyticsAdminConfig.map((c, i) => `
+    <div class="admin-user-row">
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveAnalyticsPanel(${i},-1)" ${i === 0 ? 'disabled' : ''}>▲</button>
+        <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveAnalyticsPanel(${i},1)" ${i === analyticsAdminConfig.length - 1 ? 'disabled' : ''}>▼</button>
+        <span class="name">${ANALYTICS_PANEL_LABELS[c.key] || c.key}</span>
+      </div>
+      <select onchange="setAdminAnalyticsDefault('${c.key}', this.value)" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12.5px;font-family:'Inter',sans-serif;">
+        <option value="day" ${c.defaultRange === 'day' ? 'selected' : ''}>Day</option>
+        <option value="week" ${c.defaultRange === 'week' ? 'selected' : ''}>Week</option>
+        <option value="month" ${c.defaultRange === 'month' ? 'selected' : ''}>Month</option>
+      </select>
+    </div>`).join('');
+}
+function moveAnalyticsPanel(index, dir) {
+  const target = index + dir;
+  if (target < 0 || target >= analyticsAdminConfig.length) return;
+  const tmp = analyticsAdminConfig[index];
+  analyticsAdminConfig[index] = analyticsAdminConfig[target];
+  analyticsAdminConfig[target] = tmp;
+  renderAdminAnalyticsConfig();
+}
+function setAdminAnalyticsDefault(key, value) {
+  const item = analyticsAdminConfig.find(c => c.key === key);
+  if (item) item.defaultRange = value;
+}
+async function saveAdminAnalyticsConfig() {
+  const statusEl = document.getElementById('admin-analytics-status');
+  statusEl.style.display = 'block'; statusEl.textContent = 'Saving...'; statusEl.className = 'upload-status show loading';
+  const payload = analyticsAdminConfig.map((c, i) => ({ key: c.key, order: i + 1, defaultRange: c.defaultRange }));
+  try {
+    const res = await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'adminSetAnalyticsConfig', adminPin: adminPinVal, config: payload }) });
+    const result = await res.json();
+    if (result.error) { statusEl.textContent = result.error; statusEl.className = 'upload-status show err'; return; }
+    statusEl.textContent = '✓ Layout saved.'; statusEl.className = 'upload-status show ok';
+    analyticsLayoutLoaded = false; // para que Data Analysis lo vuelva a jalar la próxima vez que se abra
+  } catch (e) { statusEl.textContent = 'Connection error.'; statusEl.className = 'upload-status show err'; }
+}
+
 // ── DATA ANALYSIS ────────────────────────────────
 let analyticsRange = 'day';       // filtro general de fecha
 let customRangeValue = null;      // rango exacto cuando el filtro general está en "Custom"
@@ -1065,8 +1125,25 @@ const CHART_PALETTE = ['#5B21B6', '#16A34A', '#CA8A04', '#DC2626', '#2563EB', '#
 // Default "de fábrica" de cada panel — se usa cuando el filtro general está en "Default"
 // y el panel no tiene su propia anulación puesta. Solo "Departed per Day" arranca en
 // Week (una tendencia de un solo día no dice mucho); el resto arranca en Day.
-const DEFAULT_RANGE_FOR_PANEL = { core: 'day', boxes: 'day', status: 'day', product: 'day', day: 'week', person: 'day', complete: 'day', shipped: 'day' };
+let DEFAULT_RANGE_FOR_PANEL = { core: 'day', boxes: 'day', status: 'day', product: 'day', day: 'week', person: 'day', complete: 'day', shipped: 'day' };
 const ALL_PANEL_KEYS = ['core', 'boxes', 'status', 'product', 'day', 'person', 'complete', 'shipped'];
+let analyticsLayoutLoaded = false;
+// Jala el acomodo (orden de paneles + default de cada uno) que el Admin haya guardado.
+// Si nunca ha guardado nada, el servidor regresa los valores de fábrica y no cambia nada.
+async function loadAnalyticsLayoutConfig() {
+  try {
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ pin: PIN, action: 'getAnalyticsConfig' }) });
+    const config = await res.json();
+    if (Array.isArray(config)) applyAnalyticsLayout(config);
+  } catch (e) { /* si falla, se queda con el acomodo/():defaults ya cargados en el HTML */ }
+}
+function applyAnalyticsLayout(config) {
+  config.forEach(c => {
+    if (c.defaultRange) DEFAULT_RANGE_FOR_PANEL[c.key] = c.defaultRange;
+    const el = document.getElementById('analytics-panel-' + c.key);
+    if (el && c.order) el.style.order = c.order;
+  });
+}
 // Paneles cuyos números dependen del filtro de frutas (todos los demás no varían por fruta)
 const FRUIT_AWARE_PANELS = new Set(['core', 'boxes', 'product', 'complete', 'shipped']);
 
@@ -1156,7 +1233,11 @@ function setPanelRange(panelKey, range) {
   document.getElementById('panel-dd-' + panelKey).classList.remove('open');
   refreshPanel(panelKey);
 }
-function initAnalyticsScreen() { panelOverride = {}; setAnalyticsRange('default'); }
+async function initAnalyticsScreen() {
+  panelOverride = {};
+  if (!analyticsLayoutLoaded) { await loadAnalyticsLayoutConfig(); analyticsLayoutLoaded = true; }
+  setAnalyticsRange('default');
+}
 
 // ── Filtro de frutas (100% client-side sobre los datos ya cargados de cada panel) ──
 function toggleAllFruits(el) {
