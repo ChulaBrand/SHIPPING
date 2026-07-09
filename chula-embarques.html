@@ -19,6 +19,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
   :root {
@@ -114,17 +115,19 @@
   .attention-count-chip.overdue.active { background:#DC2626; color:#fff; }
   .attention-count-chip.soon.active { background:#CA8A04; color:#fff; }
   .attention-count-chip.stalled.active { background:#2563EB; color:#fff; }
-  .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-bottom:1rem; }
-  .kpi-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:14px 10px; text-align:center; }
-  .kpi-value { font-size:26px; font-weight:700; line-height:1.1; }
-  .kpi-label { font-size:12px; color:var(--text-muted); margin-top:4px; }
-  .kpi-sub { font-size:11px; color:var(--text-faint); margin-top:2px; }
-  .bar-chart { display:flex; flex-direction:column; gap:8px; margin-bottom:4px; }
-  .bar-row { display:flex; align-items:center; gap:8px; }
-  .bar-label { width:112px; font-size:12px; color:var(--text-muted); flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .bar-track { flex:1; background:#F0EDE6; border-radius:6px; height:16px; overflow:hidden; }
-  .bar-fill { height:100%; background:var(--purple); border-radius:6px; min-width:2px; }
-  .bar-value { width:32px; text-align:right; font-size:12px; font-weight:600; color:var(--text); flex-shrink:0; }
+  .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(105px,1fr)); gap:8px; margin-bottom:6px; }
+  .kpi-card { background:var(--white); border:1px solid var(--border); border-left:3px solid var(--kpi-color, var(--purple)); border-radius:var(--radius-sm); padding:10px 8px; text-align:left; }
+  .kpi-value { font-size:20px; font-weight:700; line-height:1.1; color:var(--kpi-color, var(--text)); }
+  .kpi-label { font-size:10.5px; color:var(--text-muted); margin-top:3px; text-transform:uppercase; letter-spacing:.03em; }
+  .kpi-sub { font-size:10.5px; color:var(--text-faint); margin-top:1px; }
+  .kpi-footnote { font-size:10.5px; color:var(--text-faint); margin-bottom:1rem; }
+  .range-chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .range-chip { font-size:12.5px; font-weight:600; padding:7px 16px; border-radius:99px; border:1.5px solid var(--border-strong); background:var(--white); color:var(--text-muted); cursor:pointer; font-family:'Inter',sans-serif; }
+  .range-chip.active { border-color:var(--purple); color:#fff; background:var(--purple); }
+  .analytics-panel-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
+  .analytics-panel { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:12px; }
+  .panel-title { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px; }
+  .analytics-panel canvas { max-height:190px; }
   .expected-ready-row { display:flex; align-items:center; justify-content:space-between; gap:8px; background:#F7F5F0; border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; margin-bottom:10px; }
   .expected-ready-row label { font-size:12px; color:var(--text-muted); font-weight:500; }
   .expected-ready-row input[type="datetime-local"] { font-family:'Inter',sans-serif; font-size:12.5px; border:1px solid var(--border); border-radius:6px; padding:4px 6px; color:var(--text); background:#fff; }
@@ -375,10 +378,10 @@
       <p class="top-bar-title">Data Analysis</p>
       <button class="btn-back" onclick="goRol()">Sign out</button>
     </div>
-    <div class="filter-chips" id="analyticsRangeChips" style="margin-bottom:10px;">
-      <button class="filter-chip active" data-range="week" onclick="setAnalyticsRange('week')">This week</button>
-      <button class="filter-chip" data-range="month" onclick="setAnalyticsRange('month')">This month</button>
-      <button class="filter-chip" data-range="custom" onclick="setAnalyticsRange('custom')">Custom</button>
+    <div class="range-chips" id="analyticsRangeChips">
+      <button class="range-chip active" data-range="week" onclick="setAnalyticsRange('week')">This week</button>
+      <button class="range-chip" data-range="month" onclick="setAnalyticsRange('month')">This month</button>
+      <button class="range-chip" data-range="custom" onclick="setAnalyticsRange('custom')">Custom</button>
     </div>
     <div id="analyticsCustomRange" style="display:none;gap:8px;margin-bottom:14px;">
       <input type="date" id="analyticsStart" style="flex:1;height:38px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 8px;font-family:'Inter',sans-serif;font-size:13px;">
@@ -386,12 +389,25 @@
       <button class="btn-back" onclick="loadAnalytics()">Apply</button>
     </div>
     <div class="kpi-grid" id="analyticsKpis"></div>
-    <p class="section-label" style="margin-top:1.5rem;">Orders by status</p>
-    <div id="analyticsStatusChart" class="bar-chart"></div>
-    <p class="section-label" style="margin-top:1.5rem;">Departed per day</p>
-    <div id="analyticsDayChart" class="bar-chart"></div>
-    <p class="section-label" style="margin-top:1.5rem;">Activity by person</p>
-    <div id="analyticsPersonChart" class="bar-chart"></div>
+    <p class="kpi-footnote">*Tarimas de papaya, estimado con divisor estándar (48 cajas) — para el número exacto por cliente usa el Papaya Pallet Report.</p>
+    <div class="analytics-panel-grid">
+      <div class="analytics-panel">
+        <p class="panel-title">Orders by Status</p>
+        <canvas id="chartStatus"></canvas>
+      </div>
+      <div class="analytics-panel">
+        <p class="panel-title">Boxes by Product</p>
+        <canvas id="chartProduct"></canvas>
+      </div>
+      <div class="analytics-panel">
+        <p class="panel-title">Departed per Day</p>
+        <canvas id="chartDay"></canvas>
+      </div>
+      <div class="analytics-panel">
+        <p class="panel-title">Activity by Person</p>
+        <canvas id="chartPerson"></canvas>
+      </div>
+    </div>
   </div>
 
   <!-- ADMIN PANEL -->
@@ -875,6 +891,10 @@ async function adminToggleUser(name, active) {
 
 // ── DATA ANALYSIS ────────────────────────────────
 let analyticsRange = 'week';
+let analyticsCharts = {}; // guarda las instancias de Chart.js para poder destruirlas al recargar
+const PRODUCT_LABELS = { papaya: 'Papaya', limes: 'Limes', pineapples: 'Pineapples', bananas_plantains: 'Bananas/Plantains', aloe: 'Aloe Vera', cucumbers: 'Cucumbers', other: 'Other' };
+const CHART_PALETTE = ['#5B21B6', '#16A34A', '#CA8A04', '#DC2626', '#2563EB', '#EA580C', '#0D9488', '#9333EA'];
+
 function toISO(d) { return d.toISOString().slice(0, 10); }
 function computeRangeDates(range) {
   const now = new Date();
@@ -892,7 +912,7 @@ function computeRangeDates(range) {
 }
 function setAnalyticsRange(range) {
   analyticsRange = range;
-  document.querySelectorAll('#analyticsRangeChips .filter-chip').forEach(b => b.classList.toggle('active', b.dataset.range === range));
+  document.querySelectorAll('#analyticsRangeChips .range-chip').forEach(b => b.classList.toggle('active', b.dataset.range === range));
   document.getElementById('analyticsCustomRange').style.display = (range === 'custom') ? 'flex' : 'none';
   if (range !== 'custom') loadAnalytics();
 }
@@ -908,9 +928,6 @@ async function loadAnalytics() {
     range = computeRangeDates(analyticsRange);
   }
   document.getElementById('analyticsKpis').innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i>Loading...</div>';
-  document.getElementById('analyticsStatusChart').innerHTML = '';
-  document.getElementById('analyticsDayChart').innerHTML = '';
-  document.getElementById('analyticsPersonChart').innerHTML = '';
   try {
     const res = await fetch(API, { method: 'POST', body: JSON.stringify({ pin: PIN, action: 'getAnalytics', start: range.start, end: range.end }) });
     const data = await res.json();
@@ -921,27 +938,62 @@ async function loadAnalytics() {
   }
 }
 function pct(n, total) { return total ? Math.round((n / total) * 100) : 0; }
-function barChartHtml(rows, maxVal) {
-  if (!rows.length) return '<div class="empty-state">No data in this range</div>';
-  return rows.map(([label, val]) => `<div class="bar-row"><span class="bar-label" title="${label}">${label}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.max(2, val / maxVal * 100)}%"></div></div><span class="bar-value">${val}</span></div>`).join('');
+
+function makeChart(id, config) {
+  if (analyticsCharts[id]) analyticsCharts[id].destroy();
+  const ctx = document.getElementById(id);
+  analyticsCharts[id] = new Chart(ctx, config);
 }
+
 function renderAnalytics(d) {
   const kpis = [
-    { label: 'Total orders', value: d.total, sub: '' },
-    { label: 'Departed', value: d.departed, sub: pct(d.departed, d.total) + '%' },
-    { label: 'Pending', value: d.pending, sub: pct(d.pending, d.total) + '%' },
-    { label: 'Incomplete', value: d.incomplete, sub: d.departed ? pct(d.incomplete, d.departed) + '% of departed' : '—' }
+    { label: 'Total Orders', value: d.total, sub: '', color: '#5B21B6' },
+    { label: 'Departed', value: d.departed, sub: pct(d.departed, d.total) + '%', color: '#16A34A' },
+    { label: 'Pending', value: d.pending, sub: pct(d.pending, d.total) + '%', color: '#CA8A04' },
+    { label: 'Incomplete', value: d.incomplete, sub: d.departed ? pct(d.incomplete, d.departed) + '% of departed' : '—', color: '#DC2626' },
+    { label: 'Pallets Ordered*', value: d.palletsOrdered, sub: 'papaya only', color: '#2563EB' },
+    { label: 'Pallets Shipped*', value: d.palletsShipped, sub: 'papaya only', color: '#0D9488' }
   ];
-  document.getElementById('analyticsKpis').innerHTML = kpis.map(k => `<div class="kpi-card"><div class="kpi-value">${k.value}</div><div class="kpi-label">${k.label}</div><div class="kpi-sub">${k.sub}</div></div>`).join('');
+  document.getElementById('analyticsKpis').innerHTML = kpis.map(k =>
+    `<div class="kpi-card" style="--kpi-color:${k.color};"><div class="kpi-value">${k.value}</div><div class="kpi-label">${k.label}</div><div class="kpi-sub">${k.sub}</div></div>`
+  ).join('');
 
-  const statusRows = LABELS.map((l, i) => [l, d.statusCounts[i] || 0]);
-  document.getElementById('analyticsStatusChart').innerHTML = barChartHtml(statusRows, Math.max(1, ...statusRows.map(r => r[1])));
+  // Donut: pedidos por estatus actual
+  makeChart('chartStatus', {
+    type: 'doughnut',
+    data: { labels: LABELS, datasets: [{ data: d.statusCounts, backgroundColor: CHART_PALETTE, borderWidth: 0 }] },
+    options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10, padding: 8 } } } }
+  });
 
+  // Barras: cajas por tipo de producto
+  const productKeys = Object.keys(d.boxesByCategory).sort((a, b) => d.boxesByCategory[b] - d.boxesByCategory[a]);
+  makeChart('chartProduct', {
+    type: 'bar',
+    data: {
+      labels: productKeys.map(k => PRODUCT_LABELS[k] || k),
+      datasets: [{ data: productKeys.map(k => d.boxesByCategory[k]), backgroundColor: CHART_PALETTE, borderRadius: 4 }]
+    },
+    options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { font: { size: 10 } } }, x: { ticks: { font: { size: 9 } } } } }
+  });
+
+  // Línea: despachados por día (tendencia)
   const dayEntries = Object.entries(d.byDay).sort((a, b) => a[0].localeCompare(b[0]));
-  document.getElementById('analyticsDayChart').innerHTML = barChartHtml(dayEntries, Math.max(1, ...dayEntries.map(r => r[1])));
+  makeChart('chartDay', {
+    type: 'line',
+    data: {
+      labels: dayEntries.map(([day]) => day.slice(5)), // MM-DD
+      datasets: [{ data: dayEntries.map(([, v]) => v), borderColor: '#16A34A', backgroundColor: 'rgba(22,163,74,0.15)', fill: true, tension: 0.3, pointRadius: 3 }]
+    },
+    options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { font: { size: 10 } } }, x: { ticks: { font: { size: 9 } } } } }
+  });
 
+  // Barras horizontales: actividad por persona
   const personEntries = Object.entries(d.changesByUser).sort((a, b) => b[1] - a[1]);
-  document.getElementById('analyticsPersonChart').innerHTML = barChartHtml(personEntries, Math.max(1, ...personEntries.map(r => r[1])));
+  makeChart('chartPerson', {
+    type: 'bar',
+    data: { labels: personEntries.map(([n]) => n), datasets: [{ data: personEntries.map(([, v]) => v), backgroundColor: '#5B21B6', borderRadius: 4 }] },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { font: { size: 10 } } }, y: { ticks: { font: { size: 10 } } } } }
+  });
 }
 
 
