@@ -139,6 +139,14 @@
   .chart-legend-list { display:flex; flex-wrap:wrap; gap:6px 12px; margin-top:8px; }
   .chart-legend-item { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--text-muted); }
   .chart-legend-dot { width:9px; height:9px; border-radius:2px; flex-shrink:0; }
+  .kpi-panel { margin-bottom:14px; }
+  .panel-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .panel-title-row .panel-title { margin-bottom:0; }
+  .mini-dropdown-wrap { position:relative; }
+  .mini-filter-btn { width:18px; height:18px; border-radius:4px; border:none; background:none; color:var(--text-faint); font-size:12px; line-height:1; cursor:pointer; opacity:.45; display:flex; align-items:center; justify-content:center; }
+  .mini-filter-btn:hover { opacity:1; background:#F0EDE6; }
+  .dropdown-panel.mini { min-width:110px; padding:5px; right:0; left:auto; }
+  .dropdown-panel.mini .dropdown-option { font-size:12px; padding:6px 8px; }
   .expected-ready-row { display:flex; align-items:center; justify-content:space-between; gap:8px; background:#F7F5F0; border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; margin-bottom:10px; }
   .expected-ready-row label { font-size:12px; color:var(--text-muted); font-weight:500; }
   .expected-ready-row input[type="datetime-local"] { font-family:'Inter',sans-serif; font-size:12.5px; border:1px solid var(--border); border-radius:6px; padding:4px 6px; color:var(--text); background:#fff; }
@@ -421,24 +429,129 @@
         </div>
       </div>
     </div>
-    <div class="kpi-grid" id="analyticsKpis"></div>
+    <div class="kpi-panel">
+      <div class="panel-title-row">
+        <p class="panel-title">Summary</p>
+        <div class="mini-dropdown-wrap">
+          <button class="mini-filter-btn" onclick="togglePanelDropdown('core')" title="Filter this indicator">⋯</button>
+          <div class="dropdown-panel mini" id="panel-dd-core">
+            <button class="dropdown-option" onclick="setPanelRange('core','auto')">Default</button>
+            <button class="dropdown-option" onclick="setPanelRange('core','day')">Day</button>
+            <button class="dropdown-option" onclick="setPanelRange('core','week')">Week</button>
+            <button class="dropdown-option" onclick="setPanelRange('core','month')">Month</button>
+          </div>
+        </div>
+      </div>
+      <div class="kpi-grid" id="kpis-core"></div>
+    </div>
+
+    <div class="kpi-panel">
+      <div class="panel-title-row">
+        <p class="panel-title">Boxes</p>
+        <div class="mini-dropdown-wrap">
+          <button class="mini-filter-btn" onclick="togglePanelDropdown('boxes')" title="Filter this indicator">⋯</button>
+          <div class="dropdown-panel mini" id="panel-dd-boxes">
+            <button class="dropdown-option" onclick="setPanelRange('boxes','auto')">Default</button>
+            <button class="dropdown-option" onclick="setPanelRange('boxes','day')">Day</button>
+            <button class="dropdown-option" onclick="setPanelRange('boxes','week')">Week</button>
+            <button class="dropdown-option" onclick="setPanelRange('boxes','month')">Month</button>
+          </div>
+        </div>
+      </div>
+      <div class="kpi-grid" id="kpis-boxes"></div>
+    </div>
+
     <div class="analytics-panel-grid">
       <div class="analytics-panel">
-        <p class="panel-title">Orders by Status</p>
+        <div class="panel-title-row">
+          <p class="panel-title">Orders by Status</p>
+          <div class="mini-dropdown-wrap">
+            <button class="mini-filter-btn" onclick="togglePanelDropdown('status')" title="Filter this indicator">⋯</button>
+            <div class="dropdown-panel mini" id="panel-dd-status">
+              <button class="dropdown-option" onclick="setPanelRange('status','auto')">Default</button>
+              <button class="dropdown-option" onclick="setPanelRange('status','day')">Day</button>
+              <button class="dropdown-option" onclick="setPanelRange('status','week')">Week</button>
+              <button class="dropdown-option" onclick="setPanelRange('status','month')">Month</button>
+            </div>
+          </div>
+        </div>
         <canvas id="chartStatus"></canvas>
       </div>
       <div class="analytics-panel">
-        <p class="panel-title">Boxes by Product</p>
+        <div class="panel-title-row">
+          <p class="panel-title">Boxes by Product (Ordered)</p>
+          <div class="mini-dropdown-wrap">
+            <button class="mini-filter-btn" onclick="togglePanelDropdown('product')" title="Filter this indicator">⋯</button>
+            <div class="dropdown-panel mini" id="panel-dd-product">
+              <button class="dropdown-option" onclick="setPanelRange('product','auto')">Default</button>
+              <button class="dropdown-option" onclick="setPanelRange('product','day')">Day</button>
+              <button class="dropdown-option" onclick="setPanelRange('product','week')">Week</button>
+              <button class="dropdown-option" onclick="setPanelRange('product','month')">Month</button>
+            </div>
+          </div>
+        </div>
         <canvas id="chartProduct"></canvas>
         <div class="chart-legend-list" id="productLegend"></div>
       </div>
       <div class="analytics-panel">
-        <p class="panel-title">Departed per Day</p>
+        <div class="panel-title-row">
+          <p class="panel-title">Departed per Day</p>
+          <div class="mini-dropdown-wrap">
+            <button class="mini-filter-btn" onclick="togglePanelDropdown('day')" title="Filter this indicator">⋯</button>
+            <div class="dropdown-panel mini" id="panel-dd-day">
+              <button class="dropdown-option" onclick="setPanelRange('day','auto')">Default</button>
+              <button class="dropdown-option" onclick="setPanelRange('day','day')">Day</button>
+              <button class="dropdown-option" onclick="setPanelRange('day','week')">Week</button>
+              <button class="dropdown-option" onclick="setPanelRange('day','month')">Month</button>
+            </div>
+          </div>
+        </div>
         <canvas id="chartDay"></canvas>
       </div>
       <div class="analytics-panel">
-        <p class="panel-title">Activity by Person</p>
+        <div class="panel-title-row">
+          <p class="panel-title">Activity by Person</p>
+          <div class="mini-dropdown-wrap">
+            <button class="mini-filter-btn" onclick="togglePanelDropdown('person')" title="Filter this indicator">⋯</button>
+            <div class="dropdown-panel mini" id="panel-dd-person">
+              <button class="dropdown-option" onclick="setPanelRange('person','auto')">Default</button>
+              <button class="dropdown-option" onclick="setPanelRange('person','day')">Day</button>
+              <button class="dropdown-option" onclick="setPanelRange('person','week')">Week</button>
+              <button class="dropdown-option" onclick="setPanelRange('person','month')">Month</button>
+            </div>
+          </div>
+        </div>
         <canvas id="chartPerson"></canvas>
+      </div>
+      <div class="analytics-panel">
+        <div class="panel-title-row">
+          <p class="panel-title">Complete vs Incomplete</p>
+          <div class="mini-dropdown-wrap">
+            <button class="mini-filter-btn" onclick="togglePanelDropdown('complete')" title="Filter this indicator">⋯</button>
+            <div class="dropdown-panel mini" id="panel-dd-complete">
+              <button class="dropdown-option" onclick="setPanelRange('complete','auto')">Default</button>
+              <button class="dropdown-option" onclick="setPanelRange('complete','day')">Day</button>
+              <button class="dropdown-option" onclick="setPanelRange('complete','week')">Week</button>
+              <button class="dropdown-option" onclick="setPanelRange('complete','month')">Month</button>
+            </div>
+          </div>
+        </div>
+        <canvas id="chartComplete"></canvas>
+      </div>
+      <div class="analytics-panel">
+        <div class="panel-title-row">
+          <p class="panel-title">Shipped vs Not Shipped</p>
+          <div class="mini-dropdown-wrap">
+            <button class="mini-filter-btn" onclick="togglePanelDropdown('shipped')" title="Filter this indicator">⋯</button>
+            <div class="dropdown-panel mini" id="panel-dd-shipped">
+              <button class="dropdown-option" onclick="setPanelRange('shipped','auto')">Default</button>
+              <button class="dropdown-option" onclick="setPanelRange('shipped','day')">Day</button>
+              <button class="dropdown-option" onclick="setPanelRange('shipped','week')">Week</button>
+              <button class="dropdown-option" onclick="setPanelRange('shipped','month')">Month</button>
+            </div>
+          </div>
+        </div>
+        <canvas id="chartShipped"></canvas>
       </div>
     </div>
   </div>
@@ -934,28 +1047,44 @@ async function adminToggleUser(name, active) {
 }
 
 // ── DATA ANALYSIS ────────────────────────────────
-let analyticsRange = 'day';
-let analyticsCharts = {}; // guarda las instancias de Chart.js para poder destruirlas al recargar
-let lastAnalyticsData = null; // última respuesta del servidor, para re-filtrar por fruta sin re-consultar
+let analyticsRange = 'day';       // filtro general de fecha
+let customRangeValue = null;      // rango exacto cuando el filtro general está en "Custom"
+let analyticsCharts = {};         // instancias de Chart.js, para destruirlas al recargar
+let rangeCache = {};              // "start|end" -> Promise con la respuesta del servidor (evita pedir 2 veces lo mismo)
+let panelOverride = {};           // panelKey -> 'day'|'week'|'month' | null (sigue el filtro general)
+let panelData = {};               // panelKey -> último dato usado por ese panel (para re-filtrar por fruta sin re-pedir)
 const ALL_FRUIT_KEYS = ['papaya', 'limes', 'pineapples', 'bananas_plantains', 'aloe', 'cucumbers', 'other'];
 const PRODUCT_LABELS = { papaya: 'Papaya', limes: 'Limes', pineapples: 'Pineapples', bananas_plantains: 'Bananas/Plantains', aloe: 'Aloe Vera', cucumbers: 'Cucumbers', other: 'Other' };
 const PRODUCT_SHORT_LABELS = { papaya: 'PAP', limes: 'LIM', pineapples: 'PIN', bananas_plantains: 'B/P', aloe: 'ALO', cucumbers: 'CUC', other: 'OTH' };
 const CHART_PALETTE = ['#5B21B6', '#16A34A', '#CA8A04', '#DC2626', '#2563EB', '#EA580C', '#0D9488', '#9333EA'];
+// Paneles donde "Day" no dice mucho (una tendencia o un total de cajas de un solo día es
+// poco útil) — mientras el filtro general esté en Day, estos usan Week por su cuenta,
+// a menos que el usuario los anule con su propio botón chiquito.
+const WEEK_DEFAULT_PANELS = new Set(['boxes', 'product', 'day']);
+const ALL_PANEL_KEYS = ['core', 'boxes', 'status', 'product', 'day', 'person', 'complete', 'shipped'];
+// Paneles cuyos números dependen del filtro de frutas (todos los demás no varían por fruta)
+const FRUIT_AWARE_PANELS = new Set(['core', 'boxes', 'product', 'complete', 'shipped']);
 
-// ── Dropdowns (Day/Week/Month/Custom y Filter de frutas) ──
+// ── Dropdowns (Day/Week/Month/Custom, Filter de frutas, y el mini-filtro por panel) ──
 function toggleDropdown(which) {
   const btn = document.getElementById(which + 'DropdownBtn');
   const panel = document.getElementById(which + 'DropdownPanel');
   const isOpen = panel.classList.contains('open');
-  document.querySelectorAll('.dropdown-panel.open').forEach(p => p.classList.remove('open'));
-  document.querySelectorAll('.dropdown-btn.open').forEach(b => b.classList.remove('open'));
+  closeAllDropdowns();
   if (!isOpen) { panel.classList.add('open'); btn.classList.add('open'); }
 }
+function togglePanelDropdown(panelKey) {
+  const panel = document.getElementById('panel-dd-' + panelKey);
+  const isOpen = panel.classList.contains('open');
+  closeAllDropdowns();
+  if (!isOpen) panel.classList.add('open');
+}
+function closeAllDropdowns() {
+  document.querySelectorAll('.dropdown-panel.open').forEach(p => p.classList.remove('open'));
+  document.querySelectorAll('.dropdown-btn.open').forEach(b => b.classList.remove('open'));
+}
 document.addEventListener('click', (e) => {
-  if (!e.target.closest('.dropdown-wrap')) {
-    document.querySelectorAll('.dropdown-panel.open').forEach(p => p.classList.remove('open'));
-    document.querySelectorAll('.dropdown-btn.open').forEach(b => b.classList.remove('open'));
-  }
+  if (!e.target.closest('.dropdown-wrap') && !e.target.closest('.mini-dropdown-wrap')) closeAllDropdowns();
 });
 
 function toISO(d) { return d.toISOString().slice(0, 10); }
@@ -972,7 +1101,16 @@ function computeRangeDates(range) {
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
     return { start: toISO(start), end: toISO(now) };
   }
-  return null; // 'custom' usa los inputs de fecha directamente
+  return null;
+}
+// El rango que le toca a un panel en concreto: su propio override si tiene uno puesto;
+// si no, el "default inteligente" (Week) si el filtro general está en Day y este panel
+// está en la lista de excepciones; si no, sigue al filtro general tal cual.
+function effectiveRangeFor(panelKey) {
+  if (panelOverride[panelKey]) return computeRangeDates(panelOverride[panelKey]);
+  if (analyticsRange === 'day' && WEEK_DEFAULT_PANELS.has(panelKey)) return computeRangeDates('week');
+  if (analyticsRange === 'custom') return customRangeValue;
+  return computeRangeDates(analyticsRange);
 }
 function setAnalyticsRange(range) {
   analyticsRange = range;
@@ -980,96 +1118,104 @@ function setAnalyticsRange(range) {
   document.getElementById('analyticsCustomRange').style.display = (range === 'custom') ? 'flex' : 'none';
   const label = range === 'day' ? 'Day' : range === 'week' ? 'Week' : range === 'month' ? 'Month' : 'Custom';
   document.getElementById('rangeDropdownBtn').innerHTML = `${label} <i class="ti ti-chevron-down"></i>`;
-  if (range !== 'custom') { toggleDropdown('range'); loadAnalytics(); }
+  if (range !== 'custom') { toggleDropdown('range'); refreshAllPanels(); }
 }
-function applyCustomRange() { toggleDropdown('range'); loadAnalytics(); }
-function initAnalyticsScreen() { setAnalyticsRange('day'); }
+function applyCustomRange() {
+  const s = document.getElementById('analyticsStart').value;
+  const e = document.getElementById('analyticsEnd').value;
+  if (!s || !e) return;
+  customRangeValue = { start: s, end: e };
+  toggleDropdown('range');
+  refreshAllPanels();
+}
+function setPanelRange(panelKey, range) {
+  panelOverride[panelKey] = (range === 'auto') ? null : range;
+  document.getElementById('panel-dd-' + panelKey).classList.remove('open');
+  refreshPanel(panelKey);
+}
+function initAnalyticsScreen() { panelOverride = {}; setAnalyticsRange('day'); }
 
-// ── Filtro de frutas (100% client-side, no vuelve a pedir datos al servidor) ──
+// ── Filtro de frutas (100% client-side sobre los datos ya cargados de cada panel) ──
 function toggleAllFruits(el) {
   document.querySelectorAll('.fruit-check').forEach(c => c.checked = el.checked);
   onFruitCheck();
 }
 function onFruitCheck() {
   const boxes = document.querySelectorAll('.fruit-check');
-  const allChecked = [...boxes].every(b => b.checked);
-  document.getElementById('fruit-all').checked = allChecked;
-  const anyUnchecked = [...boxes].some(b => !b.checked);
-  document.getElementById('filterDropdownBtn').classList.toggle('has-filter', anyUnchecked);
-  if (lastAnalyticsData) renderAnalytics(lastAnalyticsData);
+  document.getElementById('fruit-all').checked = [...boxes].every(b => b.checked);
+  document.getElementById('filterDropdownBtn').classList.toggle('has-filter', [...boxes].some(b => !b.checked));
+  FRUIT_AWARE_PANELS.forEach(key => { if (panelData[key]) RENDER_FNS[key](panelData[key]); });
 }
-function getSelectedFruits() {
-  return [...document.querySelectorAll('.fruit-check:checked')].map(b => b.value);
-}
-
-async function loadAnalytics() {
-  let range;
-  if (analyticsRange === 'custom') {
-    const s = document.getElementById('analyticsStart').value;
-    const e = document.getElementById('analyticsEnd').value;
-    if (!s || !e) return;
-    range = { start: s, end: e };
-  } else {
-    range = computeRangeDates(analyticsRange);
-  }
-  document.getElementById('analyticsKpis').innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i>Loading...</div>';
-  try {
-    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ pin: PIN, action: 'getAnalytics', start: range.start, end: range.end }) });
-    const data = await res.json();
-    if (data.error) { document.getElementById('analyticsKpis').innerHTML = `<div class="empty-state"><i class="ti ti-alert-circle"></i>${data.error}</div>`; return; }
-    lastAnalyticsData = data;
-    renderAnalytics(data);
-  } catch (e) {
-    document.getElementById('analyticsKpis').innerHTML = '<div class="empty-state"><i class="ti ti-alert-circle"></i>Connection error.</div>';
-  }
-}
+function getSelectedFruits() { return [...document.querySelectorAll('.fruit-check:checked')].map(b => b.value); }
 function pct(n, total) { return total ? Math.round((n / total) * 100) : 0; }
+function filteredOrderCounts(d, selectedFruits) {
+  if (selectedFruits.length === ALL_FRUIT_KEYS.length || !Array.isArray(d.orderSummaries)) {
+    return { total: d.total, departed: d.departed, pending: d.pending, incomplete: d.incomplete };
+  }
+  const matching = d.orderSummaries.filter(o => o.categories.some(c => selectedFruits.includes(c)));
+  const dep = matching.filter(o => o.estatus === 6).length;
+  return { total: matching.length, departed: dep, pending: matching.length - dep, incomplete: matching.filter(o => o.incomplete).length };
+}
 
 function makeChart(id, config) {
   if (analyticsCharts[id]) analyticsCharts[id].destroy();
   const ctx = document.getElementById(id);
   analyticsCharts[id] = new Chart(ctx, config);
 }
+function kpiCardsHtml(kpis) {
+  return kpis.map(k => `<div class="kpi-card" style="--kpi-color:${k.color};"><div class="kpi-value">${k.value}</div><div class="kpi-label">${k.label}</div><div class="kpi-sub">${k.sub}</div></div>`).join('');
+}
 
-function renderAnalytics(d) {
-  const selectedFruits = getSelectedFruits();
-  const allSelected = selectedFruits.length === ALL_FRUIT_KEYS.length;
-  const sumSelected = (obj) => Object.keys(obj).reduce((sum, k) => sum + (selectedFruits.includes(k) ? obj[k] : 0), 0);
-  const boxesOrderedFiltered = sumSelected(d.boxesByCategory);
-  const boxesShippedFiltered = sumSelected(d.boxesByCategoryShipped);
-
-  // Total/Departed/Pending/Incomplete: si hay un filtro de fruta activo, solo cuenta las
-  // órdenes que incluyen al menos una de las frutas seleccionadas (para poder ver, por
-  // ejemplo, "cuántas órdenes de limón faltan").
-  let ordersView = { total: d.total, departed: d.departed, pending: d.pending, incomplete: d.incomplete };
-  if (!allSelected && Array.isArray(d.orderSummaries)) {
-    const matching = d.orderSummaries.filter(o => o.categories.some(c => selectedFruits.includes(c)));
-    const dep = matching.filter(o => o.estatus === 6).length;
-    ordersView = { total: matching.length, departed: dep, pending: matching.length - dep, incomplete: matching.filter(o => o.incomplete).length };
+// ── Fetch + orquestación de todos los paneles ──
+async function fetchRange(r) {
+  const key = r.start + '|' + r.end;
+  if (!rangeCache[key]) {
+    rangeCache[key] = fetch(API, { method: 'POST', body: JSON.stringify({ pin: PIN, action: 'getAnalytics', start: r.start, end: r.end }) }).then(res => res.json());
   }
+  return rangeCache[key];
+}
+async function refreshPanel(panelKey) {
+  const r = effectiveRangeFor(panelKey);
+  if (!r) return; // "Custom" general sin fechas aplicadas todavía
+  try {
+    const data = await fetchRange(r);
+    if (data.error) return;
+    panelData[panelKey] = data;
+    RENDER_FNS[panelKey](data);
+  } catch (e) { /* silencioso: no tumba los demás paneles */ }
+}
+function refreshAllPanels() { rangeCache = {}; ALL_PANEL_KEYS.forEach(refreshPanel); }
 
+// ── Render por panel ──
+function renderCoreKpis(d) {
+  const v = filteredOrderCounts(d, getSelectedFruits());
   const kpis = [
-    { label: 'Total Orders', value: ordersView.total, sub: '', color: '#5B21B6' },
-    { label: 'Departed', value: ordersView.departed, sub: pct(ordersView.departed, ordersView.total) + '%', color: '#16A34A' },
-    { label: 'Pending', value: ordersView.pending, sub: pct(ordersView.pending, ordersView.total) + '%', color: '#CA8A04' },
-    { label: 'Incomplete', value: ordersView.incomplete, sub: ordersView.departed ? pct(ordersView.incomplete, ordersView.departed) + '% of departed' : '—', color: '#DC2626' },
-    { label: 'Boxes Ordered', value: boxesOrderedFiltered, sub: '', color: '#2563EB' },
-    { label: 'Boxes Shipped', value: boxesShippedFiltered, sub: '', color: '#0D9488' }
+    { label: 'Total Orders', value: v.total, sub: '', color: '#5B21B6' },
+    { label: 'Departed', value: v.departed, sub: pct(v.departed, v.total) + '%', color: '#16A34A' },
+    { label: 'Pending', value: v.pending, sub: pct(v.pending, v.total) + '%', color: '#CA8A04' },
+    { label: 'Incomplete', value: v.incomplete, sub: v.departed ? pct(v.incomplete, v.departed) + '% of departed' : '—', color: '#DC2626' }
   ];
-  document.getElementById('analyticsKpis').innerHTML = kpis.map(k =>
-    `<div class="kpi-card" style="--kpi-color:${k.color};"><div class="kpi-value">${k.value}</div><div class="kpi-label">${k.label}</div><div class="kpi-sub">${k.sub}</div></div>`
-  ).join('');
-
-  // Donut: pedidos por estatus actual
+  document.getElementById('kpis-core').innerHTML = kpiCardsHtml(kpis);
+}
+function renderBoxesKpis(d) {
+  const selected = getSelectedFruits();
+  const sumSelected = (obj) => Object.keys(obj).reduce((sum, k) => sum + (selected.includes(k) ? obj[k] : 0), 0);
+  const kpis = [
+    { label: 'Boxes Ordered', value: sumSelected(d.boxesByCategory), sub: '', color: '#2563EB' },
+    { label: 'Boxes Shipped', value: sumSelected(d.boxesByCategoryShipped), sub: '', color: '#0D9488' }
+  ];
+  document.getElementById('kpis-boxes').innerHTML = kpiCardsHtml(kpis);
+}
+function renderStatusChart(d) {
   makeChart('chartStatus', {
     type: 'doughnut',
     data: { labels: LABELS, datasets: [{ data: d.statusCounts, backgroundColor: CHART_PALETTE, borderWidth: 0 }] },
     options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10, padding: 8 } } } }
   });
-
-  // Barras: cajas por tipo de producto — eje X con iniciales (los nombres completos no
-  // caben) + una listita de referencia abajo del todo, igual que el donut de estatus.
-  const productKeys = Object.keys(d.boxesByCategory).filter(k => selectedFruits.includes(k)).sort((a, b) => d.boxesByCategory[b] - d.boxesByCategory[a]);
+}
+function renderProductChart(d) {
+  const selected = getSelectedFruits();
+  const productKeys = Object.keys(d.boxesByCategory).filter(k => selected.includes(k)).sort((a, b) => d.boxesByCategory[b] - d.boxesByCategory[a]);
   makeChart('chartProduct', {
     type: 'bar',
     data: {
@@ -1079,21 +1225,21 @@ function renderAnalytics(d) {
     options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { font: { size: 10 } } }, x: { ticks: { font: { size: 11 }, maxRotation: 0 } } } }
   });
   document.getElementById('productLegend').innerHTML = productKeys.map((k, i) =>
-    `<span class="chart-legend-item"><span class="chart-legend-dot" style="background:${CHART_PALETTE[i % CHART_PALETTE.length]}"></span>${PRODUCT_SHORT_LABELS[k]} = ${PRODUCT_LABELS[k] || k}</span>`
+    `<span class="chart-legend-item"><span class="chart-legend-dot" style="background:${CHART_PALETTE[i % CHART_PALETTE.length]}"></span>${PRODUCT_LABELS[k] || k}</span>`
   ).join('');
-
-  // Línea: despachados por día (tendencia)
+}
+function renderDayChart(d) {
   const dayEntries = Object.entries(d.byDay).sort((a, b) => a[0].localeCompare(b[0]));
   makeChart('chartDay', {
     type: 'line',
     data: {
-      labels: dayEntries.map(([day]) => day.slice(5)), // MM-DD
+      labels: dayEntries.map(([day]) => day.slice(5)),
       datasets: [{ data: dayEntries.map(([, v]) => v), borderColor: '#16A34A', backgroundColor: 'rgba(22,163,74,0.15)', fill: true, tension: 0.3, pointRadius: 3 }]
     },
     options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { font: { size: 10 } } }, x: { ticks: { font: { size: 9 } } } } }
   });
-
-  // Barras horizontales: actividad por persona
+}
+function renderPersonChart(d) {
   const personEntries = Object.entries(d.changesByUser).sort((a, b) => b[1] - a[1]);
   makeChart('chartPerson', {
     type: 'bar',
@@ -1101,6 +1247,27 @@ function renderAnalytics(d) {
     options: { indexAxis: 'y', responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { font: { size: 10 } } }, y: { ticks: { font: { size: 10 } } } } }
   });
 }
+function renderCompleteChart(d) {
+  const v = filteredOrderCounts(d, getSelectedFruits());
+  const complete = v.departed - v.incomplete;
+  makeChart('chartComplete', {
+    type: 'doughnut',
+    data: { labels: ['Complete', 'Incomplete'], datasets: [{ data: [complete, v.incomplete], backgroundColor: ['#16A34A', '#DC2626'], borderWidth: 0 }] },
+    options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10, padding: 8 } } } }
+  });
+}
+function renderShippedChart(d) {
+  const v = filteredOrderCounts(d, getSelectedFruits());
+  makeChart('chartShipped', {
+    type: 'doughnut',
+    data: { labels: ['Shipped', 'Not Shipped'], datasets: [{ data: [v.departed, v.pending], backgroundColor: ['#0D9488', '#CA8A04'], borderWidth: 0 }] },
+    options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10, padding: 8 } } } }
+  });
+}
+const RENDER_FNS = {
+  core: renderCoreKpis, boxes: renderBoxesKpis, status: renderStatusChart, product: renderProductChart,
+  day: renderDayChart, person: renderPersonChart, complete: renderCompleteChart, shipped: renderShippedChart
+};
 
 
 let choferDataPromise = null; // se usa en buscar() para esperar a que choferOrdenes esté listo
