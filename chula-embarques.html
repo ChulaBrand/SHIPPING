@@ -136,6 +136,9 @@
   .analytics-panel { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:12px; }
   .panel-title { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px; }
   .analytics-panel canvas { max-height:190px; }
+  .chart-legend-list { display:flex; flex-wrap:wrap; gap:6px 12px; margin-top:8px; }
+  .chart-legend-item { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--text-muted); }
+  .chart-legend-dot { width:9px; height:9px; border-radius:2px; flex-shrink:0; }
   .expected-ready-row { display:flex; align-items:center; justify-content:space-between; gap:8px; background:#F7F5F0; border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; margin-bottom:10px; }
   .expected-ready-row label { font-size:12px; color:var(--text-muted); font-weight:500; }
   .expected-ready-row input[type="datetime-local"] { font-family:'Inter',sans-serif; font-size:12.5px; border:1px solid var(--border); border-radius:6px; padding:4px 6px; color:var(--text); background:#fff; }
@@ -384,7 +387,10 @@
   <div class="screen" id="screen-analytics">
     <div class="top-bar">
       <p class="top-bar-title">Data Analysis</p>
-      <button class="btn-back" onclick="goRol()">Sign out</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-back" onclick="analyticsBack()">← Back</button>
+        <button class="btn-back" onclick="goRol()">Sign out</button>
+      </div>
     </div>
     <div class="filter-row">
       <div class="dropdown-wrap">
@@ -424,6 +430,7 @@
       <div class="analytics-panel">
         <p class="panel-title">Boxes by Product</p>
         <canvas id="chartProduct"></canvas>
+        <div class="chart-legend-list" id="productLegend"></div>
       </div>
       <div class="analytics-panel">
         <p class="panel-title">Departed per Day</p>
@@ -742,6 +749,7 @@ let selectedUser = null;
 let currentUser = null;
 let adminPinVal = '';
 let cachedLoginOrders = null;
+let loginPermissions = [];
 
 // Cuando una cuenta tiene 2+ permisos, se le pregunta a dónde quiere entrar
 // (en vez de decidir por ella). Con 1 solo permiso, entra derecho, sin este paso.
@@ -767,6 +775,15 @@ function chooseAccess(key) {
     else { loadOrdenes(); }
   } else {
     show('screen-analytics'); initAnalyticsScreen();
+  }
+}
+// Si la cuenta tiene 2+ permisos, "Back" regresa al menú de elegir a dónde entrar
+// (en vez de cerrar sesión); si solo tiene acceso a Analytics, es lo mismo que Sign out.
+function analyticsBack() {
+  if (loginPermissions.includes('clerk') && loginPermissions.includes('analytics')) {
+    showAccessChooser();
+  } else {
+    goRol();
   }
 }
 
@@ -821,6 +838,7 @@ function pinKey(k) {
         if (result.success) {
           currentUser = selectedUser;
           const perms = String(result.permissions || 'clerk').split(',').map(s => s.trim()).filter(Boolean);
+          loginPermissions = perms;
           cachedLoginOrders = Array.isArray(result.orders) ? result.orders : null;
           const hasClerk = perms.includes('clerk'), hasAnalytics = perms.includes('analytics');
           if (hasClerk && hasAnalytics) {
@@ -921,6 +939,7 @@ let analyticsCharts = {}; // guarda las instancias de Chart.js para poder destru
 let lastAnalyticsData = null; // última respuesta del servidor, para re-filtrar por fruta sin re-consultar
 const ALL_FRUIT_KEYS = ['papaya', 'limes', 'pineapples', 'bananas_plantains', 'aloe', 'cucumbers', 'other'];
 const PRODUCT_LABELS = { papaya: 'Papaya', limes: 'Limes', pineapples: 'Pineapples', bananas_plantains: 'Bananas/Plantains', aloe: 'Aloe Vera', cucumbers: 'Cucumbers', other: 'Other' };
+const PRODUCT_SHORT_LABELS = { papaya: 'PAP', limes: 'LIM', pineapples: 'PIN', bananas_plantains: 'B/P', aloe: 'ALO', cucumbers: 'CUC', other: 'OTH' };
 const CHART_PALETTE = ['#5B21B6', '#16A34A', '#CA8A04', '#DC2626', '#2563EB', '#EA580C', '#0D9488', '#9333EA'];
 
 // ── Dropdowns (Day/Week/Month/Custom y Filter de frutas) ──
@@ -1014,15 +1033,26 @@ function makeChart(id, config) {
 
 function renderAnalytics(d) {
   const selectedFruits = getSelectedFruits();
+  const allSelected = selectedFruits.length === ALL_FRUIT_KEYS.length;
   const sumSelected = (obj) => Object.keys(obj).reduce((sum, k) => sum + (selectedFruits.includes(k) ? obj[k] : 0), 0);
   const boxesOrderedFiltered = sumSelected(d.boxesByCategory);
   const boxesShippedFiltered = sumSelected(d.boxesByCategoryShipped);
 
+  // Total/Departed/Pending/Incomplete: si hay un filtro de fruta activo, solo cuenta las
+  // órdenes que incluyen al menos una de las frutas seleccionadas (para poder ver, por
+  // ejemplo, "cuántas órdenes de limón faltan").
+  let ordersView = { total: d.total, departed: d.departed, pending: d.pending, incomplete: d.incomplete };
+  if (!allSelected && Array.isArray(d.orderSummaries)) {
+    const matching = d.orderSummaries.filter(o => o.categories.some(c => selectedFruits.includes(c)));
+    const dep = matching.filter(o => o.estatus === 6).length;
+    ordersView = { total: matching.length, departed: dep, pending: matching.length - dep, incomplete: matching.filter(o => o.incomplete).length };
+  }
+
   const kpis = [
-    { label: 'Total Orders', value: d.total, sub: '', color: '#5B21B6' },
-    { label: 'Departed', value: d.departed, sub: pct(d.departed, d.total) + '%', color: '#16A34A' },
-    { label: 'Pending', value: d.pending, sub: pct(d.pending, d.total) + '%', color: '#CA8A04' },
-    { label: 'Incomplete', value: d.incomplete, sub: d.departed ? pct(d.incomplete, d.departed) + '% of departed' : '—', color: '#DC2626' },
+    { label: 'Total Orders', value: ordersView.total, sub: '', color: '#5B21B6' },
+    { label: 'Departed', value: ordersView.departed, sub: pct(ordersView.departed, ordersView.total) + '%', color: '#16A34A' },
+    { label: 'Pending', value: ordersView.pending, sub: pct(ordersView.pending, ordersView.total) + '%', color: '#CA8A04' },
+    { label: 'Incomplete', value: ordersView.incomplete, sub: ordersView.departed ? pct(ordersView.incomplete, ordersView.departed) + '% of departed' : '—', color: '#DC2626' },
     { label: 'Boxes Ordered', value: boxesOrderedFiltered, sub: '', color: '#2563EB' },
     { label: 'Boxes Shipped', value: boxesShippedFiltered, sub: '', color: '#0D9488' }
   ];
@@ -1037,16 +1067,20 @@ function renderAnalytics(d) {
     options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10, padding: 8 } } } }
   });
 
-  // Barras: cajas por tipo de producto (respeta el filtro de frutas)
+  // Barras: cajas por tipo de producto — eje X con iniciales (los nombres completos no
+  // caben) + una listita de referencia abajo del todo, igual que el donut de estatus.
   const productKeys = Object.keys(d.boxesByCategory).filter(k => selectedFruits.includes(k)).sort((a, b) => d.boxesByCategory[b] - d.boxesByCategory[a]);
   makeChart('chartProduct', {
     type: 'bar',
     data: {
-      labels: productKeys.map(k => PRODUCT_LABELS[k] || k),
-      datasets: [{ data: productKeys.map(k => d.boxesByCategory[k]), backgroundColor: CHART_PALETTE, borderRadius: 4 }]
+      labels: productKeys.map(k => PRODUCT_SHORT_LABELS[k] || k),
+      datasets: [{ data: productKeys.map(k => d.boxesByCategory[k]), backgroundColor: productKeys.map((k, i) => CHART_PALETTE[i % CHART_PALETTE.length]), borderRadius: 4 }]
     },
-    options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { font: { size: 10 } } }, x: { ticks: { font: { size: 9 } } } } }
+    options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { font: { size: 10 } } }, x: { ticks: { font: { size: 11 }, maxRotation: 0 } } } }
   });
+  document.getElementById('productLegend').innerHTML = productKeys.map((k, i) =>
+    `<span class="chart-legend-item"><span class="chart-legend-dot" style="background:${CHART_PALETTE[i % CHART_PALETTE.length]}"></span>${PRODUCT_SHORT_LABELS[k]} = ${PRODUCT_LABELS[k] || k}</span>`
+  ).join('');
 
   // Línea: despachados por día (tendencia)
   const dayEntries = Object.entries(d.byDay).sort((a, b) => a[0].localeCompare(b[0]));
@@ -1292,11 +1326,29 @@ function setProductStatus(orden, idx, status) {
   }
 }
 
-// Order-level button click: fully manual, never blocked, doesn't touch product circles
+// Order-level button click. Antes esto no tocaba los círculos de producto (había que
+// marcarlos aparte); ahora:
+//  - Si el estatus general se mueve a Order Received/Processing/Ready (1-3), todos los
+//    círculos de producto se sincronizan a ese mismo nivel — ya no hay que marcarlos aparte.
+//  - Si se salta directo a Waiting/Loading/Departed (4-6) y la orden es de UN SOLO
+//    producto, ese producto se marca Ready automáticamente (no tiene sentido que haya
+//    salido sin que su único producto esté listo).
+//  - Si son varios productos y se salta adelante, se deja tal cual (no se puede adivinar
+//    cuáles sí quedaron listos), y el aviso de "Order moved ahead" se sigue mostrando.
 function setOrderStatus(orden, status) {
   const o = ordenes.find(x => String(x.orden) === String(orden));
   if (!o) return;
   o.estatus = status;
+
+  const prods = parseProductos(o.productos);
+  if (!productState[orden] || productState[orden].length !== prods.length) {
+    productState[orden] = prods.length ? prods.map(() => Math.min(status, 3)) : [Math.min(status, 3)];
+  }
+  if (status <= 3) {
+    productState[orden] = productState[orden].map(() => status);
+  } else if (productState[orden].length === 1) {
+    productState[orden][0] = 3;
+  }
   pushOrderStatus(orden, status);
 }
 
