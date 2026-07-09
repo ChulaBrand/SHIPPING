@@ -405,14 +405,15 @@
       <p class="top-bar-title">Data Analysis</p>
       <div style="display:flex;gap:8px;">
         <button class="btn-back" onclick="analyticsBack()">← Back</button>
-        <button class="btn-back" onclick="goRol()">Sign out</button>
+        <button class="btn-back" onclick="refreshAllPanels()"><i class="ti ti-refresh"></i> Refresh</button>
       </div>
     </div>
     <div class="filter-row">
       <div class="dropdown-wrap">
         <button class="dropdown-btn" id="rangeDropdownBtn" onclick="toggleDropdown('range')">Day <i class="ti ti-chevron-down"></i></button>
         <div class="dropdown-panel" id="rangeDropdownPanel">
-          <button class="dropdown-option active" data-range="day" onclick="setAnalyticsRange('day')">Day</button>
+          <button class="dropdown-option active" data-range="default" onclick="setAnalyticsRange('default')">Default</button>
+          <button class="dropdown-option" data-range="day" onclick="setAnalyticsRange('day')">Day</button>
           <button class="dropdown-option" data-range="week" onclick="setAnalyticsRange('week')">Week</button>
           <button class="dropdown-option" data-range="month" onclick="setAnalyticsRange('month')">Month</button>
           <button class="dropdown-option" data-range="custom" onclick="setAnalyticsRange('custom')">Custom</button>
@@ -443,7 +444,6 @@
         <div class="mini-dropdown-wrap">
           <button class="mini-filter-btn" onclick="togglePanelDropdown('core')" title="Filter this indicator">⋯</button>
           <div class="dropdown-panel mini" id="panel-dd-core">
-            <button class="dropdown-option" data-range="auto" onclick="setPanelRange('core','auto')">Default</button>
             <button class="dropdown-option" data-range="day" onclick="setPanelRange('core','day')">Day</button>
             <button class="dropdown-option" data-range="week" onclick="setPanelRange('core','week')">Week</button>
             <button class="dropdown-option" data-range="month" onclick="setPanelRange('core','month')">Month</button>
@@ -459,7 +459,6 @@
         <div class="mini-dropdown-wrap">
           <button class="mini-filter-btn" onclick="togglePanelDropdown('boxes')" title="Filter this indicator">⋯</button>
           <div class="dropdown-panel mini" id="panel-dd-boxes">
-            <button class="dropdown-option" data-range="auto" onclick="setPanelRange('boxes','auto')">Default</button>
             <button class="dropdown-option" data-range="day" onclick="setPanelRange('boxes','day')">Day</button>
             <button class="dropdown-option" data-range="week" onclick="setPanelRange('boxes','week')">Week</button>
             <button class="dropdown-option" data-range="month" onclick="setPanelRange('boxes','month')">Month</button>
@@ -476,7 +475,6 @@
           <div class="mini-dropdown-wrap">
             <button class="mini-filter-btn" onclick="togglePanelDropdown('status')" title="Filter this indicator">⋯</button>
             <div class="dropdown-panel mini" id="panel-dd-status">
-              <button class="dropdown-option" data-range="auto" onclick="setPanelRange('status','auto')">Default</button>
               <button class="dropdown-option" data-range="day" onclick="setPanelRange('status','day')">Day</button>
               <button class="dropdown-option" data-range="week" onclick="setPanelRange('status','week')">Week</button>
               <button class="dropdown-option" data-range="month" onclick="setPanelRange('status','month')">Month</button>
@@ -491,7 +489,6 @@
           <div class="mini-dropdown-wrap">
             <button class="mini-filter-btn" onclick="togglePanelDropdown('product')" title="Filter this indicator">⋯</button>
             <div class="dropdown-panel mini" id="panel-dd-product">
-              <button class="dropdown-option" data-range="auto" onclick="setPanelRange('product','auto')">Default</button>
               <button class="dropdown-option" data-range="day" onclick="setPanelRange('product','day')">Day</button>
               <button class="dropdown-option" data-range="week" onclick="setPanelRange('product','week')">Week</button>
               <button class="dropdown-option" data-range="month" onclick="setPanelRange('product','month')">Month</button>
@@ -507,7 +504,6 @@
           <div class="mini-dropdown-wrap">
             <button class="mini-filter-btn" onclick="togglePanelDropdown('day')" title="Filter this indicator">⋯</button>
             <div class="dropdown-panel mini" id="panel-dd-day">
-              <button class="dropdown-option" data-range="auto" onclick="setPanelRange('day','auto')">Default</button>
               <button class="dropdown-option" data-range="day" onclick="setPanelRange('day','day')">Day</button>
               <button class="dropdown-option" data-range="week" onclick="setPanelRange('day','week')">Week</button>
               <button class="dropdown-option" data-range="month" onclick="setPanelRange('day','month')">Month</button>
@@ -518,26 +514,10 @@
       </div>
       <div class="analytics-panel">
         <div class="panel-title-row">
-          <p class="panel-title">Activity by Person</p>
-          <div class="mini-dropdown-wrap">
-            <button class="mini-filter-btn" onclick="togglePanelDropdown('person')" title="Filter this indicator">⋯</button>
-            <div class="dropdown-panel mini" id="panel-dd-person">
-              <button class="dropdown-option" data-range="auto" onclick="setPanelRange('person','auto')">Default</button>
-              <button class="dropdown-option" data-range="day" onclick="setPanelRange('person','day')">Day</button>
-              <button class="dropdown-option" data-range="week" onclick="setPanelRange('person','week')">Week</button>
-              <button class="dropdown-option" data-range="month" onclick="setPanelRange('person','month')">Month</button>
-            </div>
-          </div>
-        </div>
-        <canvas id="chartPerson"></canvas>
-      </div>
-      <div class="analytics-panel">
-        <div class="panel-title-row">
           <p class="panel-title">Complete vs Incomplete</p>
           <div class="mini-dropdown-wrap">
             <button class="mini-filter-btn" onclick="togglePanelDropdown('complete')" title="Filter this indicator">⋯</button>
             <div class="dropdown-panel mini" id="panel-dd-complete">
-              <button class="dropdown-option" data-range="auto" onclick="setPanelRange('complete','auto')">Default</button>
               <button class="dropdown-option" data-range="day" onclick="setPanelRange('complete','day')">Day</button>
               <button class="dropdown-option" data-range="week" onclick="setPanelRange('complete','week')">Week</button>
               <button class="dropdown-option" data-range="month" onclick="setPanelRange('complete','month')">Month</button>
@@ -552,7 +532,6 @@
           <div class="mini-dropdown-wrap">
             <button class="mini-filter-btn" onclick="togglePanelDropdown('shipped')" title="Filter this indicator">⋯</button>
             <div class="dropdown-panel mini" id="panel-dd-shipped">
-              <button class="dropdown-option" data-range="auto" onclick="setPanelRange('shipped','auto')">Default</button>
               <button class="dropdown-option" data-range="day" onclick="setPanelRange('shipped','day')">Day</button>
               <button class="dropdown-option" data-range="week" onclick="setPanelRange('shipped','week')">Week</button>
               <button class="dropdown-option" data-range="month" onclick="setPanelRange('shipped','month')">Month</button>
@@ -560,6 +539,20 @@
           </div>
         </div>
         <div id="shippedGauge"></div>
+      </div>
+      <div class="analytics-panel">
+        <div class="panel-title-row">
+          <p class="panel-title">Activity by Person</p>
+          <div class="mini-dropdown-wrap">
+            <button class="mini-filter-btn" onclick="togglePanelDropdown('person')" title="Filter this indicator">⋯</button>
+            <div class="dropdown-panel mini" id="panel-dd-person">
+              <button class="dropdown-option" data-range="day" onclick="setPanelRange('person','day')">Day</button>
+              <button class="dropdown-option" data-range="week" onclick="setPanelRange('person','week')">Week</button>
+              <button class="dropdown-option" data-range="month" onclick="setPanelRange('person','month')">Month</button>
+            </div>
+          </div>
+        </div>
+        <canvas id="chartPerson"></canvas>
       </div>
     </div>
   </div>
@@ -607,7 +600,7 @@
   <!-- ENCARGADO -->
   <div class="screen" id="screen-enc">
     <div class="top-bar">
-      <p class="top-bar-title">Shipping Panel</p>
+      <p class="top-bar-title">Shipping Panel <span id="shippingUserLabel" style="font-weight:400;color:var(--text-muted);font-size:12px;"></span></p>
       <div style="display:flex;gap:8px;">
         <button class="btn-back" onclick="loadOrdenes()" title="Refresh" style="padding:5px 9px;"><i class="ti ti-refresh"></i></button>
         <button class="btn-back" onclick="goPapayaUpload('screen-enc')">Upload</button>
@@ -775,7 +768,7 @@ function expectedReadyState(o) {
 // "Stalled" — el pedido lleva 4 horas o más sin que nadie le cambie el estatus.
 // No depende de ninguna fecha que alguien haya puesto (a diferencia de overdue/soon),
 // solo de cuánto tiempo lleva "quieto". No aplica a pedidos ya Departed (est 6).
-const STALLED_HOURS = 4;
+const STALLED_HOURS = 6;
 function parseHoraAMPM(hora) {
   if (!hora) return null;
   const m = String(hora).trim().match(/^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/);
@@ -1068,7 +1061,10 @@ const CHART_PALETTE = ['#5B21B6', '#16A34A', '#CA8A04', '#DC2626', '#2563EB', '#
 // Paneles donde "Day" no dice mucho (una tendencia o un total de cajas de un solo día es
 // poco útil) — mientras el filtro general esté en Day, estos usan Week por su cuenta,
 // a menos que el usuario los anule con su propio botón chiquito.
-const WEEK_DEFAULT_PANELS = new Set(['boxes', 'product', 'day']);
+// Default "de fábrica" de cada panel — se usa cuando el filtro general está en "Default"
+// y el panel no tiene su propia anulación puesta. Solo "Departed per Day" arranca en
+// Week (una tendencia de un solo día no dice mucho); el resto arranca en Day.
+const DEFAULT_RANGE_FOR_PANEL = { core: 'day', boxes: 'day', status: 'day', product: 'day', day: 'week', person: 'day', complete: 'day', shipped: 'day' };
 const ALL_PANEL_KEYS = ['core', 'boxes', 'status', 'product', 'day', 'person', 'complete', 'shipped'];
 // Paneles cuyos números dependen del filtro de frutas (todos los demás no varían por fruta)
 const FRUIT_AWARE_PANELS = new Set(['core', 'boxes', 'product', 'complete', 'shipped']);
@@ -1092,7 +1088,7 @@ function togglePanelDropdown(panelKey) {
 // mostrar siempre "Default" aunque en realidad ya está viendo "Day" o "Week".
 function currentPanelRangeKey(panelKey) {
   if (panelOverride[panelKey]) return panelOverride[panelKey];
-  if (analyticsRange === 'day' && WEEK_DEFAULT_PANELS.has(panelKey)) return 'week';
+  if (analyticsRange === 'default') return DEFAULT_RANGE_FOR_PANEL[panelKey];
   if (analyticsRange === 'custom') return null; // no hay un botón exacto para "custom" aquí
   return analyticsRange;
 }
@@ -1133,15 +1129,16 @@ function computeRangeDates(range) {
 // está en la lista de excepciones; si no, sigue al filtro general tal cual.
 function effectiveRangeFor(panelKey) {
   if (panelOverride[panelKey]) return computeRangeDates(panelOverride[panelKey]);
-  if (analyticsRange === 'day' && WEEK_DEFAULT_PANELS.has(panelKey)) return computeRangeDates('week');
+  if (analyticsRange === 'default') return computeRangeDates(DEFAULT_RANGE_FOR_PANEL[panelKey]);
   if (analyticsRange === 'custom') return customRangeValue;
   return computeRangeDates(analyticsRange);
 }
 function setAnalyticsRange(range) {
+  if (range === 'default') panelOverride = {}; // "Default" regresa TODAS las gráficas a su valor de fábrica
   analyticsRange = range;
   document.querySelectorAll('#rangeDropdownPanel .dropdown-option').forEach(b => b.classList.toggle('active', b.dataset.range === range));
   document.getElementById('analyticsCustomRange').style.display = (range === 'custom') ? 'flex' : 'none';
-  const label = range === 'day' ? 'Day' : range === 'week' ? 'Week' : range === 'month' ? 'Month' : 'Custom';
+  const label = range === 'default' ? 'Default' : range === 'day' ? 'Day' : range === 'week' ? 'Week' : range === 'month' ? 'Month' : 'Custom';
   document.getElementById('rangeDropdownBtn').innerHTML = `${label} <i class="ti ti-chevron-down"></i>`;
   if (range !== 'custom') { toggleDropdown('range'); refreshAllPanels(); }
 }
@@ -1158,7 +1155,7 @@ function setPanelRange(panelKey, range) {
   document.getElementById('panel-dd-' + panelKey).classList.remove('open');
   refreshPanel(panelKey);
 }
-function initAnalyticsScreen() { panelOverride = {}; setAnalyticsRange('day'); }
+function initAnalyticsScreen() { panelOverride = {}; setAnalyticsRange('default'); }
 
 // ── Filtro de frutas (100% client-side sobre los datos ya cargados de cada panel) ──
 function toggleAllFruits(el) {
@@ -1247,7 +1244,7 @@ function renderProductChart(d) {
       labels: productKeys.map(k => PRODUCT_SHORT_LABELS[k] || k),
       datasets: [{ data: productKeys.map(k => d.boxesByCategory[k]), backgroundColor: productKeys.map((k, i) => CHART_PALETTE[i % CHART_PALETTE.length]), borderRadius: 4 }]
     },
-    options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { font: { size: 10 } } }, x: { ticks: { font: { size: 11 }, maxRotation: 0 } } } }
+    options: { responsive: true, maintainAspectRatio: true, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { font: { size: 10 } } }, x: { ticks: { font: { size: 11 }, maxRotation: 0 } } } }
   });
   document.getElementById('productLegend').innerHTML = productKeys.map((k, i) =>
     `<span class="chart-legend-item"><span class="chart-legend-dot" style="background:${CHART_PALETTE[i % CHART_PALETTE.length]}"></span>${PRODUCT_LABELS[k] || k}</span>`
@@ -1269,7 +1266,7 @@ function renderPersonChart(d) {
   makeChart('chartPerson', {
     type: 'bar',
     data: { labels: personEntries.map(([n]) => n), datasets: [{ data: personEntries.map(([, v]) => v), backgroundColor: '#5B21B6', borderRadius: 4 }] },
-    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { font: { size: 10 } } }, y: { ticks: { font: { size: 10 } } } } }
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: true, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { font: { size: 10 } } }, y: { ticks: { font: { size: 10 } } } } }
   });
 }
 function renderCompleteChart(d) {
@@ -1591,6 +1588,8 @@ function renderAttentionCounts(attention) {
 }
 
 function renderOrdenes() {
+  const userLabel = document.getElementById('shippingUserLabel');
+  if (userLabel) userLabel.textContent = currentUser ? '— ' + currentUser : '';
   const today = todayStr();
   const visible = ordenes.filter(o => !isOlderThan48h(o.actualizado)).filter(o => !statusFilter.size || statusFilter.has(parseInt(o.estatus) || 1));
 
