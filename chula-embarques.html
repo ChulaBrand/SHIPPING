@@ -1400,7 +1400,13 @@ async function loadOrdenes() {
   const list=document.getElementById('orders-list');
   list.innerHTML='<div class="empty-state"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i>Loading...</div>';
   try {
-    const r=await fetch(`${API}?action=getAll&pin=${PIN}`); ordenes=await r.json(); renderOrdenes();
+    const r=await fetch(`${API}?action=getAll&pin=${PIN}`); ordenes=await r.json();
+    if (searchActive) {
+      const raw = document.getElementById('enc-search').value.trim();
+      if (raw) { renderSearchResults(raw); return; }
+      searchActive = false;
+    }
+    renderOrdenes();
   } catch(e){ list.innerHTML='<div class="empty-state">Connection error</div>'; }
 }
 
@@ -1486,6 +1492,11 @@ function toggleCardExpand(orden) {
   const key = String(orden);
   if (expandedOrders.has(key)) expandedOrders.delete(key);
   else expandedOrders.add(key);
+  if (searchActive) {
+    const raw = document.getElementById('enc-search').value.trim();
+    if (raw) { renderSearchResults(raw); return; }
+    searchActive = false;
+  }
   renderOrdenes();
 }
 
@@ -1648,9 +1659,14 @@ function renderOrdenes() {
   } else { pastSection.style.display = 'none'; }
 }
 
+let searchActive = false;
 function encBuscar() {
-  const raw=document.getElementById('enc-search').value.trim();
-  if(!raw){ renderOrdenes(); return; }
+  const raw = document.getElementById('enc-search').value.trim();
+  if (!raw) { searchActive = false; renderOrdenes(); return; }
+  searchActive = true;
+  renderSearchResults(raw);
+}
+function renderSearchResults(raw) {
   const isNum = /^[0-9]+$/.test(raw);
   const val = isNum ? 'SP00'+raw : raw.toLowerCase();
   const exact = ordenes.find(o=>String(o.orden).toLowerCase()===val.toLowerCase());
