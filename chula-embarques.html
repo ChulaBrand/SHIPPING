@@ -148,6 +148,13 @@
   .mini-filter-btn:hover { opacity:1; background:#F0EDE6; }
   .dropdown-panel.mini { min-width:110px; padding:5px; right:0; left:auto; }
   .dropdown-panel.mini .dropdown-option { font-size:12px; padding:6px 8px; }
+  .progress-gauge { padding:10px 2px; }
+  .progress-gauge-pct { font-size:32px; font-weight:800; color:#0D9488; line-height:1; }
+  .progress-gauge-pct-label { font-size:11px; color:var(--text-muted); margin-top:2px; margin-bottom:12px; }
+  .progress-gauge-bar { height:22px; background:#F0EDE6; border-radius:11px; overflow:hidden; position:relative; }
+  .progress-gauge-fill { height:100%; background:linear-gradient(90deg, #0D9488, #16A34A); border-radius:11px; transition:width .4s ease; }
+  .progress-gauge-legend { display:flex; justify-content:space-between; margin-top:8px; font-size:11.5px; color:var(--text-muted); }
+  .progress-gauge-legend b { color:var(--text); }
   .expected-ready-row { display:flex; align-items:center; justify-content:space-between; gap:8px; background:#F7F5F0; border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; margin-bottom:10px; }
   .expected-ready-row label { font-size:12px; color:var(--text-muted); font-weight:500; }
   .expected-ready-row input[type="datetime-local"] { font-family:'Inter',sans-serif; font-size:12.5px; border:1px solid var(--border); border-radius:6px; padding:4px 6px; color:var(--text); background:#fff; }
@@ -552,7 +559,7 @@
             </div>
           </div>
         </div>
-        <canvas id="chartShipped"></canvas>
+        <div id="shippedGauge"></div>
       </div>
     </div>
   </div>
@@ -1290,23 +1297,14 @@ function renderCompleteChart(d) {
 function renderShippedChart(d) {
   const v = filteredOrderCounts(d, getSelectedFruits());
   const total = v.departed + v.pending;
-  makeChart('chartShipped', {
-    type: 'pie',
-    data: { labels: ['Shipped', 'Not Shipped'], datasets: [{ data: [v.departed, v.pending], backgroundColor: ['#0D9488', '#CA8A04'], borderWidth: 0 }] },
-    plugins: [ChartDataLabels],
-    options: {
-      responsive: true, maintainAspectRatio: true,
-      plugins: {
-        legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10, padding: 8 } },
-        tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.parsed}` } },
-        datalabels: {
-          color: '#fff', font: { weight: '700', size: 12 },
-          formatter: (value) => total ? Math.round(value / total * 100) + '%' : '',
-          display: (ctx) => ctx.dataset.data[ctx.dataIndex] > 0
-        }
-      }
-    }
-  });
+  const p = pct(v.departed, total);
+  document.getElementById('shippedGauge').innerHTML = `
+    <div class="progress-gauge" title="Shipped: ${v.departed} · Not shipped: ${v.pending}">
+      <div class="progress-gauge-pct">${p}%</div>
+      <div class="progress-gauge-pct-label">of orders shipped</div>
+      <div class="progress-gauge-bar"><div class="progress-gauge-fill" style="width:${p}%"></div></div>
+      <div class="progress-gauge-legend"><span>🟢 Shipped: <b>${v.departed}</b></span><span>⚪ Not shipped: <b>${v.pending}</b></span></div>
+    </div>`;
 }
 const RENDER_FNS = {
   core: renderCoreKpis, boxes: renderBoxesKpis, status: renderStatusChart, product: renderProductChart,
