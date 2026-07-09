@@ -121,9 +121,17 @@
   .kpi-label { font-size:10.5px; color:var(--text-muted); margin-top:3px; text-transform:uppercase; letter-spacing:.03em; }
   .kpi-sub { font-size:10.5px; color:var(--text-faint); margin-top:1px; }
   .kpi-footnote { font-size:10.5px; color:var(--text-faint); margin-bottom:1rem; }
-  .range-chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
-  .range-chip { font-size:12.5px; font-weight:600; padding:7px 16px; border-radius:99px; border:1.5px solid var(--border-strong); background:var(--white); color:var(--text-muted); cursor:pointer; font-family:'Inter',sans-serif; }
-  .range-chip.active { border-color:var(--purple); color:#fff; background:var(--purple); }
+  .filter-row { display:flex; gap:8px; margin-bottom:12px; position:relative; }
+  .dropdown-wrap { position:relative; }
+  .dropdown-btn { display:flex; align-items:center; gap:4px; font-size:13px; font-weight:600; padding:8px 14px; border-radius:99px; border:1.5px solid var(--border-strong); background:var(--white); color:var(--text); cursor:pointer; font-family:'Inter',sans-serif; }
+  .dropdown-btn.open, .dropdown-btn.has-filter { border-color:var(--purple); color:var(--purple); background:#F5F0FE; }
+  .dropdown-panel { display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:20; background:var(--white); border:1px solid var(--border); border-radius:var(--radius-sm); box-shadow:0 6px 18px rgba(0,0,0,.12); padding:8px; min-width:190px; }
+  .dropdown-panel.open { display:block; }
+  .dropdown-option { display:block; width:100%; text-align:left; font-size:13px; font-family:'Inter',sans-serif; padding:8px 10px; border:none; background:none; border-radius:6px; cursor:pointer; color:var(--text); }
+  .dropdown-option:hover { background:#F7F5F0; }
+  .dropdown-option.active { color:var(--purple); font-weight:700; background:#F5F0FE; }
+  .dropdown-checkbox { display:flex; align-items:center; gap:8px; font-size:13px; padding:6px 10px; cursor:pointer; color:var(--text); }
+  .dropdown-checkbox:hover { background:#F7F5F0; border-radius:6px; }
   .analytics-panel-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
   .analytics-panel { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:12px; }
   .panel-title { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px; }
@@ -378,18 +386,36 @@
       <p class="top-bar-title">Data Analysis</p>
       <button class="btn-back" onclick="goRol()">Sign out</button>
     </div>
-    <div class="range-chips" id="analyticsRangeChips">
-      <button class="range-chip active" data-range="week" onclick="setAnalyticsRange('week')">This week</button>
-      <button class="range-chip" data-range="month" onclick="setAnalyticsRange('month')">This month</button>
-      <button class="range-chip" data-range="custom" onclick="setAnalyticsRange('custom')">Custom</button>
-    </div>
-    <div id="analyticsCustomRange" style="display:none;gap:8px;margin-bottom:14px;">
-      <input type="date" id="analyticsStart" style="flex:1;height:38px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 8px;font-family:'Inter',sans-serif;font-size:13px;">
-      <input type="date" id="analyticsEnd" style="flex:1;height:38px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 8px;font-family:'Inter',sans-serif;font-size:13px;">
-      <button class="btn-back" onclick="loadAnalytics()">Apply</button>
+    <div class="filter-row">
+      <div class="dropdown-wrap">
+        <button class="dropdown-btn" id="rangeDropdownBtn" onclick="toggleDropdown('range')">Day <i class="ti ti-chevron-down"></i></button>
+        <div class="dropdown-panel" id="rangeDropdownPanel">
+          <button class="dropdown-option active" data-range="day" onclick="setAnalyticsRange('day')">Day</button>
+          <button class="dropdown-option" data-range="week" onclick="setAnalyticsRange('week')">Week</button>
+          <button class="dropdown-option" data-range="month" onclick="setAnalyticsRange('month')">Month</button>
+          <button class="dropdown-option" data-range="custom" onclick="setAnalyticsRange('custom')">Custom</button>
+          <div id="analyticsCustomRange" style="display:none;gap:6px;margin-top:8px;">
+            <input type="date" id="analyticsStart" style="flex:1;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 6px;font-family:'Inter',sans-serif;font-size:12.5px;">
+            <input type="date" id="analyticsEnd" style="flex:1;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 6px;font-family:'Inter',sans-serif;font-size:12.5px;">
+            <button class="btn-primary" style="height:36px;padding:0 12px;" onclick="applyCustomRange()">Apply</button>
+          </div>
+        </div>
+      </div>
+      <div class="dropdown-wrap">
+        <button class="dropdown-btn" id="filterDropdownBtn" onclick="toggleDropdown('filter')">Filter <i class="ti ti-chevron-down"></i></button>
+        <div class="dropdown-panel" id="filterDropdownPanel">
+          <label class="dropdown-checkbox"><input type="checkbox" id="fruit-all" checked onchange="toggleAllFruits(this)"> All</label>
+          <label class="dropdown-checkbox"><input type="checkbox" class="fruit-check" value="papaya" checked onchange="onFruitCheck()"> Papaya</label>
+          <label class="dropdown-checkbox"><input type="checkbox" class="fruit-check" value="limes" checked onchange="onFruitCheck()"> Limes</label>
+          <label class="dropdown-checkbox"><input type="checkbox" class="fruit-check" value="pineapples" checked onchange="onFruitCheck()"> Pineapples</label>
+          <label class="dropdown-checkbox"><input type="checkbox" class="fruit-check" value="bananas_plantains" checked onchange="onFruitCheck()"> Bananas/Plantains</label>
+          <label class="dropdown-checkbox"><input type="checkbox" class="fruit-check" value="aloe" checked onchange="onFruitCheck()"> Aloe Vera</label>
+          <label class="dropdown-checkbox"><input type="checkbox" class="fruit-check" value="cucumbers" checked onchange="onFruitCheck()"> Cucumbers</label>
+          <label class="dropdown-checkbox"><input type="checkbox" class="fruit-check" value="other" checked onchange="onFruitCheck()"> Other</label>
+        </div>
+      </div>
     </div>
     <div class="kpi-grid" id="analyticsKpis"></div>
-    <p class="kpi-footnote">*Tarimas de papaya, estimado con divisor estándar (48 cajas) — para el número exacto por cliente usa el Papaya Pallet Report.</p>
     <div class="analytics-panel-grid">
       <div class="analytics-panel">
         <p class="panel-title">Orders by Status</p>
@@ -890,14 +916,33 @@ async function adminToggleUser(name, active) {
 }
 
 // ── DATA ANALYSIS ────────────────────────────────
-let analyticsRange = 'week';
+let analyticsRange = 'day';
 let analyticsCharts = {}; // guarda las instancias de Chart.js para poder destruirlas al recargar
+let lastAnalyticsData = null; // última respuesta del servidor, para re-filtrar por fruta sin re-consultar
+const ALL_FRUIT_KEYS = ['papaya', 'limes', 'pineapples', 'bananas_plantains', 'aloe', 'cucumbers', 'other'];
 const PRODUCT_LABELS = { papaya: 'Papaya', limes: 'Limes', pineapples: 'Pineapples', bananas_plantains: 'Bananas/Plantains', aloe: 'Aloe Vera', cucumbers: 'Cucumbers', other: 'Other' };
 const CHART_PALETTE = ['#5B21B6', '#16A34A', '#CA8A04', '#DC2626', '#2563EB', '#EA580C', '#0D9488', '#9333EA'];
+
+// ── Dropdowns (Day/Week/Month/Custom y Filter de frutas) ──
+function toggleDropdown(which) {
+  const btn = document.getElementById(which + 'DropdownBtn');
+  const panel = document.getElementById(which + 'DropdownPanel');
+  const isOpen = panel.classList.contains('open');
+  document.querySelectorAll('.dropdown-panel.open').forEach(p => p.classList.remove('open'));
+  document.querySelectorAll('.dropdown-btn.open').forEach(b => b.classList.remove('open'));
+  if (!isOpen) { panel.classList.add('open'); btn.classList.add('open'); }
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.dropdown-wrap')) {
+    document.querySelectorAll('.dropdown-panel.open').forEach(p => p.classList.remove('open'));
+    document.querySelectorAll('.dropdown-btn.open').forEach(b => b.classList.remove('open'));
+  }
+});
 
 function toISO(d) { return d.toISOString().slice(0, 10); }
 function computeRangeDates(range) {
   const now = new Date();
+  if (range === 'day') return { start: toISO(now), end: toISO(now) };
   if (range === 'week') {
     const day = now.getDay(); // 0 = domingo
     const diffToMonday = (day === 0 ? 6 : day - 1);
@@ -912,11 +957,32 @@ function computeRangeDates(range) {
 }
 function setAnalyticsRange(range) {
   analyticsRange = range;
-  document.querySelectorAll('#analyticsRangeChips .range-chip').forEach(b => b.classList.toggle('active', b.dataset.range === range));
+  document.querySelectorAll('#rangeDropdownPanel .dropdown-option').forEach(b => b.classList.toggle('active', b.dataset.range === range));
   document.getElementById('analyticsCustomRange').style.display = (range === 'custom') ? 'flex' : 'none';
-  if (range !== 'custom') loadAnalytics();
+  const label = range === 'day' ? 'Day' : range === 'week' ? 'Week' : range === 'month' ? 'Month' : 'Custom';
+  document.getElementById('rangeDropdownBtn').innerHTML = `${label} <i class="ti ti-chevron-down"></i>`;
+  if (range !== 'custom') { toggleDropdown('range'); loadAnalytics(); }
 }
-function initAnalyticsScreen() { setAnalyticsRange('week'); }
+function applyCustomRange() { toggleDropdown('range'); loadAnalytics(); }
+function initAnalyticsScreen() { setAnalyticsRange('day'); }
+
+// ── Filtro de frutas (100% client-side, no vuelve a pedir datos al servidor) ──
+function toggleAllFruits(el) {
+  document.querySelectorAll('.fruit-check').forEach(c => c.checked = el.checked);
+  onFruitCheck();
+}
+function onFruitCheck() {
+  const boxes = document.querySelectorAll('.fruit-check');
+  const allChecked = [...boxes].every(b => b.checked);
+  document.getElementById('fruit-all').checked = allChecked;
+  const anyUnchecked = [...boxes].some(b => !b.checked);
+  document.getElementById('filterDropdownBtn').classList.toggle('has-filter', anyUnchecked);
+  if (lastAnalyticsData) renderAnalytics(lastAnalyticsData);
+}
+function getSelectedFruits() {
+  return [...document.querySelectorAll('.fruit-check:checked')].map(b => b.value);
+}
+
 async function loadAnalytics() {
   let range;
   if (analyticsRange === 'custom') {
@@ -932,6 +998,7 @@ async function loadAnalytics() {
     const res = await fetch(API, { method: 'POST', body: JSON.stringify({ pin: PIN, action: 'getAnalytics', start: range.start, end: range.end }) });
     const data = await res.json();
     if (data.error) { document.getElementById('analyticsKpis').innerHTML = `<div class="empty-state"><i class="ti ti-alert-circle"></i>${data.error}</div>`; return; }
+    lastAnalyticsData = data;
     renderAnalytics(data);
   } catch (e) {
     document.getElementById('analyticsKpis').innerHTML = '<div class="empty-state"><i class="ti ti-alert-circle"></i>Connection error.</div>';
@@ -946,13 +1013,18 @@ function makeChart(id, config) {
 }
 
 function renderAnalytics(d) {
+  const selectedFruits = getSelectedFruits();
+  const sumSelected = (obj) => Object.keys(obj).reduce((sum, k) => sum + (selectedFruits.includes(k) ? obj[k] : 0), 0);
+  const boxesOrderedFiltered = sumSelected(d.boxesByCategory);
+  const boxesShippedFiltered = sumSelected(d.boxesByCategoryShipped);
+
   const kpis = [
     { label: 'Total Orders', value: d.total, sub: '', color: '#5B21B6' },
     { label: 'Departed', value: d.departed, sub: pct(d.departed, d.total) + '%', color: '#16A34A' },
     { label: 'Pending', value: d.pending, sub: pct(d.pending, d.total) + '%', color: '#CA8A04' },
     { label: 'Incomplete', value: d.incomplete, sub: d.departed ? pct(d.incomplete, d.departed) + '% of departed' : '—', color: '#DC2626' },
-    { label: 'Pallets Ordered*', value: d.palletsOrdered, sub: 'papaya only', color: '#2563EB' },
-    { label: 'Pallets Shipped*', value: d.palletsShipped, sub: 'papaya only', color: '#0D9488' }
+    { label: 'Boxes Ordered', value: boxesOrderedFiltered, sub: '', color: '#2563EB' },
+    { label: 'Boxes Shipped', value: boxesShippedFiltered, sub: '', color: '#0D9488' }
   ];
   document.getElementById('analyticsKpis').innerHTML = kpis.map(k =>
     `<div class="kpi-card" style="--kpi-color:${k.color};"><div class="kpi-value">${k.value}</div><div class="kpi-label">${k.label}</div><div class="kpi-sub">${k.sub}</div></div>`
@@ -965,8 +1037,8 @@ function renderAnalytics(d) {
     options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10, padding: 8 } } } }
   });
 
-  // Barras: cajas por tipo de producto
-  const productKeys = Object.keys(d.boxesByCategory).sort((a, b) => d.boxesByCategory[b] - d.boxesByCategory[a]);
+  // Barras: cajas por tipo de producto (respeta el filtro de frutas)
+  const productKeys = Object.keys(d.boxesByCategory).filter(k => selectedFruits.includes(k)).sort((a, b) => d.boxesByCategory[b] - d.boxesByCategory[a]);
   makeChart('chartProduct', {
     type: 'bar',
     data: {
