@@ -102,6 +102,7 @@
   .overdue-badge { display:inline-block; font-size:10px; font-weight:600; background:#DC2626; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
   .soon-badge { display:inline-block; font-size:10px; font-weight:600; background:#CA8A04; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
   .stalled-badge { display:inline-block; font-size:10px; font-weight:600; background:#2563EB; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
+  .driver-here-badge { display:inline-block; font-size:10px; font-weight:600; background:#0D9488; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
   .order-card-compact.overdue { border-color:#DC2626; border-width:1.5px; }
   .order-card-compact.soon { border-color:#CA8A04; border-width:1.5px; }
   .order-card-compact.stalled { border-color:#2563EB; border-width:1.5px; }
@@ -1411,9 +1412,10 @@ function buildClerkCard(o) {
   if (!isExpanded) {
     const state = attentionState(o);
     const badge = state ? ' · ' + attentionBadgeHtml(state) : '';
+    const driverBadge = o.driverArrived ? ' · <span class="driver-here-badge">🚗 Driver Here' + (o.driverArrived.rampa ? ' — ' + o.driverArrived.rampa : '') + '</span>' : '';
     return `<div class="order-card-compact${locked ? ' locked' : ''}${state ? ' ' + state : ''}" id="card-${o.orden}" onclick="toggleCardExpand('${o.orden}')">
       <div class="oc-left">
-        <p class="oc-num">Order #${o.orden}${locked ? ' · <span class="locked-badge">Locked</span>' : ''}${badge}</p>
+        <p class="oc-num">Order #${o.orden}${locked ? ' · <span class="locked-badge">Locked</span>' : ''}${badge}${driverBadge}</p>
         <p class="oc-cliente">${o.cliente}</p>
       </div>
       <span class="status-pill ${BANNER_CLS[est - 1]}">${BANNER_ICONS[est - 1]} ${LABELS[est - 1]}</span>
@@ -1453,6 +1455,7 @@ function buildClerkCard(o) {
   // mostrando/editando el campo de "Expected ready" — el pedido ya cumplió su propósito.
   const state = attentionState(o);
   const badgeExpanded = state ? attentionBadgeHtml(state) : '';
+  const driverBadgeExpanded = o.driverArrived ? `<span class="driver-here-badge">🚗 Driver Here${o.driverArrived.rampa ? ' — ' + o.driverArrived.rampa : ''}</span>` : '';
   const expectedReadyRow = est < 3 ? `<div class="expected-ready-row" onclick="event.stopPropagation();">
     <label for="er-${o.orden}">Expected ready</label>
     <input type="datetime-local" id="er-${o.orden}" value="${o.expectedReady || ''}" ${locked ? 'disabled' : ''} onchange="setExpectedReady('${o.orden}', this.value)" />
@@ -1466,7 +1469,7 @@ function buildClerkCard(o) {
   return `<div class="order-card${locked ? ' locked' : ''}${state ? ' ' + state + '-expanded' : ''}" id="card-${o.orden}">
     <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;cursor:pointer;" onclick="toggleCardExpand('${o.orden}')">
       <div>
-        <p class="order-num">Order #${o.orden}${locked ? '<span class="locked-badge">Locked</span>' : ''}${badgeExpanded}</p>
+        <p class="order-num">Order #${o.orden}${locked ? '<span class="locked-badge">Locked</span>' : ''}${badgeExpanded}${driverBadgeExpanded}</p>
         <p class="order-cliente">${o.cliente}</p>
       </div>
       <i class="ti ti-chevron-up" style="color:var(--text-faint);font-size:18px;flex-shrink:0;"></i>
