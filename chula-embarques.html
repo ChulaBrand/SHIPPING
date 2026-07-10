@@ -1192,7 +1192,17 @@ document.addEventListener('click', (e) => {
   if (!e.target.closest('.dropdown-wrap') && !e.target.closest('.mini-dropdown-wrap')) closeAllDropdowns();
 });
 
-function toISO(d) { return d.toISOString().slice(0, 10); }
+// OJO: .toISOString() siempre convierte a UTC, lo cual corre la fecha al día
+// siguiente en cuanto pasan de las ~6-7pm hora Central — por eso "Day" se veía en
+// 0 después de cierta hora. Se arma la fecha con los componentes LOCALES del
+// navegador (asumiendo que el dispositivo está en la zona horaria del negocio,
+// igual que ya asume el resto de la app).
+function toISO(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 function computeRangeDates(range) {
   const now = new Date();
   if (range === 'day') return { start: toISO(now), end: toISO(now) };
