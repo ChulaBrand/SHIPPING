@@ -1058,11 +1058,11 @@ async function adminToggleUser(name, active) {
 }
 
 // ── Data Analysis layout (Admin) ──
-// Se manejan 2 grupos por separado: los 2 indicadores de arriba (Summary/Boxes) y las
-// 6 gráficas de abajo — cada uno se reordena dentro de su propio grupo, no mezclados.
+// Summary y Boxes quedan fijos (como estaban antes) — el Admin solo puede reordenar
+// y poner el default de las 6 gráficas de abajo.
 const ANALYTICS_TOP_KEYS = ['core', 'boxes'];
 const ANALYTICS_PANEL_LABELS = { core: 'Summary', boxes: 'Boxes', status: 'Orders by Status', product: 'Boxes by Product', day: 'Departed per Day', complete: 'Complete vs Incomplete', shipped: 'Shipped vs Not Shipped', person: 'Activity by Person' };
-let analyticsTopConfig = [], analyticsChartConfig = [];
+let analyticsChartConfig = [];
 async function loadAdminAnalyticsConfig() {
   const list = document.getElementById('admin-analytics-list');
   list.innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i>Loading...</div>';
@@ -1070,16 +1070,17 @@ async function loadAdminAnalyticsConfig() {
     const res = await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'getAnalyticsConfig' }) });
     const config = await res.json();
     const all = (Array.isArray(config) ? config : []).slice().sort((a, b) => a.order - b.order);
-    analyticsTopConfig = all.filter(c => ANALYTICS_TOP_KEYS.includes(c.key));
     analyticsChartConfig = all.filter(c => !ANALYTICS_TOP_KEYS.includes(c.key));
     renderAdminAnalyticsConfig();
   } catch (e) { list.innerHTML = '<div class="empty-state"><i class="ti ti-alert-circle"></i>Connection error.</div>'; }
 }
-function analyticsRowHtml(c, i, len, group) {
-  return `<div class="admin-user-row">
+function renderAdminAnalyticsConfig() {
+  const list = document.getElementById('admin-analytics-list');
+  list.innerHTML = analyticsChartConfig.map((c, i) => `
+    <div class="admin-user-row">
       <div style="display:flex;gap:6px;align-items:center;">
-        <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveAnalyticsPanel('${group}',${i},-1)" ${i === 0 ? 'disabled' : ''}>▲</button>
-        <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveAnalyticsPanel('${group}',${i},1)" ${i === len - 1 ? 'disabled' : ''}>▼</button>
+        <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveAnalyticsPanel(${i},-1)" ${i === 0 ? 'disabled' : ''}>▲</button>
+        <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveAnalyticsPanel(${i},1)" ${i === analyticsChartConfig.length - 1 ? 'disabled' : ''}>▼</button>
         <span class="name">${ANALYTICS_PANEL_LABELS[c.key] || c.key}</span>
       </div>
       <select onchange="setAdminAnalyticsDefault('${c.key}', this.value)" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12.5px;font-family:'Inter',sans-serif;">
@@ -1087,35 +1088,22 @@ function analyticsRowHtml(c, i, len, group) {
         <option value="week" ${c.defaultRange === 'week' ? 'selected' : ''}>Week</option>
         <option value="month" ${c.defaultRange === 'month' ? 'selected' : ''}>Month</option>
       </select>
-    </div>`;
+    </div>`).join('');
 }
-function renderAdminAnalyticsConfig() {
-  const list = document.getElementById('admin-analytics-list');
-  list.innerHTML = `
-    <p style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin:4px 0 6px;">Top indicators</p>
-    ${analyticsTopConfig.map((c, i) => analyticsRowHtml(c, i, analyticsTopConfig.length, 'top')).join('')}
-    <p style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 6px;">Charts</p>
-    ${analyticsChartConfig.map((c, i) => analyticsRowHtml(c, i, analyticsChartConfig.length, 'chart')).join('')}
-  `;
-}
-function moveAnalyticsPanel(group, index, dir) {
-  const arr = group === 'top' ? analyticsTopConfig : analyticsChartConfig;
+function moveAnalyticsPanel(index, dir) {
   const target = index + dir;
-  if (target < 0 || target >= arr.length) return;
-  const tmp = arr[index]; arr[index] = arr[target]; arr[target] = tmp;
+  if (target < 0 || target >= analyticsChartConfig.length) return;
+  const tmp = analyticsChartConfig[index]; analyticsChartConfig[index] = analyticsChartConfig[target]; analyticsChartConfig[target] = tmp;
   renderAdminAnalyticsConfig();
 }
 function setAdminAnalyticsDefault(key, value) {
-  const item = [...analyticsTopConfig, ...analyticsChartConfig].find(c => c.key === key);
+  const item = analyticsChartConfig.find(c => c.key === key);
   if (item) item.defaultRange = value;
 }
 async function saveAdminAnalyticsConfig() {
   const statusEl = document.getElementById('admin-analytics-status');
   statusEl.style.display = 'block'; statusEl.textContent = 'Saving...'; statusEl.className = 'upload-status show loading';
-  const payload = [
-    ...analyticsTopConfig.map((c, i) => ({ key: c.key, order: i + 1, defaultRange: c.defaultRange })),
-    ...analyticsChartConfig.map((c, i) => ({ key: c.key, order: i + 1, defaultRange: c.defaultRange }))
-  ];
+  const payload = analyticsChartConfig.map((c, i) => ({ key: c.key, order: i + 1, defaultRange: c.defaultRange }));
   try {
     const res = await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'adminSetAnalyticsConfig', adminPin: adminPinVal, config: payload }) });
     const result = await res.json();
@@ -1156,6 +1144,7 @@ async function loadAnalyticsLayoutConfig() {
 }
 function applyAnalyticsLayout(config) {
   config.forEach(c => {
+    if (c.key === 'core' || c.key === 'boxes') return; // estos 2 quedan fijos, no editables desde el Admin
     if (c.defaultRange) DEFAULT_RANGE_FOR_PANEL[c.key] = c.defaultRange;
     const el = document.getElementById('analytics-panel-' + c.key);
     if (el && c.order) el.style.order = c.order;
