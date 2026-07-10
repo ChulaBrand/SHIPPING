@@ -1458,7 +1458,7 @@ function renderDriverCard(o, highlighted) {
   const expectedReadyRow = (o.expectedReady && est < 3)
     ? `<div class="meta-row"><span class="meta-label">Expected ready</span><span class="meta-val">${formatExpectedReady(o.expectedReady)}</span></div>`
     : '';
-  const driverStatusRow = `<div class="meta-row"><span class="meta-label">Driver</span><span class="meta-val">${o.driverArrived ? '✅ Arrived' + (o.driverArrived.time ? ' at ' + o.driverArrived.time : '') : '⏳ Has not arrived'}</span></div>`;
+  const driverStatusRow = `<div class="meta-row"><span class="meta-label">Driver</span><span class="meta-val">${o.driverArrived ? 'Arrived' + (o.driverArrived.time ? ' at ' + o.driverArrived.time : '') : '⏳ Has not arrived'}</span></div>`;
 
   return `<div class="order-card${highlighted?' highlight':''}${locked?' locked':''}">
     <p class="order-num" style="margin-bottom:4px;">Order #${o.orden}${highlighted?'<span class="highlight-badge">Your order</span>':''}${lockedTag}</p>
