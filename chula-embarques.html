@@ -1473,6 +1473,7 @@ function renderDriverCard(o, highlighted) {
 async function buscar() {
   const raw = document.getElementById('orden-input').value.trim();
   if(!raw) return;
+  lastChoferSearch = raw;
   const val = 'SP00' + raw.replace(/^SP00/i, '');
   const errEl=document.getElementById('error-msg'), list=document.getElementById('results-list'), btn=document.getElementById('btn-buscar');
   errEl.style.display='none'; list.innerHTML='';
@@ -2609,6 +2610,14 @@ setInterval(() => {
   const encScreen = document.getElementById('screen-enc');
   if (encScreen && encScreen.classList.contains('active') && currentUser) loadOrdenes();
 }, 120000);
+
+// Auto-refresh de la pantalla Driver/Client cada 30s — para que "Driver Arrived" salga
+// solo, sin que el chofer/cliente tenga que volver a buscar manualmente.
+let lastChoferSearch = '';
+setInterval(() => {
+  const choferScreen = document.getElementById('screen-chofer');
+  if (choferScreen && choferScreen.classList.contains('active') && lastChoferSearch) buscar();
+}, 30000);
 
 // Registro del Service Worker para modo PWA (instalable en iPad/celular)
 if ('serviceWorker' in navigator) {
