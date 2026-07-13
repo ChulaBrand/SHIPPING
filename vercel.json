@@ -1,0 +1,5 @@
+{
+  "crons": [
+    { "path": "/api/cron/archive-old-orders", "schedule": "0 */6 * * *" }
+  ]
+}
