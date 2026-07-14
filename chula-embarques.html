@@ -71,9 +71,18 @@
   .admin-tabs { display:flex; gap:6px; margin-bottom:1.25rem; border-bottom:1px solid var(--border); overflow-x:auto; }
   .admin-tab-btn { background:none; border:none; border-bottom:2px solid transparent; font-size:13px; font-weight:500; color:var(--text-muted); cursor:pointer; padding:8px 4px; font-family:'Inter',sans-serif; white-space:nowrap; }
   .admin-tab-btn.active { color:var(--green-dark); border-bottom-color:var(--green-dark); }
-  .settings-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
+  .settings-group { padding:10px 0; border-bottom:1px solid var(--border); }
+  .settings-group:last-of-type { border-bottom:none; }
+  .settings-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
   .settings-row label { font-size:13px; color:var(--text); }
   .settings-row input[type=number] { width:80px; height:36px; border:1px solid var(--border); border-radius:var(--radius-sm); padding:0 10px; font-family:'IBM Plex Mono',monospace; font-size:13px; text-align:right; }
+  .settings-caption { font-size:11.5px; color:var(--text-faint); margin-top:6px; }
+  .toggle-switch { position:relative; display:inline-block; width:42px; height:24px; flex-shrink:0; }
+  .toggle-switch input { opacity:0; width:0; height:0; position:absolute; }
+  .toggle-switch .toggle-slider { position:absolute; inset:0; background:var(--border); transition:.15s; border-radius:24px; cursor:pointer; }
+  .toggle-switch .toggle-slider:before { content:""; position:absolute; height:18px; width:18px; left:3px; top:3px; background:var(--white); transition:.15s; border-radius:50%; box-shadow:0 1px 2px rgba(0,0,0,.25); }
+  .toggle-switch input:checked + .toggle-slider { background:var(--green-dark); }
+  .toggle-switch input:checked + .toggle-slider:before { transform:translateX(18px); }
   .pin-wrap { max-width:280px; margin:0 auto; text-align:center; }
   .pin-title { font-size:17px; font-weight:600; margin-bottom:6px; }
   .pin-sub { font-size:13px; color:var(--text-muted); margin-bottom:1.75rem; }
@@ -636,23 +645,29 @@
 
     <div class="admin-tab-panel" id="admin-tab-driver" style="display:none;">
       <p class="section-label">Pantalla de Driver/Client</p>
-      <div class="settings-row"><label>Refrescar cada (segundos)</label><input type="number" id="setting-chofRefreshSeconds" min="10"></div>
-      <p style="font-size:11.5px;color:var(--text-faint);margin-top:-4px;margin-bottom:2px;">Cada cuánto se actualiza sola la pantalla de tracking del chofer/cliente (mínimo 10s para no saturar el servidor).</p>
-      <div class="settings-row"><label>Mostrar nombre del cliente</label><input type="checkbox" id="setting-chofShowClientName" style="width:20px;height:18px;cursor:pointer;"></div>
-      <div class="settings-row"><label>Mostrar productos</label><input type="checkbox" id="setting-chofShowProducts" style="width:20px;height:18px;cursor:pointer;"></div>
-      <p style="font-size:11.5px;color:var(--text-faint);margin-top:-4px;margin-bottom:2px;">Apagador general para toda la pantalla del chofer/cliente. Si quieres la excepción de un solo cliente en vez de todos, usa las casillas en la pestaña Clients.</p>
+      <div class="settings-group">
+        <div class="settings-row"><label>Refrescar cada (segundos)</label><input type="number" id="setting-chofRefreshSeconds" min="10"></div>
+        <p class="settings-caption">Cada cuánto se actualiza sola la pantalla de tracking del chofer/cliente (mínimo 10s para no saturar el servidor).</p>
+      </div>
+      <div class="settings-group">
+        <div class="settings-row"><label>Mostrar nombre del cliente</label><label class="toggle-switch"><input type="checkbox" id="setting-chofShowClientName"><span class="toggle-slider"></span></label></div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-row"><label>Mostrar productos</label><label class="toggle-switch"><input type="checkbox" id="setting-chofShowProducts"><span class="toggle-slider"></span></label></div>
+        <p class="settings-caption">Apagador general para toda la pantalla del chofer/cliente. Si quieres la excepción de un solo cliente en vez de todos, usa las casillas en la pestaña Clients.</p>
+      </div>
       <button class="btn-primary" style="margin-top:14px;" onclick="saveDriverScreenSettings()">Save changes</button>
       <p class="upload-status show" id="admin-driver-status" style="display:none;"></p>
     </div>
 
     <div class="admin-tab-panel" id="admin-tab-settings" style="display:none;">
       <p class="section-label">Cajas por tarima</p>
-      <div class="settings-row"><label>Estándar</label><input type="number" id="setting-standardDivisor"></div>
-      <div class="settings-row"><label>HEB</label><input type="number" id="setting-hebDivisor"></div>
-      <div class="settings-row"><label>SAM'S</label><input type="number" id="setting-samsDivisor"></div>
+      <div class="settings-group"><div class="settings-row"><label>Estándar</label><input type="number" id="setting-standardDivisor"></div></div>
+      <div class="settings-group"><div class="settings-row"><label>HEB</label><input type="number" id="setting-hebDivisor"></div></div>
+      <div class="settings-group"><div class="settings-row"><label>SAM'S</label><input type="number" id="setting-samsDivisor"></div></div>
       <p class="section-label" style="margin-top:1.5rem;">Umbrales</p>
-      <div class="settings-row"><label>Horas para marcar "Stalled"</label><input type="number" id="setting-stalledHours"></div>
-      <div class="settings-row"><label>Horas para bloquear edición</label><input type="number" id="setting-lockHours"></div>
+      <div class="settings-group"><div class="settings-row"><label>Horas para marcar "Stalled"</label><input type="number" id="setting-stalledHours"></div></div>
+      <div class="settings-group"><div class="settings-row"><label>Horas para bloquear edición</label><input type="number" id="setting-lockHours"></div></div>
       <button class="btn-primary" style="margin-top:14px;" onclick="saveAdminSettings()">Save changes</button>
       <p class="upload-status show" id="admin-settings-status" style="display:none;"></p>
     </div>
