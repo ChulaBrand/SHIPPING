@@ -152,7 +152,8 @@
   .analytics-panel-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
   .analytics-panel { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:12px; }
   .panel-title { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px; }
-  .analytics-panel canvas { max-height:190px; }
+  .analytics-panel > canvas { max-height:190px; }
+  .chart-scroll-wrap { max-height:340px; overflow-y:auto; overflow-x:hidden; }
   .chart-legend-list { display:flex; flex-wrap:wrap; gap:6px 12px; margin-top:8px; }
   .chart-legend-item { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--text-muted); }
   .chart-legend-dot { width:9px; height:9px; border-radius:2px; flex-shrink:0; }
@@ -405,10 +406,11 @@
         <button class="pkey" onclick="pinKey('')"></button><button class="pkey" onclick="pinKey('0')">0</button>
         <button class="pkey del" onclick="pinDel()"><i class="ti ti-backspace"></i></button>
       </div>
-      <div id="admin-pw-wrap" style="display:none;flex-direction:column;gap:12px;align-items:stretch;">
-        <input type="password" id="admin-pw-input" placeholder="Password" style="height:48px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 14px;font-family:'IBM Plex Mono',monospace;font-size:15px;text-align:center;">
-        <button class="btn-primary" onclick="submitAdminPassword()">Enter</button>
-      </div>
+      <p class="pin-sub" id="pw-toggle-link" onclick="togglePasswordInput()" style="display:none;cursor:pointer;text-decoration:underline;">Use a password instead</p>
+      <form id="pw-form" style="display:none;flex-direction:column;gap:12px;align-items:stretch;" onsubmit="event.preventDefault(); submitPassword();">
+        <input type="password" id="pw-input" placeholder="Password" autocomplete="current-password" style="height:48px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 14px;font-family:'IBM Plex Mono',monospace;font-size:15px;text-align:center;">
+        <button type="submit" class="btn-primary">Enter</button>
+      </form>
       <p class="pin-error" id="pin-error">Incorrect PIN. Try again.</p>
     </div>
   </div>
@@ -575,7 +577,7 @@
             </div>
           </div>
         </div>
-        <canvas id="chartPerson"></canvas>
+        <div class="chart-scroll-wrap" id="chartPerson-wrap"><canvas id="chartPerson"></canvas></div>
       </div>
       <div class="analytics-panel" id="analytics-panel-vendedor">
         <div class="panel-title-row">
@@ -589,7 +591,7 @@
             </div>
           </div>
         </div>
-        <canvas id="chartVendedor"></canvas>
+        <div class="chart-scroll-wrap" id="chartVendedor-wrap"><canvas id="chartVendedor"></canvas></div>
       </div>
     </div>
   </div>
@@ -1116,22 +1118,36 @@ function toggleAdminBtn() {
   btn.style.display = (btn.style.display === 'none') ? 'inline-block' : 'none';
 }
 
+// Una cuenta con permiso "admin" además de "clerk" tiene una contraseña larga (no un
+// PIN de 4 dígitos), así que el teclado numérico no le sirve para entrar a Shipping.
+// showingPasswordInput deja cambiar a un campo de texto normal desde CUALQUIER modo
+// (en admin arranca ahí directo; en clerk es opcional, por si esa cuenta usa password).
+let showingPasswordInput = false;
 function goPin() {
   pinVal = "";
-  const isAdmin = pinMode === 'admin';
-  document.getElementById('pin-dots-wrap').style.display = isAdmin ? 'none' : '';
-  document.getElementById('pin-pad-wrap').style.display = isAdmin ? 'none' : '';
-  document.getElementById('admin-pw-wrap').style.display = isAdmin ? 'flex' : 'none';
-  document.getElementById('pin-error').textContent = isAdmin ? 'Incorrect password. Try again.' : 'Incorrect PIN. Try again.';
+  showingPasswordInput = (pinMode === 'admin');
+  renderPinScreen();
+  show('screen-pin');
+}
+function togglePasswordInput() {
+  showingPasswordInput = !showingPasswordInput;
+  renderPinScreen();
+}
+function renderPinScreen() {
+  document.getElementById('pin-dots-wrap').style.display = showingPasswordInput ? 'none' : '';
+  document.getElementById('pin-pad-wrap').style.display = showingPasswordInput ? 'none' : '';
+  document.getElementById('pw-form').style.display = showingPasswordInput ? 'flex' : 'none';
+  const toggleLink = document.getElementById('pw-toggle-link');
+  toggleLink.style.display = (pinMode === 'clerk') ? '' : 'none';
+  toggleLink.textContent = showingPasswordInput ? 'Use the PIN pad instead' : 'Use a password instead';
+  document.getElementById('pin-error').textContent = showingPasswordInput ? 'Incorrect password. Try again.' : 'Incorrect PIN. Try again.';
   document.getElementById('pin-error').style.display = 'none';
-  if (isAdmin) {
-    const pw = document.getElementById('admin-pw-input');
+  if (showingPasswordInput) {
+    const pw = document.getElementById('pw-input');
     pw.value = '';
-    show('screen-pin');
     setTimeout(() => pw.focus(), 50);
   } else {
     updateDots();
-    show('screen-pin');
   }
 }
 function updateDots() { for(let i=0;i<4;i++) document.getElementById('pd'+i).className='pin-dot'+(i<pinVal.length?' filled':''); }
@@ -1155,32 +1171,38 @@ async function completeLogin(result) {
   }
 }
 
-async function submitAdminPassword() {
-  const pwEl = document.getElementById('admin-pw-input');
+async function submitPassword() {
+  const pwEl = document.getElementById('pw-input');
   const pw = pwEl.value;
   if (!pw) return;
   try {
     const res = await fetch(API, { method:'POST', body: JSON.stringify({ action: 'loginUser', name: selectedUser, userPin: pw }) });
     const result = await res.json();
     const perms = String(result.permissions || '').split(',').map(s => s.trim());
-    if (result.success && perms.includes('admin')) {
-      ADMIN_SESSION_TOKEN = result.sessionToken;
-      show('screen-admin'); loadAdminUsers(); loadAdminAnalyticsConfig();
+    if (pinMode === 'admin') {
+      if (result.success && perms.includes('admin')) {
+        ADMIN_SESSION_TOKEN = result.sessionToken;
+        show('screen-admin'); loadAdminUsers(); loadAdminAnalyticsConfig();
+        return;
+      }
+      if (result.success) {
+        document.getElementById('pin-error').textContent = 'This account does not have Admin access.';
+        document.getElementById('pin-error').style.display = 'block';
+        pwEl.value = '';
+        return;
+      }
     } else if (result.success) {
-      document.getElementById('pin-error').textContent = 'This account does not have Admin access.';
-      document.getElementById('pin-error').style.display = 'block';
-      pwEl.value = '';
-    } else {
-      document.getElementById('pin-error').textContent = result.error || 'Incorrect password. Try again.';
-      document.getElementById('pin-error').style.display = 'block';
-      pwEl.value = '';
+      completeLogin(result);
+      return;
     }
+    document.getElementById('pin-error').textContent = result.error || 'Incorrect password. Try again.';
+    document.getElementById('pin-error').style.display = 'block';
+    pwEl.value = '';
   } catch (e) {
     document.getElementById('pin-error').textContent = 'Connection error.';
     document.getElementById('pin-error').style.display = 'block';
   }
 }
-document.getElementById('admin-pw-input').addEventListener('keydown', e => { if (e.key === 'Enter') submitAdminPassword(); });
 
 function pinKey(k) {
   if(!k||pinVal.length>=4) return;
@@ -1196,7 +1218,7 @@ function pinKey(k) {
 }
 function pinDel() { pinVal=pinVal.slice(0,-1); updateDots(); }
 document.addEventListener('keydown', e => {
-  if(!document.getElementById('screen-pin').classList.contains('active') || pinMode === 'admin') return;
+  if(!document.getElementById('screen-pin').classList.contains('active') || showingPasswordInput) return;
   if(e.key >= '0' && e.key <= '9') { pinKey(e.key); }
   else if(e.key === 'Backspace') { pinDel(); }
 });
@@ -1773,21 +1795,48 @@ function renderDayChart(d) {
     options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { font: { size: 10 } } }, x: { ticks: { font: { size: 9 } } } } }
   });
 }
+// Alto dinámico según cuántas barras hay, para que Chart.js nunca tenga que
+// saltarse nombres por falta de espacio (le pasaba con listas largas metidas en
+// los 190px fijos de antes). El wrap tiene su propio scroll si se pasa de 340px,
+// así el panel no empuja toda la página hacia abajo con muchos vendedores/personas.
+function sizeHorizontalBarChart(wrapId, count) {
+  document.getElementById(wrapId).style.height = Math.max(190, count * 28) + 'px';
+}
 function renderPersonChart(d) {
   const personEntries = Object.entries(d.changesByUser).sort((a, b) => b[1] - a[1]);
+  sizeHorizontalBarChart('chartPerson-wrap', personEntries.length);
   makeChart('chartPerson', {
     type: 'bar',
     data: { labels: personEntries.map(([n]) => n), datasets: [{ data: personEntries.map(([, v]) => v), backgroundColor: '#5B21B6', borderRadius: 4 }] },
-    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: true, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { font: { size: 10 } } }, y: { ticks: { font: { size: 10 } } } } }
+    plugins: [ChartDataLabels],
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      layout: { padding: { right: 26 } },
+      plugins: {
+        legend: { display: false },
+        datalabels: { color: '#1a1a1a', anchor: 'end', align: 'end', font: { size: 10, weight: '600' } }
+      },
+      scales: { x: { beginAtZero: true, ticks: { font: { size: 10 } } }, y: { ticks: { font: { size: 10 }, autoSkip: false } } }
+    }
   });
 }
 // Cajas totales por vendedor (columna "SPN" del PDF) — para evaluar volumen de venta.
 function renderVendedorChart(d) {
   const entries = Object.entries(d.boxesByVendedor || {}).sort((a, b) => b[1] - a[1]);
+  sizeHorizontalBarChart('chartVendedor-wrap', entries.length);
   makeChart('chartVendedor', {
     type: 'bar',
     data: { labels: entries.map(([n]) => n), datasets: [{ data: entries.map(([, v]) => v), backgroundColor: '#EA580C', borderRadius: 4 }] },
-    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: true, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { font: { size: 10 } } }, y: { ticks: { font: { size: 10 } } } } }
+    plugins: [ChartDataLabels],
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      layout: { padding: { right: 26 } },
+      plugins: {
+        legend: { display: false },
+        datalabels: { color: '#1a1a1a', anchor: 'end', align: 'end', font: { size: 10, weight: '600' } }
+      },
+      scales: { x: { beginAtZero: true, ticks: { font: { size: 10 } } }, y: { ticks: { font: { size: 10 }, autoSkip: false } } }
+    }
   });
 }
 function renderCompleteChart(d) {
