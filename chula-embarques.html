@@ -367,7 +367,7 @@
     </div>
     <div style="display:flex;justify-content:center;gap:10px;margin-top:22px;">
       <button class="btn-back" onclick="goPapayaUpload()">Upload</button>
-      <button class="btn-back" id="hiddenAdminBtn" onclick="goAdminPin()" style="display:none;">Admin</button>
+      <button class="btn-back" id="hiddenAdminBtn" onclick="goAdminUserSelect()" style="display:none;">Admin</button>
     </div>
   </div>
 
@@ -385,16 +385,20 @@
     <div class="pin-wrap">
       <p class="pin-title" id="pin-title">Clerk access</p>
       <p class="pin-sub" id="pin-sub">Enter your 4-digit PIN</p>
-      <div class="pin-dots">
+      <div class="pin-dots" id="pin-dots-wrap">
         <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
         <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
       </div>
-      <div class="pin-pad">
+      <div class="pin-pad" id="pin-pad-wrap">
         <button class="pkey" onclick="pinKey('1')">1</button><button class="pkey" onclick="pinKey('2')">2</button><button class="pkey" onclick="pinKey('3')">3</button>
         <button class="pkey" onclick="pinKey('4')">4</button><button class="pkey" onclick="pinKey('5')">5</button><button class="pkey" onclick="pinKey('6')">6</button>
         <button class="pkey" onclick="pinKey('7')">7</button><button class="pkey" onclick="pinKey('8')">8</button><button class="pkey" onclick="pinKey('9')">9</button>
         <button class="pkey" onclick="pinKey('')"></button><button class="pkey" onclick="pinKey('0')">0</button>
         <button class="pkey del" onclick="pinDel()"><i class="ti ti-backspace"></i></button>
+      </div>
+      <div id="admin-pw-wrap" style="display:none;flex-direction:column;gap:12px;align-items:stretch;">
+        <input type="password" id="admin-pw-input" placeholder="Password" style="height:48px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 14px;font-family:'IBM Plex Mono',monospace;font-size:15px;text-align:center;">
+        <button class="btn-primary" onclick="submitAdminPassword()">Enter</button>
       </div>
       <p class="pin-error" id="pin-error">Incorrect PIN. Try again.</p>
     </div>
@@ -601,10 +605,12 @@
         <div style="display:flex;flex-direction:column;gap:8px;">
           <input id="admin-new-name" type="text" placeholder="Name" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'Inter',sans-serif;font-size:14px;">
           <input id="admin-new-pin" type="text" inputmode="numeric" maxlength="4" placeholder="4-digit PIN" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;">
-          <div style="display:flex;gap:14px;padding:4px 2px;font-size:13px;color:var(--text-muted);">
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-clerk" checked> Shipping Clerk</label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-analytics"> Data Analysis</label>
+          <div style="display:flex;gap:14px;padding:4px 2px;font-size:13px;color:var(--text-muted);flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-clerk" checked onchange="updateNewUserPinField()"> Shipping Clerk</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-analytics" onchange="updateNewUserPinField()"> Data Analysis</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-admin" onchange="updateNewUserPinField()"> Admin</label>
           </div>
+          <p style="font-size:11px;color:var(--text-faint);margin:-2px 0 0;">Admin usa contraseña (mínimo 6 caracteres) en vez de PIN de 4 dígitos.</p>
           <button class="btn-primary" onclick="adminAddUser()">Add user</button>
         </div>
         <p class="upload-status show" id="admin-add-status" style="display:none;"></p>
@@ -986,7 +992,7 @@ function goRol() {
   // token viejo no sigue sirviendo hasta que expire solo a las 10 horas.
   const tokenToKill = SESSION_TOKEN || ADMIN_SESSION_TOKEN;
   if (tokenToKill) fetch(API, { method:'POST', body: JSON.stringify({ action:'logout', sessionToken: tokenToKill }) }).catch(()=>{});
-  pinVal=""; updateDots(); currentUser=null; selectedUser=null; adminPinVal=''; SESSION_TOKEN=null; ADMIN_SESSION_TOKEN=null; show('screen-rol'); prefetchUsers();
+  pinVal=""; updateDots(); currentUser=null; selectedUser=null; SESSION_TOKEN=null; ADMIN_SESSION_TOKEN=null; show('screen-rol'); prefetchUsers();
 }
 function goChofer() {
   document.getElementById('error-msg').style.display='none';
@@ -1007,7 +1013,6 @@ async function loadChoferPublicSettings() {
 let pinMode = 'clerk'; // 'clerk' or 'admin'
 let selectedUser = null;
 let currentUser = null;
-let adminPinVal = '';
 let cachedLoginOrders = null;
 let loginPermissions = [];
 
@@ -1047,7 +1052,9 @@ function analyticsBack() {
   }
 }
 
+let userSelectMode = 'clerk'; // 'clerk' o 'admin' — decide qué lista se pide y a dónde va selectUser()
 async function goUserSelect() {
+  userSelectMode = 'clerk';
   show('screen-user-select');
   const list = document.getElementById('user-select-list');
   list.innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i>Loading...</div>';
@@ -1055,15 +1062,37 @@ async function goUserSelect() {
     if (!usersPromise) prefetchUsers(); // por si el prefetch inicial no alcanzó a correr
     const names = await usersPromise;
     if (!Array.isArray(names) || !names.length) { list.innerHTML = '<div class="empty-state"><i class="ti ti-user-off"></i>No active users. Ask an admin to add you.</div>'; return; }
-    list.innerHTML = names.map(n => `<div class="user-select-btn" onclick="selectUser('${n.replace(/'/g,"\\'")}')"><i class="ti ti-user"></i> ${n}</div>`).join('');
+    list.innerHTML = names.map(n => `<div class="user-select-btn" onclick="selectUser('${n.replace(/'/g,"\\'")}')"><i class="ti ti-user"></i> ${escapeHtml(n)}</div>`).join('');
+  } catch (e) { list.innerHTML = '<div class="empty-state"><i class="ti ti-alert-circle"></i>Connection error.</div>'; }
+}
+
+// Admin ya no es un PIN compartido — es una cuenta más de Users con el permiso
+// "admin". Este selector solo lista esas cuentas (nunca prefetcheado, para no
+// exponer quién es admin en cada carga de la página).
+async function goAdminUserSelect() {
+  userSelectMode = 'admin';
+  show('screen-user-select');
+  const list = document.getElementById('user-select-list');
+  list.innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i>Loading...</div>';
+  try {
+    const res = await fetch(`${API}?action=getAdminUsers`);
+    const names = await res.json();
+    if (!Array.isArray(names) || !names.length) { list.innerHTML = '<div class="empty-state"><i class="ti ti-user-off"></i>No admin accounts yet.</div>'; return; }
+    list.innerHTML = names.map(n => `<div class="user-select-btn" onclick="selectUser('${n.replace(/'/g,"\\'")}')"><i class="ti ti-user"></i> ${escapeHtml(n)}</div>`).join('');
   } catch (e) { list.innerHTML = '<div class="empty-state"><i class="ti ti-alert-circle"></i>Connection error.</div>'; }
 }
 
 function selectUser(name) {
   selectedUser = name;
-  pinMode = 'clerk';
-  document.getElementById('pin-title').textContent = 'Clerk access';
-  document.getElementById('pin-sub').textContent = 'Enter PIN for ' + name;
+  if (userSelectMode === 'admin') {
+    pinMode = 'admin';
+    document.getElementById('pin-title').textContent = 'Admin access';
+    document.getElementById('pin-sub').textContent = 'Enter password for ' + name;
+  } else {
+    pinMode = 'clerk';
+    document.getElementById('pin-title').textContent = 'Clerk access';
+    document.getElementById('pin-sub').textContent = 'Enter PIN for ' + name;
+  }
   goPin();
 }
 
@@ -1071,56 +1100,88 @@ function toggleAdminBtn() {
   const btn = document.getElementById('hiddenAdminBtn');
   btn.style.display = (btn.style.display === 'none') ? 'inline-block' : 'none';
 }
-function goAdminPin() {
-  pinMode = 'admin';
-  document.getElementById('pin-title').textContent = 'Admin access';
-  document.getElementById('pin-sub').textContent = 'Enter admin PIN';
-  goPin();
+
+function goPin() {
+  pinVal = "";
+  const isAdmin = pinMode === 'admin';
+  document.getElementById('pin-dots-wrap').style.display = isAdmin ? 'none' : '';
+  document.getElementById('pin-pad-wrap').style.display = isAdmin ? 'none' : '';
+  document.getElementById('admin-pw-wrap').style.display = isAdmin ? 'flex' : 'none';
+  document.getElementById('pin-error').textContent = isAdmin ? 'Incorrect password. Try again.' : 'Incorrect PIN. Try again.';
+  document.getElementById('pin-error').style.display = 'none';
+  if (isAdmin) {
+    const pw = document.getElementById('admin-pw-input');
+    pw.value = '';
+    show('screen-pin');
+    setTimeout(() => pw.focus(), 50);
+  } else {
+    updateDots();
+    show('screen-pin');
+  }
+}
+function updateDots() { for(let i=0;i<4;i++) document.getElementById('pd'+i).className='pin-dot'+(i<pinVal.length?' filled':''); }
+
+async function completeLogin(result) {
+  currentUser = selectedUser;
+  SESSION_TOKEN = result.sessionToken;
+  loadAppSettings(); // corre en paralelo, no bloquea el login
+  const perms = String(result.permissions || 'clerk').split(',').map(s => s.trim()).filter(Boolean);
+  loginPermissions = perms;
+  cachedLoginOrders = Array.isArray(result.orders) ? result.orders : null;
+  const hasClerk = perms.includes('clerk'), hasAnalytics = perms.includes('analytics');
+  if (hasClerk && hasAnalytics) {
+    showAccessChooser();
+  } else if (hasAnalytics) {
+    show('screen-analytics'); initAnalyticsScreen();
+  } else {
+    show('screen-enc');
+    if (cachedLoginOrders) { ordenes = cachedLoginOrders; renderOrdenes(); }
+    else { loadOrdenes(); }
+  }
 }
 
-function goPin() { pinVal=""; updateDots(); document.getElementById('pin-error').style.display='none'; show('screen-pin'); }
-function updateDots() { for(let i=0;i<4;i++) document.getElementById('pd'+i).className='pin-dot'+(i<pinVal.length?' filled':''); }
+async function submitAdminPassword() {
+  const pwEl = document.getElementById('admin-pw-input');
+  const pw = pwEl.value;
+  if (!pw) return;
+  try {
+    const res = await fetch(API, { method:'POST', body: JSON.stringify({ action: 'loginUser', name: selectedUser, userPin: pw }) });
+    const result = await res.json();
+    const perms = String(result.permissions || '').split(',').map(s => s.trim());
+    if (result.success && perms.includes('admin')) {
+      ADMIN_SESSION_TOKEN = result.sessionToken;
+      show('screen-admin'); loadAdminUsers(); loadAdminAnalyticsConfig();
+    } else if (result.success) {
+      document.getElementById('pin-error').textContent = 'This account does not have Admin access.';
+      document.getElementById('pin-error').style.display = 'block';
+      pwEl.value = '';
+    } else {
+      document.getElementById('pin-error').textContent = result.error || 'Incorrect password. Try again.';
+      document.getElementById('pin-error').style.display = 'block';
+      pwEl.value = '';
+    }
+  } catch (e) {
+    document.getElementById('pin-error').textContent = 'Connection error.';
+    document.getElementById('pin-error').style.display = 'block';
+  }
+}
+document.getElementById('admin-pw-input').addEventListener('keydown', e => { if (e.key === 'Enter') submitAdminPassword(); });
+
 function pinKey(k) {
   if(!k||pinVal.length>=4) return;
   pinVal+=k; updateDots();
   if(pinVal.length===4) setTimeout(async ()=>{
-    if (pinMode === 'admin') {
-      try {
-        const res = await fetch(API, { method:'POST', body: JSON.stringify({ action: 'adminLogin', adminPin: pinVal }) });
-        const result = await res.json();
-        if (result.success) { adminPinVal = pinVal; ADMIN_SESSION_TOKEN = result.sessionToken; show('screen-admin'); loadAdminUsers(); loadAdminAnalyticsConfig(); }
-        else { document.getElementById('pin-error').style.display='block'; pinVal=""; updateDots(); }
-      } catch(e){ document.getElementById('pin-error').style.display='block'; pinVal=""; updateDots(); }
-    } else {
-      try {
-        const res = await fetch(API, { method:'POST', body: JSON.stringify({ action: 'loginUser', name: selectedUser, userPin: pinVal }) });
-        const result = await res.json();
-        if (result.success) {
-          currentUser = selectedUser;
-          SESSION_TOKEN = result.sessionToken;
-          loadAppSettings(); // corre en paralelo, no bloquea el login
-          const perms = String(result.permissions || 'clerk').split(',').map(s => s.trim()).filter(Boolean);
-          loginPermissions = perms;
-          cachedLoginOrders = Array.isArray(result.orders) ? result.orders : null;
-          const hasClerk = perms.includes('clerk'), hasAnalytics = perms.includes('analytics');
-          if (hasClerk && hasAnalytics) {
-            showAccessChooser();
-          } else if (hasAnalytics) {
-            show('screen-analytics'); initAnalyticsScreen();
-          } else {
-            show('screen-enc');
-            if (cachedLoginOrders) { ordenes = cachedLoginOrders; renderOrdenes(); }
-            else { loadOrdenes(); }
-          }
-        }
-        else { document.getElementById('pin-error').style.display='block'; pinVal=""; updateDots(); }
-      } catch(e){ document.getElementById('pin-error').style.display='block'; pinVal=""; updateDots(); }
-    }
+    try {
+      const res = await fetch(API, { method:'POST', body: JSON.stringify({ action: 'loginUser', name: selectedUser, userPin: pinVal }) });
+      const result = await res.json();
+      if (result.success) { completeLogin(result); }
+      else { document.getElementById('pin-error').style.display='block'; pinVal=""; updateDots(); }
+    } catch(e){ document.getElementById('pin-error').style.display='block'; pinVal=""; updateDots(); }
   },200);
 }
 function pinDel() { pinVal=pinVal.slice(0,-1); updateDots(); }
 document.addEventListener('keydown', e => {
-  if(!document.getElementById('screen-pin').classList.contains('active')) return;
+  if(!document.getElementById('screen-pin').classList.contains('active') || pinMode === 'admin') return;
   if(e.key >= '0' && e.key <= '9') { pinKey(e.key); }
   else if(e.key === 'Backspace') { pinDel(); }
 });
@@ -1143,9 +1204,10 @@ async function loadAdminUsers() {
           <span class="name${u.active?'':' inactive'}">${escapeHtml(u.name)}</span>
           <span class="admin-toggle-btn ${u.active?'is-active':'is-inactive'}" onclick="adminToggleUser('${safeName}', ${!u.active})">${u.active?'Active':'Inactive'}</span>
         </div>
-        <div style="display:flex;gap:14px;font-size:12.5px;color:var(--text-muted);">
+        <div style="display:flex;gap:14px;font-size:12.5px;color:var(--text-muted);flex-wrap:wrap;">
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="clerk" ${perms.includes('clerk')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"> Shipping Clerk</label>
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="analytics" ${perms.includes('analytics')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"> Data Analysis</label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="admin" ${perms.includes('admin')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"> Admin</label>
         </div>
       </div>`;
     }).join('');
@@ -1163,6 +1225,12 @@ async function adminEditPermissions(name, checkboxEl) {
   } catch(e) { showToast('Connection error.'); }
 }
 
+function updateNewUserPinField() {
+  const pinEl = document.getElementById('admin-new-pin');
+  const isAdmin = document.getElementById('admin-new-perm-admin').checked;
+  if (isAdmin) { pinEl.removeAttribute('maxlength'); pinEl.removeAttribute('inputmode'); pinEl.type = 'password'; pinEl.placeholder = 'Password (min. 6 characters)'; }
+  else { pinEl.setAttribute('maxlength', '4'); pinEl.setAttribute('inputmode', 'numeric'); pinEl.type = 'text'; pinEl.placeholder = '4-digit PIN'; }
+}
 async function adminAddUser() {
   const nameEl = document.getElementById('admin-new-name');
   const pinEl = document.getElementById('admin-new-pin');
@@ -1172,8 +1240,14 @@ async function adminAddUser() {
   const perms = [];
   if (document.getElementById('admin-new-perm-clerk').checked) perms.push('clerk');
   if (document.getElementById('admin-new-perm-analytics').checked) perms.push('analytics');
+  const isAdmin = document.getElementById('admin-new-perm-admin').checked;
+  if (isAdmin) perms.push('admin');
   statusEl.style.display = 'block';
-  if (!name || !/^[0-9]{4}$/.test(userPin)) { statusEl.textContent = 'Enter a name and a 4-digit PIN.'; statusEl.className = 'upload-status show err'; return; }
+  if (!name) { statusEl.textContent = 'Enter a name.'; statusEl.className = 'upload-status show err'; return; }
+  if (isAdmin ? userPin.length < 6 : !/^[0-9]{4}$/.test(userPin)) {
+    statusEl.textContent = isAdmin ? 'Admin password must be at least 6 characters.' : 'Enter a 4-digit PIN.';
+    statusEl.className = 'upload-status show err'; return;
+  }
   if (!perms.length) { statusEl.textContent = 'Select at least one access.'; statusEl.className = 'upload-status show err'; return; }
   statusEl.textContent = 'Adding...'; statusEl.className = 'upload-status show loading';
   try {
@@ -1183,6 +1257,8 @@ async function adminAddUser() {
     nameEl.value = ''; pinEl.value = '';
     document.getElementById('admin-new-perm-clerk').checked = true;
     document.getElementById('admin-new-perm-analytics').checked = false;
+    document.getElementById('admin-new-perm-admin').checked = false;
+    updateNewUserPinField();
     statusEl.textContent = '✓ User added.'; statusEl.className = 'upload-status show ok';
     loadAdminUsers();
   } catch(e) { statusEl.textContent = 'Connection error.'; statusEl.className = 'upload-status show err'; }
