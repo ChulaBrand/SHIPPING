@@ -68,6 +68,12 @@
   .top-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; }
   .top-bar-title { font-size:17px; font-weight:600; }
   .btn-back { background:none; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px; color:var(--text-muted); cursor:pointer; padding:5px 12px; font-family:'Inter',sans-serif; }
+  .admin-tabs { display:flex; gap:6px; margin-bottom:1.25rem; border-bottom:1px solid var(--border); overflow-x:auto; }
+  .admin-tab-btn { background:none; border:none; border-bottom:2px solid transparent; font-size:13px; font-weight:500; color:var(--text-muted); cursor:pointer; padding:8px 4px; font-family:'Inter',sans-serif; white-space:nowrap; }
+  .admin-tab-btn.active { color:var(--green-dark); border-bottom-color:var(--green-dark); }
+  .settings-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
+  .settings-row label { font-size:13px; color:var(--text); }
+  .settings-row input[type=number] { width:80px; height:36px; border:1px solid var(--border); border-radius:var(--radius-sm); padding:0 10px; font-family:'IBM Plex Mono',monospace; font-size:13px; text-align:right; }
   .pin-wrap { max-width:280px; margin:0 auto; text-align:center; }
   .pin-title { font-size:17px; font-weight:600; margin-bottom:6px; }
   .pin-sub { font-size:13px; color:var(--text-muted); margin-bottom:1.75rem; }
@@ -558,36 +564,88 @@
         </div>
         <canvas id="chartPerson"></canvas>
       </div>
+      <div class="analytics-panel" id="analytics-panel-vendedor">
+        <div class="panel-title-row">
+          <p class="panel-title">Boxes by Salesperson</p>
+          <div class="mini-dropdown-wrap">
+            <button class="mini-filter-btn" onclick="togglePanelDropdown('vendedor')" title="Filter this indicator">⋯</button>
+            <div class="dropdown-panel mini" id="panel-dd-vendedor">
+              <button class="dropdown-option" data-range="day" onclick="setPanelRange('vendedor','day')">Day</button>
+              <button class="dropdown-option" data-range="week" onclick="setPanelRange('vendedor','week')">Week</button>
+              <button class="dropdown-option" data-range="month" onclick="setPanelRange('vendedor','month')">Month</button>
+            </div>
+          </div>
+        </div>
+        <canvas id="chartVendedor"></canvas>
+      </div>
     </div>
   </div>
 
   <!-- ADMIN PANEL -->
   <div class="screen" id="screen-admin">
     <div class="top-bar">
-      <p class="top-bar-title">Admin — Users</p>
+      <p class="top-bar-title">Admin</p>
       <button class="btn-back" onclick="goRol()">← Back</button>
     </div>
-    <div class="checklist" style="margin-bottom:16px;">
-      <p class="checklist-title">Add user</p>
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        <input id="admin-new-name" type="text" placeholder="Name" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'Inter',sans-serif;font-size:14px;">
-        <input id="admin-new-pin" type="text" inputmode="numeric" maxlength="4" placeholder="4-digit PIN" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;">
-        <div style="display:flex;gap:14px;padding:4px 2px;font-size:13px;color:var(--text-muted);">
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-clerk" checked> Shipping Clerk</label>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-analytics"> Data Analysis</label>
-        </div>
-        <button class="btn-primary" onclick="adminAddUser()">Add user</button>
-      </div>
-      <p class="upload-status show" id="admin-add-status" style="display:none;"></p>
+    <div class="admin-tabs">
+      <button class="admin-tab-btn active" data-tab="users" onclick="showAdminTab('users')">Users</button>
+      <button class="admin-tab-btn" data-tab="clients" onclick="showAdminTab('clients')">Clients</button>
+      <button class="admin-tab-btn" data-tab="settings" onclick="showAdminTab('settings')">Settings</button>
+      <button class="admin-tab-btn" data-tab="analytics" onclick="showAdminTab('analytics')">Analytics Layout</button>
     </div>
-    <p class="section-label">Users</p>
-    <div id="admin-user-list"></div>
 
-    <p class="section-label" style="margin-top:1.5rem;">Data Analysis layout</p>
-    <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:8px;">Usa ▲▼ para acomodar el orden de los paneles, y el menú para el rango que ven por default.</p>
-    <div id="admin-analytics-list"></div>
-    <button class="btn-primary" style="margin-top:10px;" onclick="saveAdminAnalyticsConfig()">Save layout</button>
-    <p class="upload-status show" id="admin-analytics-status" style="display:none;"></p>
+    <div class="admin-tab-panel" id="admin-tab-users">
+      <div class="checklist" style="margin-bottom:16px;">
+        <p class="checklist-title">Add user</p>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <input id="admin-new-name" type="text" placeholder="Name" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'Inter',sans-serif;font-size:14px;">
+          <input id="admin-new-pin" type="text" inputmode="numeric" maxlength="4" placeholder="4-digit PIN" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;">
+          <div style="display:flex;gap:14px;padding:4px 2px;font-size:13px;color:var(--text-muted);">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-clerk" checked> Shipping Clerk</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-analytics"> Data Analysis</label>
+          </div>
+          <button class="btn-primary" onclick="adminAddUser()">Add user</button>
+        </div>
+        <p class="upload-status show" id="admin-add-status" style="display:none;"></p>
+      </div>
+      <p class="section-label">Users</p>
+      <div id="admin-user-list"></div>
+    </div>
+
+    <div class="admin-tab-panel" id="admin-tab-clients" style="display:none;">
+      <div class="checklist" style="margin-bottom:16px;">
+        <p class="checklist-title">Add client</p>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <input id="admin-new-client-pattern" type="text" placeholder="Nombre patrón (como aparece en el PDF)" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'Inter',sans-serif;font-size:14px;">
+          <input id="admin-new-client-short" type="text" placeholder="Nombre corto (cómo se muestra)" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'Inter',sans-serif;font-size:14px;">
+          <input id="admin-new-client-boxes" type="number" placeholder="Cajas por tarima (déjalo vacío para usar el estándar)" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;">
+          <button class="btn-primary" onclick="adminAddClient()">Add client</button>
+        </div>
+        <p class="upload-status show" id="admin-add-client-status" style="display:none;"></p>
+      </div>
+      <p class="section-label">Clients</p>
+      <div id="admin-client-list"></div>
+    </div>
+
+    <div class="admin-tab-panel" id="admin-tab-settings" style="display:none;">
+      <p class="section-label">Cajas por tarima</p>
+      <div class="settings-row"><label>Estándar</label><input type="number" id="setting-standardDivisor"></div>
+      <div class="settings-row"><label>HEB</label><input type="number" id="setting-hebDivisor"></div>
+      <div class="settings-row"><label>SAM'S</label><input type="number" id="setting-samsDivisor"></div>
+      <p class="section-label" style="margin-top:1.5rem;">Umbrales</p>
+      <div class="settings-row"><label>Horas para marcar "Stalled"</label><input type="number" id="setting-stalledHours"></div>
+      <div class="settings-row"><label>Horas para bloquear edición</label><input type="number" id="setting-lockHours"></div>
+      <button class="btn-primary" style="margin-top:14px;" onclick="saveAdminSettings()">Save settings</button>
+      <p class="upload-status show" id="admin-settings-status" style="display:none;"></p>
+    </div>
+
+    <div class="admin-tab-panel" id="admin-tab-analytics" style="display:none;">
+      <p class="section-label">Data Analysis layout</p>
+      <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:8px;">Usa ▲▼ para acomodar el orden de los paneles, y el menú para el rango que ven por default.</p>
+      <div id="admin-analytics-list"></div>
+      <button class="btn-primary" style="margin-top:10px;" onclick="saveAdminAnalyticsConfig()">Save layout</button>
+      <p class="upload-status show" id="admin-analytics-status" style="display:none;"></p>
+    </div>
   </div>
 
   <!-- CHOFER -->
@@ -713,6 +771,26 @@ let ADMIN_SESSION_TOKEN = null;
 let pinVal = "";
 let ordenes = [];
 
+// Valores editables desde Admin → Settings. Estos son el "de fábrica" mientras se
+// cargan de verdad (justo después del login); ver loadAppSettings()/loadClientsConfig().
+let APP_SETTINGS = { standardDivisor: 48, hebDivisor: 60, samsDivisor: 40, stalledHours: 6, lockHours: 48 };
+let CLIENTS_CONFIG = []; // [{ nombrePatron, nombreCorto, cajasPorTarima, activo }], desde Admin → Clients
+let clientsConfigLoaded = false;
+async function loadAppSettings() {
+  try {
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getSettings' }) });
+    const s = await res.json();
+    if (s && !s.error) APP_SETTINGS = s;
+  } catch (e) { /* se queda con los defaults de fábrica si falla */ }
+}
+async function loadClientsConfig() {
+  try {
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getClients' }) });
+    const c = await res.json();
+    if (Array.isArray(c)) { CLIENTS_CONFIG = c; clientsConfigLoaded = true; }
+  } catch (e) { /* se queda vacío -> divisorFor cae al estándar */ }
+}
+
 const LABELS = ["Order Received","Processing","Ready","Waiting for dock","Loading","Departed"];
 const DESCS  = [
   "Order has been received in the system",
@@ -759,7 +837,7 @@ function formatLastUpdated(hora, fecha) {
 }
 function isOlderThan48h(fecha) {
   if(!fecha) return false;
-  return (new Date() - new Date(fecha)) / 3600000 > 48;
+  return (new Date() - new Date(fecha)) / 3600000 > APP_SETTINGS.lockHours;
 }
 
 // "Expected ready" — lo pone el Shipping Clerk manualmente; si queda vacío, no se
@@ -778,10 +856,10 @@ function expectedReadyState(o) {
   return null;
 }
 
-// "Stalled" — el pedido lleva 4 horas o más sin que nadie le cambie el estatus.
-// No depende de ninguna fecha que alguien haya puesto (a diferencia de overdue/soon),
-// solo de cuánto tiempo lleva "quieto". No aplica a pedidos ya Departed (est 6).
-const STALLED_HOURS = 6;
+// "Stalled" — el pedido lleva APP_SETTINGS.stalledHours (editable en Admin → Settings)
+// sin que nadie le cambie el estatus. No depende de ninguna fecha que alguien haya
+// puesto (a diferencia de overdue/soon), solo de cuánto tiempo lleva "quieto". No
+// aplica a pedidos ya Departed (est 6).
 function parseHoraAMPM(hora) {
   if (!hora) return null;
   const m = String(hora).trim().match(/^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/);
@@ -810,7 +888,7 @@ function isStalled(o) {
   if (est >= 6) return false;
   const last = getLastChangeDate(o);
   if (!last) return false;
-  return (new Date() - last) / 3600000 >= STALLED_HOURS;
+  return (new Date() - last) / 3600000 >= APP_SETTINGS.stalledHours;
 }
 
 // Prioridad cuando aplica más de una: Overdue > Stalled > Soon
@@ -856,7 +934,11 @@ function prefetchUsers() {
   usersPromise = fetch(`${API}?action=getUsers`).then(r => r.json()).catch(() => null);
 }
 let papayaReturnScreen = 'screen-rol';
-function goPapayaUpload(returnScreen) { papayaReturnScreen = returnScreen || 'screen-rol'; show('screen-papaya-upload'); }
+function goPapayaUpload(returnScreen) {
+  papayaReturnScreen = returnScreen || 'screen-rol';
+  show('screen-papaya-upload');
+  if (!clientsConfigLoaded) loadClientsConfig();
+}
 function goPapayaBack() {
   show(papayaReturnScreen);
   // Si regresamos al Shipping Panel, recargar las órdenes automáticamente
@@ -965,6 +1047,7 @@ function pinKey(k) {
         if (result.success) {
           currentUser = selectedUser;
           SESSION_TOKEN = result.sessionToken;
+          loadAppSettings(); // corre en paralelo, no bloquea el login
           const perms = String(result.permissions || 'clerk').split(',').map(s => s.trim()).filter(Boolean);
           loginPermissions = perms;
           cachedLoginOrders = Array.isArray(result.orders) ? result.orders : null;
@@ -1061,11 +1144,103 @@ async function adminToggleUser(name, active) {
   } catch(e) { showToast('Connection error.'); }
 }
 
+// ── Navegación de pestañas dentro de Admin ──
+let adminClientsLoaded = false, adminSettingsLoaded = false;
+function showAdminTab(tab) {
+  document.querySelectorAll('.admin-tab-panel').forEach(p => p.style.display = 'none');
+  document.getElementById('admin-tab-' + tab).style.display = '';
+  document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  if (tab === 'clients' && !adminClientsLoaded) { adminClientsLoaded = true; loadAdminClients(); }
+  if (tab === 'settings' && !adminSettingsLoaded) { adminSettingsLoaded = true; loadAdminSettings(); }
+}
+
+// ── CLIENTS (Admin) ──
+async function loadAdminClients() {
+  const list = document.getElementById('admin-client-list');
+  list.innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i>Loading...</div>';
+  try {
+    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'getClients' }) });
+    const clients = await res.json();
+    if (clients.error) { list.innerHTML = `<div class="empty-state"><i class="ti ti-alert-circle"></i>${clients.error}</div>`; return; }
+    if (!clients.length) { list.innerHTML = '<div class="empty-state"><i class="ti ti-building-store"></i>No clients yet.</div>'; return; }
+    list.innerHTML = clients.map(c => {
+      const safePattern = c.nombrePatron.replace(/'/g, "\\'");
+      return `
+      <div class="admin-user-row" style="flex-direction:column;align-items:stretch;gap:6px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="name${c.activo?'':' inactive'}">${c.nombrePatron}${c.nombreCorto ? ' → ' + c.nombreCorto : ''}</span>
+          <span class="admin-toggle-btn ${c.activo?'is-active':'is-inactive'}" onclick="adminToggleClient('${safePattern}', ${!c.activo})">${c.activo?'Active':'Inactive'}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);">Cajas por tarima: ${c.cajasPorTarima || '(usa el estándar)'}</div>
+      </div>`;
+    }).join('');
+  } catch(e) { list.innerHTML = '<div class="empty-state"><i class="ti ti-alert-circle"></i>Connection error.</div>'; }
+}
+async function adminAddClient() {
+  const patternEl = document.getElementById('admin-new-client-pattern');
+  const shortEl = document.getElementById('admin-new-client-short');
+  const boxesEl = document.getElementById('admin-new-client-boxes');
+  const statusEl = document.getElementById('admin-add-client-status');
+  const nombrePatron = patternEl.value.trim();
+  const nombreCorto = shortEl.value.trim();
+  const cajasPorTarima = boxesEl.value.trim();
+  statusEl.style.display = 'block';
+  if (!nombrePatron) { statusEl.textContent = 'Enter the client pattern name.'; statusEl.className = 'upload-status show err'; return; }
+  statusEl.textContent = 'Adding...'; statusEl.className = 'upload-status show loading';
+  try {
+    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminAddClient', nombrePatron, nombreCorto, cajasPorTarima: cajasPorTarima ? parseInt(cajasPorTarima, 10) : null }) });
+    const result = await res.json();
+    if (result.error) { statusEl.textContent = result.error; statusEl.className = 'upload-status show err'; return; }
+    patternEl.value = ''; shortEl.value = ''; boxesEl.value = '';
+    statusEl.textContent = '✓ Client added.'; statusEl.className = 'upload-status show ok';
+    loadAdminClients();
+    clientsConfigLoaded = false; // se vuelve a jalar la próxima vez que se abra el subidor de PDF
+  } catch(e) { statusEl.textContent = 'Connection error.'; statusEl.className = 'upload-status show err'; }
+}
+async function adminToggleClient(nombrePatron, active) {
+  try {
+    await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminToggleClient', nombrePatron, active }) });
+    loadAdminClients();
+    clientsConfigLoaded = false;
+  } catch(e) { showToast('Connection error.'); }
+}
+
+// ── SETTINGS (Admin) ──
+async function loadAdminSettings() {
+  try {
+    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'getSettings' }) });
+    const s = await res.json();
+    document.getElementById('setting-standardDivisor').value = s.standardDivisor;
+    document.getElementById('setting-hebDivisor').value = s.hebDivisor;
+    document.getElementById('setting-samsDivisor').value = s.samsDivisor;
+    document.getElementById('setting-stalledHours').value = s.stalledHours;
+    document.getElementById('setting-lockHours').value = s.lockHours;
+  } catch(e) { showToast('Connection error loading settings.'); }
+}
+async function saveAdminSettings() {
+  const statusEl = document.getElementById('admin-settings-status');
+  const payload = {
+    standardDivisor: parseInt(document.getElementById('setting-standardDivisor').value, 10) || 48,
+    hebDivisor: parseInt(document.getElementById('setting-hebDivisor').value, 10) || 60,
+    samsDivisor: parseInt(document.getElementById('setting-samsDivisor').value, 10) || 40,
+    stalledHours: parseInt(document.getElementById('setting-stalledHours').value, 10) || 6,
+    lockHours: parseInt(document.getElementById('setting-lockHours').value, 10) || 48
+  };
+  statusEl.style.display = 'block'; statusEl.textContent = 'Saving...'; statusEl.className = 'upload-status show loading';
+  try {
+    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminSetSettings', settings: payload }) });
+    const result = await res.json();
+    if (result.error) { statusEl.textContent = result.error; statusEl.className = 'upload-status show err'; return; }
+    statusEl.textContent = '✓ Settings saved.'; statusEl.className = 'upload-status show ok';
+    APP_SETTINGS = payload; // aplica de inmediato en esta misma sesión también
+  } catch(e) { statusEl.textContent = 'Connection error.'; statusEl.className = 'upload-status show err'; }
+}
+
 // ── Data Analysis layout (Admin) ──
 // Summary y Boxes quedan fijos (como estaban antes) — el Admin solo puede reordenar
 // y poner el default de las 6 gráficas de abajo.
 const ANALYTICS_TOP_KEYS = ['core', 'boxes'];
-const ANALYTICS_PANEL_LABELS = { core: 'Summary', boxes: 'Boxes', status: 'Orders by Status', product: 'Boxes by Product', day: 'Departed per Day', complete: 'Complete vs Incomplete', shipped: 'Shipped vs Not Shipped', person: 'Activity by Person' };
+const ANALYTICS_PANEL_LABELS = { core: 'Summary', boxes: 'Boxes', status: 'Orders by Status', product: 'Boxes by Product', day: 'Departed per Day', complete: 'Complete vs Incomplete', shipped: 'Shipped vs Not Shipped', person: 'Activity by Person', vendedor: 'Boxes by Salesperson' };
 let analyticsChartConfig = [];
 async function loadAdminAnalyticsConfig() {
   const list = document.getElementById('admin-analytics-list');
@@ -1134,8 +1309,8 @@ const CHART_PALETTE = ['#5B21B6', '#16A34A', '#CA8A04', '#DC2626', '#2563EB', '#
 // Default "de fábrica" de cada panel — se usa cuando el filtro general está en "Default"
 // y el panel no tiene su propia anulación puesta. Solo "Departed per Day" arranca en
 // Week (una tendencia de un solo día no dice mucho); el resto arranca en Day.
-let DEFAULT_RANGE_FOR_PANEL = { core: 'day', boxes: 'day', status: 'day', product: 'day', day: 'week', person: 'day', complete: 'day', shipped: 'day' };
-const ALL_PANEL_KEYS = ['core', 'boxes', 'status', 'product', 'day', 'person', 'complete', 'shipped'];
+let DEFAULT_RANGE_FOR_PANEL = { core: 'day', boxes: 'day', status: 'day', product: 'day', day: 'week', person: 'day', complete: 'day', shipped: 'day', vendedor: 'day' };
+const ALL_PANEL_KEYS = ['core', 'boxes', 'status', 'product', 'day', 'person', 'complete', 'shipped', 'vendedor'];
 let analyticsLayoutLoaded = false;
 // Jala el acomodo (orden de paneles + default de cada uno) que el Admin haya guardado.
 // Si nunca ha guardado nada, el servidor regresa los valores de fábrica y no cambia nada.
@@ -1371,6 +1546,15 @@ function renderPersonChart(d) {
     options: { indexAxis: 'y', responsive: true, maintainAspectRatio: true, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { font: { size: 10 } } }, y: { ticks: { font: { size: 10 } } } } }
   });
 }
+// Cajas totales por vendedor (columna "SPN" del PDF) — para evaluar volumen de venta.
+function renderVendedorChart(d) {
+  const entries = Object.entries(d.boxesByVendedor || {}).sort((a, b) => b[1] - a[1]);
+  makeChart('chartVendedor', {
+    type: 'bar',
+    data: { labels: entries.map(([n]) => n), datasets: [{ data: entries.map(([, v]) => v), backgroundColor: '#EA580C', borderRadius: 4 }] },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: true, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { font: { size: 10 } } }, y: { ticks: { font: { size: 10 } } } } }
+  });
+}
 function renderCompleteChart(d) {
   const v = filteredOrderCounts(d, getSelectedFruits());
   const complete = v.departed - v.incomplete;
@@ -1407,7 +1591,8 @@ function renderShippedChart(d) {
 }
 const RENDER_FNS = {
   core: renderCoreKpis, boxes: renderBoxesKpis, status: renderStatusChart, product: renderProductChart,
-  day: renderDayChart, person: renderPersonChart, complete: renderCompleteChart, shipped: renderShippedChart
+  day: renderDayChart, person: renderPersonChart, complete: renderCompleteChart, shipped: renderShippedChart,
+  vendedor: renderVendedorChart
 };
 
 
@@ -1805,11 +1990,9 @@ if (typeof pdfjsLib !== "undefined") {
   console.warn("pdf.js no cargó (revisa tu conexión a internet)");
 }
 
-const SAMS_DIVISOR_CLIENTS = new Set([
-  "terrell", "paul's valley", "harrisonville", "cocoa",
-  "johnstown", "mankato", "robert", "monroe", "cheyenne", "r&r produce"
-]);
-const STANDARD_DIVISOR = 48, SAMS_DIVISOR = 40, HEB_DIVISOR = 60;
+// Las cajas por tarima (estándar/HEB/SAM'S) y qué clientes usan una regla especial
+// ya NO están fijas aquí — se editan desde Admin → Settings / Admin → Clients y se
+// cargan en APP_SETTINGS/CLIENTS_CONFIG (ver arriba). divisorFor() las usa directo.
 
 const NAME_STRIP_PATTERNS = [
   /,?\s*Sales Corp\.?\s*$/,
@@ -1976,9 +2159,10 @@ function titleCase(s) {
 }
 
 function divisorFor(clientKey, isHeb) {
-  if (isHeb) return HEB_DIVISOR;
-  if (SAMS_DIVISOR_CLIENTS.has(clientKey)) return SAMS_DIVISOR;
-  return STANDARD_DIVISOR;
+  if (isHeb) return APP_SETTINGS.hebDivisor;
+  const override = CLIENTS_CONFIG.find(c => c.activo && String(c.nombrePatron || '').toLowerCase() === String(clientKey || '').toLowerCase());
+  if (override && override.cajasPorTarima) return override.cajasPorTarima;
+  return APP_SETTINGS.standardDivisor;
 }
 
 function buildReportRows(orders) {
@@ -2522,7 +2706,7 @@ async function handlePapayaFile(file) {
         combined.set(key, (combined.get(key) || 0) + qty);
       }
       const productos = [...combined.entries()].map(([desc, qty]) => `${qty} ${desc}`).join(', ');
-      return { orden: o.sp, cliente: shortenClientName(o.name, o.note, o.sp), productos };
+      return { orden: o.sp, cliente: shortenClientName(o.name, o.note, o.sp), productos, vendedor: o.spn || '' };
     }).filter(r => r.productos);
 
     const [rows, flags] = buildReportRows(orders);
