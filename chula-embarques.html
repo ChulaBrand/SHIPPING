@@ -161,6 +161,8 @@
   .kpi-panels-row { display:flex; flex-direction:column; gap:14px; margin-bottom:14px; }
   .panel-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
   .panel-title-row .panel-title { margin-bottom:0; }
+  .panel-title-row-right { display:flex; align-items:center; gap:6px; }
+  .panel-range-badge { font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--text-faint); background:#F0EDE6; border-radius:99px; padding:3px 8px; white-space:nowrap; }
   .mini-dropdown-wrap { position:relative; }
   .mini-filter-btn { width:18px; height:18px; border-radius:4px; border:none; background:none; color:var(--text-faint); font-size:12px; line-height:1; cursor:pointer; opacity:.45; display:flex; align-items:center; justify-content:center; }
   .mini-filter-btn:hover { opacity:1; background:#F0EDE6; }
@@ -408,7 +410,7 @@
       </div>
       <p class="pin-sub" id="pw-toggle-link" onclick="togglePasswordInput()" style="display:none;cursor:pointer;text-decoration:underline;">Use a password instead</p>
       <form id="pw-form" style="display:none;flex-direction:column;gap:12px;align-items:stretch;" onsubmit="event.preventDefault(); submitPassword();">
-        <input type="password" id="pw-input" placeholder="Password" autocomplete="current-password" style="height:48px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 14px;font-family:'IBM Plex Mono',monospace;font-size:15px;text-align:center;">
+        <input type="password" id="pw-input" placeholder="Password" autocomplete="current-password" enterkeyhint="go" style="height:48px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 14px;font-family:'IBM Plex Mono',monospace;font-size:15px;text-align:center;">
         <button type="submit" class="btn-primary">Enter</button>
       </form>
       <p class="pin-error" id="pin-error">Incorrect PIN. Try again.</p>
@@ -465,12 +467,15 @@
       <div class="kpi-panel" id="analytics-panel-core">
         <div class="panel-title-row">
           <p class="panel-title">Summary</p>
-          <div class="mini-dropdown-wrap">
-            <button class="mini-filter-btn" onclick="togglePanelDropdown('core')" title="Filter this indicator">⋯</button>
-            <div class="dropdown-panel mini" id="panel-dd-core">
-              <button class="dropdown-option" data-range="day" onclick="setPanelRange('core','day')">Day</button>
-              <button class="dropdown-option" data-range="week" onclick="setPanelRange('core','week')">Week</button>
-              <button class="dropdown-option" data-range="month" onclick="setPanelRange('core','month')">Month</button>
+          <div class="panel-title-row-right">
+            <span class="panel-range-badge" id="badge-core">Day</span>
+            <div class="mini-dropdown-wrap">
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('core')" title="Filter this indicator">⋯</button>
+              <div class="dropdown-panel mini" id="panel-dd-core">
+                <button class="dropdown-option" data-range="day" onclick="setPanelRange('core','day')">Day</button>
+                <button class="dropdown-option" data-range="week" onclick="setPanelRange('core','week')">Week</button>
+                <button class="dropdown-option" data-range="month" onclick="setPanelRange('core','month')">Month</button>
+              </div>
             </div>
           </div>
         </div>
@@ -480,12 +485,15 @@
       <div class="kpi-panel" id="analytics-panel-boxes">
         <div class="panel-title-row">
           <p class="panel-title">Boxes</p>
-          <div class="mini-dropdown-wrap">
-            <button class="mini-filter-btn" onclick="togglePanelDropdown('boxes')" title="Filter this indicator">⋯</button>
-            <div class="dropdown-panel mini" id="panel-dd-boxes">
-              <button class="dropdown-option" data-range="day" onclick="setPanelRange('boxes','day')">Day</button>
-              <button class="dropdown-option" data-range="week" onclick="setPanelRange('boxes','week')">Week</button>
-              <button class="dropdown-option" data-range="month" onclick="setPanelRange('boxes','month')">Month</button>
+          <div class="panel-title-row-right">
+            <span class="panel-range-badge" id="badge-boxes">Day</span>
+            <div class="mini-dropdown-wrap">
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('boxes')" title="Filter this indicator">⋯</button>
+              <div class="dropdown-panel mini" id="panel-dd-boxes">
+                <button class="dropdown-option" data-range="day" onclick="setPanelRange('boxes','day')">Day</button>
+                <button class="dropdown-option" data-range="week" onclick="setPanelRange('boxes','week')">Week</button>
+                <button class="dropdown-option" data-range="month" onclick="setPanelRange('boxes','month')">Month</button>
+              </div>
             </div>
           </div>
         </div>
@@ -497,12 +505,15 @@
       <div class="analytics-panel" id="analytics-panel-status">
         <div class="panel-title-row">
           <p class="panel-title">Orders by Status</p>
-          <div class="mini-dropdown-wrap">
-            <button class="mini-filter-btn" onclick="togglePanelDropdown('status')" title="Filter this indicator">⋯</button>
-            <div class="dropdown-panel mini" id="panel-dd-status">
-              <button class="dropdown-option" data-range="day" onclick="setPanelRange('status','day')">Day</button>
-              <button class="dropdown-option" data-range="week" onclick="setPanelRange('status','week')">Week</button>
-              <button class="dropdown-option" data-range="month" onclick="setPanelRange('status','month')">Month</button>
+          <div class="panel-title-row-right">
+            <span class="panel-range-badge" id="badge-status">Day</span>
+            <div class="mini-dropdown-wrap">
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('status')" title="Filter this indicator">⋯</button>
+              <div class="dropdown-panel mini" id="panel-dd-status">
+                <button class="dropdown-option" data-range="day" onclick="setPanelRange('status','day')">Day</button>
+                <button class="dropdown-option" data-range="week" onclick="setPanelRange('status','week')">Week</button>
+                <button class="dropdown-option" data-range="month" onclick="setPanelRange('status','month')">Month</button>
+              </div>
             </div>
           </div>
         </div>
@@ -511,12 +522,15 @@
       <div class="analytics-panel" id="analytics-panel-product">
         <div class="panel-title-row">
           <p class="panel-title">Boxes by Product</p>
-          <div class="mini-dropdown-wrap">
-            <button class="mini-filter-btn" onclick="togglePanelDropdown('product')" title="Filter this indicator">⋯</button>
-            <div class="dropdown-panel mini" id="panel-dd-product">
-              <button class="dropdown-option" data-range="day" onclick="setPanelRange('product','day')">Day</button>
-              <button class="dropdown-option" data-range="week" onclick="setPanelRange('product','week')">Week</button>
-              <button class="dropdown-option" data-range="month" onclick="setPanelRange('product','month')">Month</button>
+          <div class="panel-title-row-right">
+            <span class="panel-range-badge" id="badge-product">Day</span>
+            <div class="mini-dropdown-wrap">
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('product')" title="Filter this indicator">⋯</button>
+              <div class="dropdown-panel mini" id="panel-dd-product">
+                <button class="dropdown-option" data-range="day" onclick="setPanelRange('product','day')">Day</button>
+                <button class="dropdown-option" data-range="week" onclick="setPanelRange('product','week')">Week</button>
+                <button class="dropdown-option" data-range="month" onclick="setPanelRange('product','month')">Month</button>
+              </div>
             </div>
           </div>
         </div>
@@ -526,12 +540,15 @@
       <div class="analytics-panel" id="analytics-panel-day">
         <div class="panel-title-row">
           <p class="panel-title">Departed per Day</p>
-          <div class="mini-dropdown-wrap">
-            <button class="mini-filter-btn" onclick="togglePanelDropdown('day')" title="Filter this indicator">⋯</button>
-            <div class="dropdown-panel mini" id="panel-dd-day">
-              <button class="dropdown-option" data-range="day" onclick="setPanelRange('day','day')">Day</button>
-              <button class="dropdown-option" data-range="week" onclick="setPanelRange('day','week')">Week</button>
-              <button class="dropdown-option" data-range="month" onclick="setPanelRange('day','month')">Month</button>
+          <div class="panel-title-row-right">
+            <span class="panel-range-badge" id="badge-day">Last 7 days</span>
+            <div class="mini-dropdown-wrap">
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('day')" title="Filter this indicator">⋯</button>
+              <div class="dropdown-panel mini" id="panel-dd-day">
+                <button class="dropdown-option" data-range="day" onclick="setPanelRange('day','day')">Day</button>
+                <button class="dropdown-option" data-range="week" onclick="setPanelRange('day','week')">Week</button>
+                <button class="dropdown-option" data-range="month" onclick="setPanelRange('day','month')">Month</button>
+              </div>
             </div>
           </div>
         </div>
@@ -540,12 +557,15 @@
       <div class="analytics-panel" id="analytics-panel-complete">
         <div class="panel-title-row">
           <p class="panel-title">Complete vs Incomplete</p>
-          <div class="mini-dropdown-wrap">
-            <button class="mini-filter-btn" onclick="togglePanelDropdown('complete')" title="Filter this indicator">⋯</button>
-            <div class="dropdown-panel mini" id="panel-dd-complete">
-              <button class="dropdown-option" data-range="day" onclick="setPanelRange('complete','day')">Day</button>
-              <button class="dropdown-option" data-range="week" onclick="setPanelRange('complete','week')">Week</button>
-              <button class="dropdown-option" data-range="month" onclick="setPanelRange('complete','month')">Month</button>
+          <div class="panel-title-row-right">
+            <span class="panel-range-badge" id="badge-complete">Day</span>
+            <div class="mini-dropdown-wrap">
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('complete')" title="Filter this indicator">⋯</button>
+              <div class="dropdown-panel mini" id="panel-dd-complete">
+                <button class="dropdown-option" data-range="day" onclick="setPanelRange('complete','day')">Day</button>
+                <button class="dropdown-option" data-range="week" onclick="setPanelRange('complete','week')">Week</button>
+                <button class="dropdown-option" data-range="month" onclick="setPanelRange('complete','month')">Month</button>
+              </div>
             </div>
           </div>
         </div>
@@ -554,12 +574,15 @@
       <div class="analytics-panel" id="analytics-panel-shipped">
         <div class="panel-title-row">
           <p class="panel-title">Shipped vs Not Shipped</p>
-          <div class="mini-dropdown-wrap">
-            <button class="mini-filter-btn" onclick="togglePanelDropdown('shipped')" title="Filter this indicator">⋯</button>
-            <div class="dropdown-panel mini" id="panel-dd-shipped">
-              <button class="dropdown-option" data-range="day" onclick="setPanelRange('shipped','day')">Day</button>
-              <button class="dropdown-option" data-range="week" onclick="setPanelRange('shipped','week')">Week</button>
-              <button class="dropdown-option" data-range="month" onclick="setPanelRange('shipped','month')">Month</button>
+          <div class="panel-title-row-right">
+            <span class="panel-range-badge" id="badge-shipped">Day</span>
+            <div class="mini-dropdown-wrap">
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('shipped')" title="Filter this indicator">⋯</button>
+              <div class="dropdown-panel mini" id="panel-dd-shipped">
+                <button class="dropdown-option" data-range="day" onclick="setPanelRange('shipped','day')">Day</button>
+                <button class="dropdown-option" data-range="week" onclick="setPanelRange('shipped','week')">Week</button>
+                <button class="dropdown-option" data-range="month" onclick="setPanelRange('shipped','month')">Month</button>
+              </div>
             </div>
           </div>
         </div>
@@ -568,12 +591,15 @@
       <div class="analytics-panel" id="analytics-panel-person">
         <div class="panel-title-row">
           <p class="panel-title">Activity by Person</p>
-          <div class="mini-dropdown-wrap">
-            <button class="mini-filter-btn" onclick="togglePanelDropdown('person')" title="Filter this indicator">⋯</button>
-            <div class="dropdown-panel mini" id="panel-dd-person">
-              <button class="dropdown-option" data-range="day" onclick="setPanelRange('person','day')">Day</button>
-              <button class="dropdown-option" data-range="week" onclick="setPanelRange('person','week')">Week</button>
-              <button class="dropdown-option" data-range="month" onclick="setPanelRange('person','month')">Month</button>
+          <div class="panel-title-row-right">
+            <span class="panel-range-badge" id="badge-person">Day</span>
+            <div class="mini-dropdown-wrap">
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('person')" title="Filter this indicator">⋯</button>
+              <div class="dropdown-panel mini" id="panel-dd-person">
+                <button class="dropdown-option" data-range="day" onclick="setPanelRange('person','day')">Day</button>
+                <button class="dropdown-option" data-range="week" onclick="setPanelRange('person','week')">Week</button>
+                <button class="dropdown-option" data-range="month" onclick="setPanelRange('person','month')">Month</button>
+              </div>
             </div>
           </div>
         </div>
@@ -582,12 +608,15 @@
       <div class="analytics-panel" id="analytics-panel-vendedor">
         <div class="panel-title-row">
           <p class="panel-title">Boxes by Salesperson</p>
-          <div class="mini-dropdown-wrap">
-            <button class="mini-filter-btn" onclick="togglePanelDropdown('vendedor')" title="Filter this indicator">⋯</button>
-            <div class="dropdown-panel mini" id="panel-dd-vendedor">
-              <button class="dropdown-option" data-range="day" onclick="setPanelRange('vendedor','day')">Day</button>
-              <button class="dropdown-option" data-range="week" onclick="setPanelRange('vendedor','week')">Week</button>
-              <button class="dropdown-option" data-range="month" onclick="setPanelRange('vendedor','month')">Month</button>
+          <div class="panel-title-row-right">
+            <span class="panel-range-badge" id="badge-vendedor">Day</span>
+            <div class="mini-dropdown-wrap">
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('vendedor')" title="Filter this indicator">⋯</button>
+              <div class="dropdown-panel mini" id="panel-dd-vendedor">
+                <button class="dropdown-option" data-range="day" onclick="setPanelRange('vendedor','day')">Day</button>
+                <button class="dropdown-option" data-range="week" onclick="setPanelRange('vendedor','week')">Week</button>
+                <button class="dropdown-option" data-range="month" onclick="setPanelRange('vendedor','month')">Month</button>
+              </div>
             </div>
           </div>
         </div>
@@ -613,17 +642,17 @@
     <div class="admin-tab-panel" id="admin-tab-users">
       <div class="checklist" style="margin-bottom:16px;">
         <p class="checklist-title">Add user</p>
-        <div style="display:flex;flex-direction:column;gap:8px;">
+        <form style="display:flex;flex-direction:column;gap:8px;" onsubmit="event.preventDefault(); adminAddUser();">
           <input id="admin-new-name" type="text" placeholder="Name" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'Inter',sans-serif;font-size:14px;">
-          <input id="admin-new-pin" type="text" inputmode="numeric" maxlength="4" placeholder="4-digit PIN" onkeydown="if(event.key==='Enter'){event.preventDefault();adminAddUser();}" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;">
+          <input id="admin-new-pin" type="text" inputmode="numeric" maxlength="4" enterkeyhint="go" placeholder="4-digit PIN" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;">
           <div style="display:flex;gap:14px;padding:4px 2px;font-size:13px;color:var(--text-muted);flex-wrap:wrap;">
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-clerk" checked onchange="updateNewUserPinField()"> Shipping Clerk</label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-analytics" onchange="updateNewUserPinField()"> Data Analysis</label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-admin" onchange="updateNewUserPinField()"> Admin</label>
           </div>
           <p style="font-size:11px;color:var(--text-faint);margin:-2px 0 0;">Admin usa contraseña (mínimo 6 caracteres) en vez de PIN de 4 dígitos.</p>
-          <button class="btn-primary" onclick="adminAddUser()">Add user</button>
-        </div>
+          <button type="submit" class="btn-primary">Add user</button>
+        </form>
         <p class="upload-status show" id="admin-add-status" style="display:none;"></p>
       </div>
       <p class="section-label">Users</p>
@@ -1248,11 +1277,11 @@ async function loadAdminUsers() {
         </div>
         <div>
           <span class="admin-toggle-btn" onclick="toggleResetPinPanel(this)">Reset PIN</span>
-          <div class="reset-pin-panel" style="display:none;gap:8px;align-items:center;margin-top:8px;">
-            <input type="password" class="reset-pw-input" placeholder="${perms.includes('admin') ? 'New password (min. 6 chars)' : 'New 4-digit PIN'}" onkeydown="if(event.key==='Enter'){event.preventDefault();this.nextElementSibling.click();}" style="flex:1;height:34px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;">
-            <button class="btn-primary" style="height:34px;padding:0 14px;font-size:12.5px;white-space:nowrap;" onclick="submitResetUserPin('${safeName}', this)">Confirm</button>
+          <form class="reset-pin-panel" style="display:none;gap:8px;align-items:center;margin-top:8px;" onsubmit="event.preventDefault(); submitResetUserPin('${safeName}', this);">
+            <input type="password" class="reset-pw-input" enterkeyhint="go" placeholder="${perms.includes('admin') ? 'New password (min. 6 chars)' : 'New 4-digit PIN'}" style="flex:1;height:34px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;">
+            <button type="submit" class="btn-primary" style="height:34px;padding:0 14px;font-size:12.5px;white-space:nowrap;">Confirm</button>
             <span class="admin-toggle-btn" style="white-space:nowrap;" onclick="toggleResetPinPanel(this)">Cancel</span>
-          </div>
+          </form>
         </div>
       </div>`;
     }).join('');
@@ -1282,11 +1311,11 @@ function toggleResetPinPanel(btnEl) {
   }
 }
 
-async function submitResetUserPin(name, btnEl) {
-  const panel = btnEl.closest('.reset-pin-panel');
+async function submitResetUserPin(name, formEl) {
+  const panel = formEl.closest('.reset-pin-panel');
   const input = panel.querySelector('.reset-pw-input');
   const newPin = input.value.trim();
-  const isAdminAccount = btnEl.closest('.admin-user-row').querySelector('input[data-perm="admin"]').checked;
+  const isAdminAccount = formEl.closest('.admin-user-row').querySelector('input[data-perm="admin"]').checked;
   if (isAdminAccount ? newPin.length < 6 : !/^[0-9]{4}$/.test(newPin)) {
     showToast(isAdminAccount ? 'Admin password must be at least 6 characters.' : 'PIN must be 4 digits.');
     return;
@@ -1682,9 +1711,9 @@ function computeRangeDates(range) {
   const now = new Date();
   if (range === 'day') return { start: toISO(now), end: toISO(now) };
   if (range === 'week') {
-    const day = now.getDay(); // 0 = domingo
-    const diffToMonday = (day === 0 ? 6 : day - 1);
-    const start = new Date(now); start.setDate(now.getDate() - diffToMonday);
+    // "Last 7 days" en vez de "desde el lunes" — así un martes no muestra una
+    // tendencia de nada más 2 días. Son 7 fechas siempre, sin importar qué día sea hoy.
+    const start = new Date(now); start.setDate(now.getDate() - 6);
     return { start: toISO(start), end: toISO(now) };
   }
   if (range === 'month') {
@@ -1702,6 +1731,25 @@ function effectiveRangeFor(panelKey) {
   if (analyticsRange === 'custom') return customRangeValue;
   return computeRangeDates(analyticsRange);
 }
+// Etiqueta corta para la pastillita de cada panel — así se ve de un vistazo qué
+// rango está viendo cada quien sin tener que abrir su mini-filtro "⋯".
+function rangeKeyLabel(key) {
+  if (key === 'day') return 'Day';
+  if (key === 'week') return 'Last 7 days';
+  if (key === 'month') return 'Month';
+  return 'Custom';
+}
+function updatePanelBadge(panelKey) {
+  const el = document.getElementById('badge-' + panelKey);
+  if (!el) return;
+  let key;
+  if (panelOverride[panelKey]) key = panelOverride[panelKey];
+  else if (analyticsRange === 'default') key = DEFAULT_RANGE_FOR_PANEL[panelKey];
+  else key = analyticsRange;
+  el.textContent = rangeKeyLabel(key);
+}
+function updateAllPanelBadges() { ALL_PANEL_KEYS.forEach(updatePanelBadge); }
+
 function setAnalyticsRange(range) {
   if (range === 'default') panelOverride = {}; // "Default" regresa TODAS las gráficas a su valor de fábrica
   analyticsRange = range;
@@ -1709,6 +1757,7 @@ function setAnalyticsRange(range) {
   document.getElementById('analyticsCustomRange').style.display = (range === 'custom') ? 'flex' : 'none';
   const label = range === 'default' ? 'Default' : range === 'day' ? 'Day' : range === 'week' ? 'Week' : range === 'month' ? 'Month' : 'Custom';
   document.getElementById('rangeDropdownBtn').innerHTML = `${label} <i class="ti ti-chevron-down"></i>`;
+  updateAllPanelBadges();
   if (range !== 'custom') { toggleDropdown('range'); refreshAllPanels(); }
 }
 function applyCustomRange() {
@@ -1722,6 +1771,7 @@ function applyCustomRange() {
 function setPanelRange(panelKey, range) {
   panelOverride[panelKey] = (range === 'auto') ? null : range;
   document.getElementById('panel-dd-' + panelKey).classList.remove('open');
+  updatePanelBadge(panelKey);
   refreshPanel(panelKey);
 }
 async function initAnalyticsScreen() {
@@ -1762,24 +1812,27 @@ function kpiCardsHtml(kpis) {
 }
 
 // ── Fetch + orquestación de todos los paneles ──
-async function fetchRange(r) {
+// force=true (solo desde el botón "Refresh") le dice al servidor que no use su
+// propio cache de 90s — para todo lo demás (abrir Analytics, cambiar de rango) se
+// deja usar el cache, que es justo lo que hace que cargue mucho más rápido.
+async function fetchRange(r, force) {
   const key = r.start + '|' + r.end;
-  if (!rangeCache[key]) {
-    rangeCache[key] = fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getAnalytics', start: r.start, end: r.end }) }).then(res => res.json());
+  if (force || !rangeCache[key]) {
+    rangeCache[key] = fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getAnalytics', start: r.start, end: r.end, force: !!force }) }).then(res => res.json());
   }
   return rangeCache[key];
 }
-async function refreshPanel(panelKey) {
+async function refreshPanel(panelKey, force) {
   const r = effectiveRangeFor(panelKey);
   if (!r) return; // "Custom" general sin fechas aplicadas todavía
   try {
-    const data = await fetchRange(r);
+    const data = await fetchRange(r, force);
     if (data.error) return;
     panelData[panelKey] = data;
     RENDER_FNS[panelKey](data);
   } catch (e) { /* silencioso: no tumba los demás paneles */ }
 }
-function refreshAllPanels() { rangeCache = {}; ALL_PANEL_KEYS.forEach(refreshPanel); }
+function refreshAllPanels() { rangeCache = {}; ALL_PANEL_KEYS.forEach(k => refreshPanel(k, true)); }
 
 // ── Render por panel ──
 function renderCoreKpis(d) {
