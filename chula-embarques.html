@@ -641,7 +641,13 @@
 
     <div class="admin-tab-panel" id="admin-tab-analytics" style="display:none;">
       <p class="section-label">Data Analysis layout</p>
-      <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:8px;">Usa ▲▼ para acomodar el orden de los paneles, y el menú para el rango que ven por default.</p>
+      <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:8px;">"Order" mueve el panel arriba/abajo. La casilla prende o apaga el panel completo. El menú define con qué rango de fechas abre por default.</p>
+      <div style="display:flex;gap:10px;align-items:center;padding:0 4px 4px;font-size:10.5px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:.02em;">
+        <span style="width:64px;">Order</span>
+        <span style="width:20px;text-align:center;">Show</span>
+        <span style="flex:1;">Panel</span>
+        <span>Default range</span>
+      </div>
       <div id="admin-analytics-list"></div>
       <button class="btn-primary" style="margin-top:10px;" onclick="saveAdminAnalyticsConfig()">Save layout</button>
       <p class="upload-status show" id="admin-analytics-status" style="display:none;"></p>
@@ -1249,20 +1255,23 @@ async function loadAdminAnalyticsConfig() {
     const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'getAnalyticsConfig' }) });
     const config = await res.json();
     const all = (Array.isArray(config) ? config : []).slice().sort((a, b) => a.order - b.order);
-    analyticsChartConfig = all.filter(c => !ANALYTICS_TOP_KEYS.includes(c.key));
+    analyticsChartConfig = all.filter(c => !ANALYTICS_TOP_KEYS.includes(c.key)).map(c => ({ ...c, visible: c.visible !== false }));
     renderAdminAnalyticsConfig();
   } catch (e) { list.innerHTML = '<div class="empty-state"><i class="ti ti-alert-circle"></i>Connection error.</div>'; }
 }
 function renderAdminAnalyticsConfig() {
   const list = document.getElementById('admin-analytics-list');
   list.innerHTML = analyticsChartConfig.map((c, i) => `
-    <div class="admin-user-row">
-      <div style="display:flex;gap:6px;align-items:center;">
-        <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveAnalyticsPanel(${i},-1)" ${i === 0 ? 'disabled' : ''}>▲</button>
-        <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveAnalyticsPanel(${i},1)" ${i === analyticsChartConfig.length - 1 ? 'disabled' : ''}>▼</button>
+    <div class="admin-user-row" style="${c.visible ? '' : 'opacity:.5;'}">
+      <div style="display:flex;gap:10px;align-items:center;">
+        <div style="display:flex;gap:4px;width:64px;">
+          <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveAnalyticsPanel(${i},-1)" title="Move this panel up" ${i === 0 ? 'disabled' : ''}>▲</button>
+          <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveAnalyticsPanel(${i},1)" title="Move this panel down" ${i === analyticsChartConfig.length - 1 ? 'disabled' : ''}>▼</button>
+        </div>
+        <input type="checkbox" style="width:20px;height:16px;flex-shrink:0;cursor:pointer;" onchange="toggleAnalyticsVisible('${c.key}', this.checked)" ${c.visible ? 'checked' : ''} title="${c.visible ? 'Shown in Data Analysis' : 'Hidden from Data Analysis'}">
         <span class="name">${ANALYTICS_PANEL_LABELS[c.key] || c.key}</span>
       </div>
-      <select onchange="setAdminAnalyticsDefault('${c.key}', this.value)" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12.5px;font-family:'Inter',sans-serif;">
+      <select onchange="setAdminAnalyticsDefault('${c.key}', this.value)" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12.5px;font-family:'Inter',sans-serif;" title="Rango de fechas con el que abre este panel por default">
         <option value="day" ${c.defaultRange === 'day' ? 'selected' : ''}>Day</option>
         <option value="week" ${c.defaultRange === 'week' ? 'selected' : ''}>Week</option>
         <option value="month" ${c.defaultRange === 'month' ? 'selected' : ''}>Month</option>
@@ -1279,10 +1288,15 @@ function setAdminAnalyticsDefault(key, value) {
   const item = analyticsChartConfig.find(c => c.key === key);
   if (item) item.defaultRange = value;
 }
+function toggleAnalyticsVisible(key, checked) {
+  const item = analyticsChartConfig.find(c => c.key === key);
+  if (item) item.visible = checked;
+  renderAdminAnalyticsConfig();
+}
 async function saveAdminAnalyticsConfig() {
   const statusEl = document.getElementById('admin-analytics-status');
   statusEl.style.display = 'block'; statusEl.textContent = 'Saving...'; statusEl.className = 'upload-status show loading';
-  const payload = analyticsChartConfig.map((c, i) => ({ key: c.key, order: i + 1, defaultRange: c.defaultRange }));
+  const payload = analyticsChartConfig.map((c, i) => ({ key: c.key, order: i + 1, defaultRange: c.defaultRange, visible: c.visible !== false }));
   try {
     const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminSetAnalyticsConfig', config: payload }) });
     const result = await res.json();
@@ -1326,7 +1340,9 @@ function applyAnalyticsLayout(config) {
     if (c.key === 'core' || c.key === 'boxes') return; // estos 2 quedan fijos, no editables desde el Admin
     if (c.defaultRange) DEFAULT_RANGE_FOR_PANEL[c.key] = c.defaultRange;
     const el = document.getElementById('analytics-panel-' + c.key);
-    if (el && c.order) el.style.order = c.order;
+    if (!el) return;
+    if (c.order) el.style.order = c.order;
+    el.style.display = c.visible === false ? 'none' : '';
   });
 }
 // Paneles cuyos números dependen del filtro de frutas (todos los demás no varían por fruta)
