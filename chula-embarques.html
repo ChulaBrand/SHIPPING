@@ -635,6 +635,9 @@
       <p class="section-label" style="margin-top:1.5rem;">Umbrales</p>
       <div class="settings-row"><label>Horas para marcar "Stalled"</label><input type="number" id="setting-stalledHours"></div>
       <div class="settings-row"><label>Horas para bloquear edición</label><input type="number" id="setting-lockHours"></div>
+      <p class="section-label" style="margin-top:1.5rem;">Pantalla de Driver/Client</p>
+      <div class="settings-row"><label>Refrescar cada (segundos)</label><input type="number" id="setting-chofRefreshSeconds" min="10"></div>
+      <p style="font-size:11.5px;color:var(--text-faint);margin-top:-4px;margin-bottom:2px;">Cada cuánto se actualiza sola la pantalla de tracking del chofer/cliente (mínimo 10s para no saturar el servidor).</p>
       <button class="btn-primary" style="margin-top:14px;" onclick="saveAdminSettings()">Save settings</button>
       <p class="upload-status show" id="admin-settings-status" style="display:none;"></p>
     </div>
@@ -779,7 +782,7 @@ let ordenes = [];
 
 // Valores editables desde Admin → Settings. Estos son el "de fábrica" mientras se
 // cargan de verdad (justo después del login); ver loadAppSettings()/loadClientsConfig().
-let APP_SETTINGS = { standardDivisor: 48, hebDivisor: 60, samsDivisor: 40, stalledHours: 6, lockHours: 48 };
+let APP_SETTINGS = { standardDivisor: 48, hebDivisor: 60, samsDivisor: 40, stalledHours: 6, lockHours: 48, chofRefreshSeconds: 30 };
 let CLIENTS_CONFIG = []; // [{ nombrePatron, nombreCorto, cajasPorTarima, activo }], desde Admin → Clients
 let clientsConfigLoaded = false;
 async function loadAppSettings() {
@@ -957,6 +960,15 @@ function goChofer() {
   document.getElementById('results-list').innerHTML='';
   document.getElementById('orden-input').value='';
   show('screen-chofer');
+  loadChoferPublicSettings();
+}
+let CHOFER_REFRESH_SECONDS = 30;
+async function loadChoferPublicSettings() {
+  try {
+    const res = await fetch(`${API}?action=getChoferPublicSettings`);
+    const s = await res.json();
+    if (s && s.chofRefreshSeconds) CHOFER_REFRESH_SECONDS = s.chofRefreshSeconds;
+  } catch (e) { /* se queda con los 30s de fábrica si falla */ }
 }
 
 let pinMode = 'clerk'; // 'clerk' or 'admin'
@@ -1178,6 +1190,11 @@ async function loadAdminClients() {
           <span class="admin-toggle-btn ${c.activo?'is-active':'is-inactive'}" onclick="adminToggleClient('${safePattern}', ${!c.activo})">${c.activo?'Active':'Inactive'}</span>
         </div>
         <div style="font-size:12px;color:var(--text-muted);">Cajas por tarima: ${c.cajasPorTarima || '(usa el estándar)'}</div>
+        <div style="font-size:11px;color:var(--text-faint);">Lo que ve el chofer/cliente en su pantalla de tracking:</div>
+        <div style="display:flex;gap:8px;">
+          <span class="admin-toggle-btn ${c.mostrarProductos?'is-active':'is-inactive'}" onclick="adminToggleClientDisplay('${safePattern}','mostrarProductos',${!c.mostrarProductos})">${c.mostrarProductos?'Products: shown':'Products: hidden'}</span>
+          <span class="admin-toggle-btn ${c.mostrarCliente?'is-active':'is-inactive'}" onclick="adminToggleClientDisplay('${safePattern}','mostrarCliente',${!c.mostrarCliente})">${c.mostrarCliente?'Name: shown':'Name: hidden'}</span>
+        </div>
       </div>`;
     }).join('');
   } catch(e) { list.innerHTML = '<div class="empty-state"><i class="ti ti-alert-circle"></i>Connection error.</div>'; }
@@ -1210,6 +1227,12 @@ async function adminToggleClient(nombrePatron, active) {
     clientsConfigLoaded = false;
   } catch(e) { showToast('Connection error.'); }
 }
+async function adminToggleClientDisplay(nombrePatron, field, value) {
+  try {
+    await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminSetClientDisplay', nombrePatron, field, value }) });
+    loadAdminClients();
+  } catch(e) { showToast('Connection error.'); }
+}
 
 // ── SETTINGS (Admin) ──
 async function loadAdminSettings() {
@@ -1221,6 +1244,7 @@ async function loadAdminSettings() {
     document.getElementById('setting-samsDivisor').value = s.samsDivisor;
     document.getElementById('setting-stalledHours').value = s.stalledHours;
     document.getElementById('setting-lockHours').value = s.lockHours;
+    document.getElementById('setting-chofRefreshSeconds').value = s.chofRefreshSeconds;
   } catch(e) { showToast('Connection error loading settings.'); }
 }
 async function saveAdminSettings() {
@@ -1230,7 +1254,8 @@ async function saveAdminSettings() {
     hebDivisor: parseInt(document.getElementById('setting-hebDivisor').value, 10) || 60,
     samsDivisor: parseInt(document.getElementById('setting-samsDivisor').value, 10) || 40,
     stalledHours: parseInt(document.getElementById('setting-stalledHours').value, 10) || 6,
-    lockHours: parseInt(document.getElementById('setting-lockHours').value, 10) || 48
+    lockHours: parseInt(document.getElementById('setting-lockHours').value, 10) || 48,
+    chofRefreshSeconds: Math.max(10, parseInt(document.getElementById('setting-chofRefreshSeconds').value, 10) || 30)
   };
   statusEl.style.display = 'block'; statusEl.textContent = 'Saving...'; statusEl.className = 'upload-status show loading';
   try {
@@ -1648,7 +1673,7 @@ function renderDriverCard(o, highlighted) {
     : (Array.isArray(o.productEstatus) && o.productEstatus.length===prods.length ? o.productEstatus : prods.map(()=>Math.min(est, 3)));
 
   let productsHtml = '';
-  if(prods.length > 0) {
+  if(prods.length > 0 && o.mostrarProductos !== false) {
     const rows = prods.map((p,i)=>{
       const s = Math.min(statuses[i], 3);
       const notShipped = est === 6 && s < 3;
@@ -1695,7 +1720,7 @@ async function buscar() {
     btn.innerHTML='Search'; btn.disabled=false;
     const toShow=clientOrders.length>0?clientOrders:[found];
     let html='';
-    if(toShow.length>1) html+=`<div class="client-header"><i class="ti ti-user"></i><div><p class="client-header-name">${found.cliente}</p><p class="client-header-sub">${toShow.length} orders today</p></div></div>`;
+    if(toShow.length>1) html+=`<div class="client-header"><i class="ti ti-user"></i><div>${found.mostrarCliente !== false ? `<p class="client-header-name">${found.cliente}</p>` : ''}<p class="client-header-sub">${toShow.length} orders today</p></div></div>`;
     html+=renderDriverCard(found,true);
     toShow.filter(o=>String(o.orden)!==String(found.orden)).forEach(o=>{html+=renderDriverCard(o,false);});
     list.innerHTML=html;
@@ -2818,13 +2843,19 @@ setInterval(() => {
   if (encScreen && encScreen.classList.contains('active') && currentUser) loadOrdenes();
 }, 120000);
 
-// Auto-refresh de la pantalla Driver/Client cada 30s — para que "Driver Arrived" salga
-// solo, sin que el chofer/cliente tenga que volver a buscar manualmente.
+// Auto-refresh de la pantalla Driver/Client — para que "Driver Arrived" salga solo,
+// sin que el chofer/cliente tenga que volver a buscar manualmente. El intervalo es
+// configurable desde Admin → Settings (CHOFER_REFRESH_SECONDS, default 30s), así que
+// se reprograma solo en cada vuelta en vez de usar un setInterval de duración fija.
 let lastChoferSearch = '';
-setInterval(() => {
-  const choferScreen = document.getElementById('screen-chofer');
-  if (choferScreen && choferScreen.classList.contains('active') && lastChoferSearch) buscar();
-}, 30000);
+function scheduleChoferRefresh() {
+  setTimeout(() => {
+    const choferScreen = document.getElementById('screen-chofer');
+    if (choferScreen && choferScreen.classList.contains('active') && lastChoferSearch) buscar();
+    scheduleChoferRefresh();
+  }, Math.max(10, CHOFER_REFRESH_SECONDS || 30) * 1000);
+}
+scheduleChoferRefresh();
 
 // Registro del Service Worker para modo PWA (instalable en iPad/celular)
 if ('serviceWorker' in navigator) {
