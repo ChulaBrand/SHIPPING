@@ -378,7 +378,7 @@
       </div>
     </div>
     <div style="display:flex;justify-content:center;gap:10px;margin-top:22px;">
-      <button class="btn-back" onclick="goPapayaUpload()">Upload</button>
+      <button class="btn-back" onclick="goPapayaUploadWithLogin()">Upload</button>
       <button class="btn-back" id="hiddenAdminBtn" onclick="goAdminUserSelect()" style="display:none;">Admin</button>
     </div>
   </div>
@@ -1027,6 +1027,16 @@ function goPapayaUpload(returnScreen) {
   show('screen-papaya-upload');
   if (!clientsConfigLoaded) loadClientsConfig();
 }
+// Subir un PDF manda las órdenes directo al Sheet (writeDraft/syncDraft), y eso
+// necesita una sesión real — ya no hay PIN compartido para hacerlo "de paso" sin
+// identificarse. Si le pican a Upload sin haber iniciado sesión, primero los manda
+// a elegir su nombre y PIN, y en cuanto entran, sigue derecho al PDF (ver completeLogin).
+let pendingUploadAfterLogin = false;
+function goPapayaUploadWithLogin() {
+  if (SESSION_TOKEN) { goPapayaUpload('screen-enc'); return; }
+  pendingUploadAfterLogin = true;
+  goUserSelect();
+}
 function goPapayaBack() {
   show(papayaReturnScreen);
   // Si regresamos al Shipping Panel, recargar las órdenes automáticamente
@@ -1038,7 +1048,7 @@ function goRol() {
   // token viejo no sigue sirviendo hasta que expire solo a las 10 horas.
   const tokenToKill = SESSION_TOKEN || ADMIN_SESSION_TOKEN;
   if (tokenToKill) fetch(API, { method:'POST', body: JSON.stringify({ action:'logout', sessionToken: tokenToKill }) }).catch(()=>{});
-  pinVal=""; updateDots(); currentUser=null; selectedUser=null; SESSION_TOKEN=null; ADMIN_SESSION_TOKEN=null; show('screen-rol'); prefetchUsers();
+  pinVal=""; updateDots(); currentUser=null; selectedUser=null; SESSION_TOKEN=null; ADMIN_SESSION_TOKEN=null; pendingUploadAfterLogin=false; show('screen-rol'); prefetchUsers();
 }
 function goChofer() {
   document.getElementById('error-msg').style.display='none';
@@ -1188,6 +1198,11 @@ async function completeLogin(result) {
   const perms = String(result.permissions || 'clerk').split(',').map(s => s.trim()).filter(Boolean);
   loginPermissions = perms;
   cachedLoginOrders = Array.isArray(result.orders) ? result.orders : null;
+  if (pendingUploadAfterLogin) {
+    pendingUploadAfterLogin = false;
+    goPapayaUpload('screen-enc');
+    return;
+  }
   const hasClerk = perms.includes('clerk'), hasAnalytics = perms.includes('analytics');
   if (hasClerk && hasAnalytics) {
     showAccessChooser();
