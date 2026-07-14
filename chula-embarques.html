@@ -1232,6 +1232,9 @@ async function submitPassword() {
     document.getElementById('pin-error').style.display = 'block';
   }
 }
+// Respaldo directo además del <form>: mismo patrón que ya usan orden-input/enc-search
+// y que sabemos que sí detecta Enter de forma confiable en este teclado.
+document.getElementById('pw-input').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submitPassword(); } });
 
 function pinKey(k) {
   if(!k||pinVal.length>=4) return;
@@ -1329,6 +1332,14 @@ async function submitResetUserPin(name, formEl) {
     showToast('PIN reset ✓');
   } catch(e) { showToast('Connection error.'); }
 }
+// Delegado (la lista se re-arma con innerHTML en cada loadAdminUsers, así que un
+// listener puesto directo en cada input se perdería) — mismo respaldo de Enter.
+document.getElementById('admin-user-list').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.classList.contains('reset-pw-input')) {
+    e.preventDefault();
+    e.target.closest('form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+  }
+});
 
 function updateNewUserPinField() {
   const pinEl = document.getElementById('admin-new-pin');
@@ -1368,6 +1379,8 @@ async function adminAddUser() {
     loadAdminUsers();
   } catch(e) { statusEl.textContent = 'Connection error.'; statusEl.className = 'upload-status show err'; }
 }
+document.getElementById('admin-new-pin').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); adminAddUser(); } });
+document.getElementById('admin-new-name').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); adminAddUser(); } });
 
 async function adminToggleUser(name, active) {
   if (!confirm(`¿Confirmas este cambio?\n\n"${name}": ${active ? 'Inactive' : 'Active'} → ${active ? 'Active' : 'Inactive'}`)) return;
