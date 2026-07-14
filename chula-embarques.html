@@ -1246,9 +1246,13 @@ async function loadAdminUsers() {
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="analytics" ${perms.includes('analytics')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"> Data Analysis</label>
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="admin" ${perms.includes('admin')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"> Admin</label>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <input type="password" class="reset-pw-input" placeholder="${perms.includes('admin') ? 'New password (min. 6 chars)' : 'New 4-digit PIN'}" onkeydown="if(event.key==='Enter'){event.preventDefault();this.nextElementSibling.click();}" style="flex:1;height:34px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;">
-          <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);white-space:nowrap;" onclick="submitResetUserPin('${safeName}', this)">Reset PIN</button>
+        <div>
+          <span class="admin-toggle-btn" onclick="toggleResetPinPanel(this)">Reset PIN</span>
+          <div class="reset-pin-panel" style="display:none;gap:8px;align-items:center;margin-top:8px;">
+            <input type="password" class="reset-pw-input" placeholder="${perms.includes('admin') ? 'New password (min. 6 chars)' : 'New 4-digit PIN'}" onkeydown="if(event.key==='Enter'){event.preventDefault();this.nextElementSibling.click();}" style="flex:1;height:34px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;">
+            <button class="btn-primary" style="height:34px;padding:0 14px;font-size:12.5px;white-space:nowrap;" onclick="submitResetUserPin('${safeName}', this)">Confirm</button>
+            <span class="admin-toggle-btn" style="white-space:nowrap;" onclick="toggleResetPinPanel(this)">Cancel</span>
+          </div>
         </div>
       </div>`;
     }).join('');
@@ -1266,22 +1270,34 @@ async function adminEditPermissions(name, checkboxEl) {
   } catch(e) { showToast('Connection error.'); }
 }
 
-async function submitResetUserPin(name, btnEl) {
+function toggleResetPinPanel(btnEl) {
   const row = btnEl.closest('.admin-user-row');
-  const input = row.querySelector('.reset-pw-input');
+  const panel = row.querySelector('.reset-pin-panel');
+  const showing = panel.style.display === 'flex';
+  panel.style.display = showing ? 'none' : 'flex';
+  if (!showing) {
+    const input = panel.querySelector('.reset-pw-input');
+    input.value = '';
+    setTimeout(() => input.focus(), 30);
+  }
+}
+
+async function submitResetUserPin(name, btnEl) {
+  const panel = btnEl.closest('.reset-pin-panel');
+  const input = panel.querySelector('.reset-pw-input');
   const newPin = input.value.trim();
-  const isAdminAccount = row.querySelector('input[data-perm="admin"]').checked;
+  const isAdminAccount = btnEl.closest('.admin-user-row').querySelector('input[data-perm="admin"]').checked;
   if (isAdminAccount ? newPin.length < 6 : !/^[0-9]{4}$/.test(newPin)) {
-    showToast(isAdminAccount ? 'La contraseña de Admin debe tener mínimo 6 caracteres.' : 'El PIN debe ser de 4 dígitos.');
+    showToast(isAdminAccount ? 'Admin password must be at least 6 characters.' : 'PIN must be 4 digits.');
     return;
   }
-  if (!confirm(`¿Confirmas este cambio?\n\nNuevo PIN/contraseña para "${name}".`)) return;
+  if (!confirm(`Confirm PIN change for "${name}"?\n\nThey will need to use the new PIN/password next time they log in.`)) return;
   try {
     const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminResetUserPin', name, newPin }) });
     const result = await res.json();
     if (result.error) { showToast(result.error); return; }
-    input.value = '';
-    showToast('PIN/password reset ✓');
+    panel.style.display = 'none';
+    showToast('PIN reset ✓');
   } catch(e) { showToast('Connection error.'); }
 }
 
