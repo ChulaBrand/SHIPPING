@@ -638,6 +638,9 @@
       <p class="section-label" style="margin-top:1.5rem;">Pantalla de Driver/Client</p>
       <div class="settings-row"><label>Refrescar cada (segundos)</label><input type="number" id="setting-chofRefreshSeconds" min="10"></div>
       <p style="font-size:11.5px;color:var(--text-faint);margin-top:-4px;margin-bottom:2px;">Cada cuánto se actualiza sola la pantalla de tracking del chofer/cliente (mínimo 10s para no saturar el servidor).</p>
+      <div class="settings-row"><label>Mostrar nombre del cliente</label><input type="checkbox" id="setting-chofShowClientName" style="width:20px;height:18px;cursor:pointer;"></div>
+      <div class="settings-row"><label>Mostrar productos</label><input type="checkbox" id="setting-chofShowProducts" style="width:20px;height:18px;cursor:pointer;"></div>
+      <p style="font-size:11.5px;color:var(--text-faint);margin-top:-4px;margin-bottom:2px;">Apagador general para toda la pantalla del chofer/cliente. Si quieres la excepción de un solo cliente en vez de todos, usa las casillas en la pestaña Clients.</p>
       <button class="btn-primary" style="margin-top:14px;" onclick="saveAdminSettings()">Save settings</button>
       <p class="upload-status show" id="admin-settings-status" style="display:none;"></p>
     </div>
@@ -710,9 +713,13 @@
       <p class="section-label" style="margin-top:1.25rem;">Previous orders</p>
       <div class="orders-list" id="past-list"></div>
     </div>
-    <div id="departed-section" style="display:none;">
-      <p class="section-label" style="margin-top:1.25rem;">📦 Departed</p>
-      <div class="orders-list" id="departed-list"></div>
+    <div id="departed-today-section" style="display:none;">
+      <p class="section-label" style="margin-top:1.25rem;">📦 Departed today</p>
+      <div class="orders-list" id="departed-today-list"></div>
+    </div>
+    <div id="departed-yesterday-section" style="display:none;">
+      <p class="section-label" style="margin-top:1.25rem;">📦 Departed yesterday</p>
+      <div class="orders-list" id="departed-yesterday-list"></div>
     </div>
   </div>
 
@@ -782,7 +789,7 @@ let ordenes = [];
 
 // Valores editables desde Admin → Settings. Estos son el "de fábrica" mientras se
 // cargan de verdad (justo después del login); ver loadAppSettings()/loadClientsConfig().
-let APP_SETTINGS = { standardDivisor: 48, hebDivisor: 60, samsDivisor: 40, stalledHours: 6, lockHours: 48, chofRefreshSeconds: 30 };
+let APP_SETTINGS = { standardDivisor: 48, hebDivisor: 60, samsDivisor: 40, stalledHours: 6, lockHours: 48, chofRefreshSeconds: 30, chofShowClientName: 1, chofShowProducts: 1 };
 let CLIENTS_CONFIG = []; // [{ nombrePatron, nombreCorto, cajasPorTarima, activo }], desde Admin → Clients
 let clientsConfigLoaded = false;
 async function loadAppSettings() {
@@ -1245,6 +1252,8 @@ async function loadAdminSettings() {
     document.getElementById('setting-stalledHours').value = s.stalledHours;
     document.getElementById('setting-lockHours').value = s.lockHours;
     document.getElementById('setting-chofRefreshSeconds').value = s.chofRefreshSeconds;
+    document.getElementById('setting-chofShowClientName').checked = s.chofShowClientName !== 0;
+    document.getElementById('setting-chofShowProducts').checked = s.chofShowProducts !== 0;
   } catch(e) { showToast('Connection error loading settings.'); }
 }
 async function saveAdminSettings() {
@@ -1255,7 +1264,9 @@ async function saveAdminSettings() {
     samsDivisor: parseInt(document.getElementById('setting-samsDivisor').value, 10) || 40,
     stalledHours: parseInt(document.getElementById('setting-stalledHours').value, 10) || 6,
     lockHours: parseInt(document.getElementById('setting-lockHours').value, 10) || 48,
-    chofRefreshSeconds: Math.max(10, parseInt(document.getElementById('setting-chofRefreshSeconds').value, 10) || 30)
+    chofRefreshSeconds: Math.max(10, parseInt(document.getElementById('setting-chofRefreshSeconds').value, 10) || 30),
+    chofShowClientName: document.getElementById('setting-chofShowClientName').checked ? 1 : 0,
+    chofShowProducts: document.getElementById('setting-chofShowProducts').checked ? 1 : 0
   };
   statusEl.style.display = 'block'; statusEl.textContent = 'Saving...'; statusEl.className = 'upload-status show loading';
   try {
@@ -1975,13 +1986,24 @@ function renderOrdenes() {
   if (!todayOrders.length) { list.innerHTML = '<div class="empty-state"><i class="ti ti-inbox"></i>No orders today</div>'; }
   else todayOrders.forEach(o => { list.innerHTML += buildClerkCard(o); });
 
-  const departedSection = document.getElementById('departed-section');
-  const departedList = document.getElementById('departed-list');
-  if (departed.length > 0) {
-    departedSection.style.display = 'block';
-    departedList.innerHTML = '';
-    departed.forEach(o => { departedList.innerHTML += buildClerkCard(o); });
-  } else { departedSection.style.display = 'none'; }
+  const departedToday = departed.filter(o => o.fecha === today);
+  const departedYesterday = departed.filter(o => o.fecha !== today);
+
+  const departedTodaySection = document.getElementById('departed-today-section');
+  const departedTodayList = document.getElementById('departed-today-list');
+  if (departedToday.length > 0) {
+    departedTodaySection.style.display = 'block';
+    departedTodayList.innerHTML = '';
+    departedToday.forEach(o => { departedTodayList.innerHTML += buildClerkCard(o); });
+  } else { departedTodaySection.style.display = 'none'; }
+
+  const departedYesterdaySection = document.getElementById('departed-yesterday-section');
+  const departedYesterdayList = document.getElementById('departed-yesterday-list');
+  if (departedYesterday.length > 0) {
+    departedYesterdaySection.style.display = 'block';
+    departedYesterdayList.innerHTML = '';
+    departedYesterday.forEach(o => { departedYesterdayList.innerHTML += buildClerkCard(o); });
+  } else { departedYesterdaySection.style.display = 'none'; }
 
   const pastSection = document.getElementById('past-section');
   const pastList = document.getElementById('past-list');
@@ -2007,7 +2029,8 @@ function renderSearchResults(raw) {
   list.innerHTML='';
   document.getElementById('past-section').style.display='none';
   document.getElementById('attention-section').style.display='none';
-  document.getElementById('departed-section').style.display='none';
+  document.getElementById('departed-today-section').style.display='none';
+  document.getElementById('departed-yesterday-section').style.display='none';
   document.getElementById('attentionCounts').innerHTML='';
   const filtered = exact ? [exact] : ordenes.filter(o=>!isOlderThan48h(o.actualizado) && (String(o.orden).toLowerCase().includes(val.toLowerCase())||o.cliente.toLowerCase().includes(val.toLowerCase())));
   if(!filtered.length){ list.innerHTML='<div class="empty-state"><i class="ti ti-search-off"></i>No match found</div>'; return; }
