@@ -3188,9 +3188,16 @@ async function sendAndSyncDraft() {
     if (result2.error) { showToast(`Se guardó el Draft, pero el sync falló: ${result2.error}`); return; }
 
     showToast(`${result.count} órdenes enviadas, sincronizadas y Draft limpiado ✓`);
-  } catch (e) { showToast('Connection error — usa el botón para reintentar'); }
-  papayaSendDraftBtn.disabled = false;
-  papayaSendDraftBtn.textContent = original;
+  } catch (e) {
+    showToast('Connection error — usa el botón para reintentar');
+  } finally {
+    // Antes este reset vivía DESPUÉS del try/catch, no en un finally — cualquier
+    // "return" temprano (ej. "Session expired") se lo saltaba entero y el botón se
+    // quedaba trabado en "Enviando al Draft..." para siempre, aunque el servidor ya
+    // hubiera respondido rápido. Por eso se sentía como que se quedaba cargando.
+    papayaSendDraftBtn.disabled = false;
+    papayaSendDraftBtn.textContent = original;
+  }
 }
 
 papayaSendDraftBtn.addEventListener("click", sendAndSyncDraft);
