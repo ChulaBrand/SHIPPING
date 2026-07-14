@@ -705,10 +705,13 @@
 
 <script>
 const API = "https://script.google.com/macros/s/AKfycbwJ8viClBTNp-fOnZ4mYlwDobAWSdKX1rD05E3OIN-y9yIXXBLVeeRbuMo5hYJssI_cuQ/exec";
-const PIN = "6Nzj0kVi22556jQWd5oMPjqHNQNrxCYE";
+// Ya no hay un PIN fijo escrito aquí. SESSION_TOKEN/ADMIN_SESSION_TOKEN se generan
+// en el servidor solo al hacer login y expiran solos — no son un secreto permanente
+// que alguien pueda copiar del código fuente y usar para siempre.
+let SESSION_TOKEN = null;
+let ADMIN_SESSION_TOKEN = null;
 let pinVal = "";
 let ordenes = [];
-let choferOrdenes = [];
 
 const LABELS = ["Order Received","Processing","Ready","Waiting for dock","Loading","Departed"];
 const DESCS  = [
@@ -843,7 +846,7 @@ async function setExpectedReady(orden, value) {
     if (card) card.outerHTML = buildClerkCard(o);
   }
   try {
-    await fetch(API, { method: 'POST', body: JSON.stringify({ pin: PIN, action: 'setExpectedReady', orden, expectedReady: value }) });
+    await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'setExpectedReady', orden, expectedReady: value }) });
   } catch (e) { showToast('Connection error — no se guardó la hora esperada'); }
 }
 
@@ -860,12 +863,12 @@ function goPapayaBack() {
   // (evita tener que hacer un refresh completo de la página, que saca del login)
   if (papayaReturnScreen === 'screen-enc' && currentUser) loadOrdenes();
 }
-function goRol() { pinVal=""; updateDots(); currentUser=null; selectedUser=null; adminPinVal=''; show('screen-rol'); prefetchUsers(); }
+function goRol() { pinVal=""; updateDots(); currentUser=null; selectedUser=null; adminPinVal=''; SESSION_TOKEN=null; ADMIN_SESSION_TOKEN=null; show('screen-rol'); prefetchUsers(); }
 function goChofer() {
   document.getElementById('error-msg').style.display='none';
   document.getElementById('results-list').innerHTML='';
   document.getElementById('orden-input').value='';
-  loadChoferData(); show('screen-chofer');
+  show('screen-chofer');
 }
 
 let pinMode = 'clerk'; // 'clerk' or 'admin'
@@ -950,17 +953,18 @@ function pinKey(k) {
   if(pinVal.length===4) setTimeout(async ()=>{
     if (pinMode === 'admin') {
       try {
-        const res = await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'adminLogin', adminPin: pinVal }) });
+        const res = await fetch(API, { method:'POST', body: JSON.stringify({ action: 'adminLogin', adminPin: pinVal }) });
         const result = await res.json();
-        if (result.success) { adminPinVal = pinVal; show('screen-admin'); loadAdminUsers(); loadAdminAnalyticsConfig(); }
+        if (result.success) { adminPinVal = pinVal; ADMIN_SESSION_TOKEN = result.sessionToken; show('screen-admin'); loadAdminUsers(); loadAdminAnalyticsConfig(); }
         else { document.getElementById('pin-error').style.display='block'; pinVal=""; updateDots(); }
       } catch(e){ document.getElementById('pin-error').style.display='block'; pinVal=""; updateDots(); }
     } else {
       try {
-        const res = await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'loginUser', name: selectedUser, userPin: pinVal }) });
+        const res = await fetch(API, { method:'POST', body: JSON.stringify({ action: 'loginUser', name: selectedUser, userPin: pinVal }) });
         const result = await res.json();
         if (result.success) {
           currentUser = selectedUser;
+          SESSION_TOKEN = result.sessionToken;
           const perms = String(result.permissions || 'clerk').split(',').map(s => s.trim()).filter(Boolean);
           loginPermissions = perms;
           cachedLoginOrders = Array.isArray(result.orders) ? result.orders : null;
@@ -992,7 +996,7 @@ async function loadAdminUsers() {
   const list = document.getElementById('admin-user-list');
   list.innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i>Loading...</div>';
   try {
-    const res = await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'adminGetUsers', adminPin: adminPinVal }) });
+    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminGetUsers' }) });
     const users = await res.json();
     if (users.error) { list.innerHTML = `<div class="empty-state"><i class="ti ti-alert-circle"></i>${users.error}</div>`; return; }
     if (!users.length) { list.innerHTML = '<div class="empty-state"><i class="ti ti-users"></i>No users yet.</div>'; return; }
@@ -1020,7 +1024,7 @@ async function adminEditPermissions(name, checkboxEl) {
   row.querySelectorAll('input[data-perm]').forEach(b => { if (b.checked) finalPerms.push(b.dataset.perm); });
   if (!finalPerms.length) { showToast('Debe tener al menos un acceso'); checkboxEl.checked = true; return; }
   try {
-    await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'adminSetPermissions', adminPin: adminPinVal, name, permissions: finalPerms }) });
+    await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminSetPermissions', name, permissions: finalPerms }) });
     showToast('Permissions updated ✓');
   } catch(e) { showToast('Connection error.'); }
 }
@@ -1039,7 +1043,7 @@ async function adminAddUser() {
   if (!perms.length) { statusEl.textContent = 'Select at least one access.'; statusEl.className = 'upload-status show err'; return; }
   statusEl.textContent = 'Adding...'; statusEl.className = 'upload-status show loading';
   try {
-    const res = await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'adminAddUser', adminPin: adminPinVal, name, userPin, permissions: perms }) });
+    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminAddUser', name, userPin, permissions: perms }) });
     const result = await res.json();
     if (result.error) { statusEl.textContent = result.error; statusEl.className = 'upload-status show err'; return; }
     nameEl.value = ''; pinEl.value = '';
@@ -1052,7 +1056,7 @@ async function adminAddUser() {
 
 async function adminToggleUser(name, active) {
   try {
-    await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'adminToggleUser', adminPin: adminPinVal, name, active }) });
+    await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminToggleUser', name, active }) });
     loadAdminUsers();
   } catch(e) { showToast('Connection error.'); }
 }
@@ -1067,7 +1071,7 @@ async function loadAdminAnalyticsConfig() {
   const list = document.getElementById('admin-analytics-list');
   list.innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i>Loading...</div>';
   try {
-    const res = await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'getAnalyticsConfig' }) });
+    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'getAnalyticsConfig' }) });
     const config = await res.json();
     const all = (Array.isArray(config) ? config : []).slice().sort((a, b) => a.order - b.order);
     analyticsChartConfig = all.filter(c => !ANALYTICS_TOP_KEYS.includes(c.key));
@@ -1105,7 +1109,7 @@ async function saveAdminAnalyticsConfig() {
   statusEl.style.display = 'block'; statusEl.textContent = 'Saving...'; statusEl.className = 'upload-status show loading';
   const payload = analyticsChartConfig.map((c, i) => ({ key: c.key, order: i + 1, defaultRange: c.defaultRange }));
   try {
-    const res = await fetch(API, { method:'POST', body: JSON.stringify({ pin: PIN, action: 'adminSetAnalyticsConfig', adminPin: adminPinVal, config: payload }) });
+    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminSetAnalyticsConfig', config: payload }) });
     const result = await res.json();
     if (result.error) { statusEl.textContent = result.error; statusEl.className = 'upload-status show err'; return; }
     statusEl.textContent = '✓ Layout saved.'; statusEl.className = 'upload-status show ok';
@@ -1137,7 +1141,7 @@ let analyticsLayoutLoaded = false;
 // Si nunca ha guardado nada, el servidor regresa los valores de fábrica y no cambia nada.
 async function loadAnalyticsLayoutConfig() {
   try {
-    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ pin: PIN, action: 'getAnalyticsConfig' }) });
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getAnalyticsConfig' }) });
     const config = await res.json();
     if (Array.isArray(config)) applyAnalyticsLayout(config);
   } catch (e) { /* si falla, se queda con el acomodo/():defaults ya cargados en el HTML */ }
@@ -1290,7 +1294,7 @@ function kpiCardsHtml(kpis) {
 async function fetchRange(r) {
   const key = r.start + '|' + r.end;
   if (!rangeCache[key]) {
-    rangeCache[key] = fetch(API, { method: 'POST', body: JSON.stringify({ pin: PIN, action: 'getAnalytics', start: r.start, end: r.end }) }).then(res => res.json());
+    rangeCache[key] = fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getAnalytics', start: r.start, end: r.end }) }).then(res => res.json());
   }
   return rangeCache[key];
 }
@@ -1407,12 +1411,16 @@ const RENDER_FNS = {
 };
 
 
-let choferDataPromise = null; // se usa en buscar() para esperar a que choferOrdenes esté listo
-async function loadChoferData() {
-  choferDataPromise = (async () => {
-    try { const r=await fetch(`${API}?action=getAll&pin=${PIN}`); const all=await r.json(); choferOrdenes = Array.isArray(all) ? all.filter(o=>!isOlderThan48h(o.actualizado)) : []; } catch(e){ choferOrdenes=[]; }
-  })();
-  return choferDataPromise;
+// Ya no se precarga todo el libro de pedidos con un secreto compartido. En vez de eso,
+// buscar() pide (sin PIN, público) solo los pedidos del MISMO cliente, y solo después
+// de haber confirmado un número de tracking válido — así un chofer/cliente nunca ve
+// datos de otras empresas, aunque sepa la URL del API.
+async function loadClientOrders(orden) {
+  try {
+    const r = await fetch(`${API}?action=getClientOrders&orden=${encodeURIComponent(orden)}`);
+    const all = await r.json();
+    return Array.isArray(all) ? all.filter(o=>!isOlderThan48h(o.actualizado)) : [];
+  } catch(e) { return []; }
 }
 
 function buildTracker(est) {
@@ -1481,10 +1489,9 @@ async function buscar() {
   try {
     const res=await fetch(`${API}?action=getOrder&orden=${encodeURIComponent(val)}`);
     const found=await res.json();
-    if (choferDataPromise) await choferDataPromise; // asegura que choferOrdenes ya esté listo antes de filtrar
+    if(found.error || isOlderThan48h(found.actualizado)){ btn.innerHTML='Search'; btn.disabled=false; errEl.style.display='block'; return; }
+    const clientOrders = await loadClientOrders(val);
     btn.innerHTML='Search'; btn.disabled=false;
-    if(found.error || isOlderThan48h(found.actualizado)){ errEl.style.display='block'; return; }
-    const clientOrders=choferOrdenes.filter(o=>o.cliente===found.cliente);
     const toShow=clientOrders.length>0?clientOrders:[found];
     let html='';
     if(toShow.length>1) html+=`<div class="client-header"><i class="ti ti-user"></i><div><p class="client-header-name">${found.cliente}</p><p class="client-header-sub">${toShow.length} orders today</p></div></div>`;
@@ -1500,7 +1507,7 @@ async function loadOrdenes() {
   const list=document.getElementById('orders-list');
   list.innerHTML='<div class="empty-state"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i>Loading...</div>';
   try {
-    const r=await fetch(`${API}?action=getAll&pin=${PIN}`); ordenes=await r.json();
+    const r=await fetch(`${API}?action=getAll&sessionToken=${encodeURIComponent(SESSION_TOKEN)}`); ordenes=await r.json();
     if (searchActive) {
       const raw = document.getElementById('enc-search').value.trim();
       if (raw) { renderSearchResults(raw); return; }
@@ -1677,7 +1684,7 @@ async function pushOrderStatus(orden, estatus) {
   const card = document.getElementById('card-' + orden);
   if (card && o) card.outerHTML = buildClerkCard(o);
   showToast('Status updated ✓');
-  const body = { pin: PIN, action: 'updateStatus', orden, estatus, usuario: currentUser };
+  const body = { sessionToken: SESSION_TOKEN, action: 'updateStatus', orden, estatus, usuario: currentUser };
   if (productState[orden]) body.productEstatus = productState[orden]; // persiste el detalle por producto
   try { await fetch(API, { method: 'POST', body: JSON.stringify(body) }); }
   catch (e) { showToast('Sync error — check connection'); }
@@ -2586,12 +2593,12 @@ async function sendAndSyncDraft() {
   papayaSendDraftBtn.disabled = true;
   try {
     papayaSendDraftBtn.textContent = 'Enviando al Draft...';
-    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ pin: PIN, action: 'writeDraft', rows: papayaLastDraftRows }) });
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'writeDraft', rows: papayaLastDraftRows }) });
     const result = await res.json();
     if (result.error) { showToast('Error: ' + result.error); return; }
 
     papayaSendDraftBtn.textContent = 'Sincronizando...';
-    const res2 = await fetch(API, { method: 'POST', body: JSON.stringify({ pin: PIN, action: 'syncDraft' }) });
+    const res2 = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'syncDraft' }) });
     const result2 = await res2.json();
     if (result2.error) { showToast(`Se guardó el Draft, pero el sync falló: ${result2.error}`); return; }
 
