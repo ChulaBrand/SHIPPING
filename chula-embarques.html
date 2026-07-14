@@ -615,7 +615,7 @@
         <p class="checklist-title">Add user</p>
         <div style="display:flex;flex-direction:column;gap:8px;">
           <input id="admin-new-name" type="text" placeholder="Name" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'Inter',sans-serif;font-size:14px;">
-          <input id="admin-new-pin" type="text" inputmode="numeric" maxlength="4" placeholder="4-digit PIN" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;">
+          <input id="admin-new-pin" type="text" inputmode="numeric" maxlength="4" placeholder="4-digit PIN" onkeydown="if(event.key==='Enter'){event.preventDefault();adminAddUser();}" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;">
           <div style="display:flex;gap:14px;padding:4px 2px;font-size:13px;color:var(--text-muted);flex-wrap:wrap;">
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-clerk" checked onchange="updateNewUserPinField()"> Shipping Clerk</label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-analytics" onchange="updateNewUserPinField()"> Data Analysis</label>
@@ -1246,6 +1246,10 @@ async function loadAdminUsers() {
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="analytics" ${perms.includes('analytics')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"> Data Analysis</label>
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="admin" ${perms.includes('admin')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"> Admin</label>
         </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="password" class="reset-pw-input" placeholder="${perms.includes('admin') ? 'New password (min. 6 chars)' : 'New 4-digit PIN'}" onkeydown="if(event.key==='Enter'){event.preventDefault();this.nextElementSibling.click();}" style="flex:1;height:34px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;">
+          <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);white-space:nowrap;" onclick="submitResetUserPin('${safeName}', this)">Reset PIN</button>
+        </div>
       </div>`;
     }).join('');
   } catch(e) { list.innerHTML = '<div class="empty-state"><i class="ti ti-alert-circle"></i>Connection error.</div>'; }
@@ -1259,6 +1263,25 @@ async function adminEditPermissions(name, checkboxEl) {
   try {
     await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminSetPermissions', name, permissions: finalPerms }) });
     showToast('Permissions updated ✓');
+  } catch(e) { showToast('Connection error.'); }
+}
+
+async function submitResetUserPin(name, btnEl) {
+  const row = btnEl.closest('.admin-user-row');
+  const input = row.querySelector('.reset-pw-input');
+  const newPin = input.value.trim();
+  const isAdminAccount = row.querySelector('input[data-perm="admin"]').checked;
+  if (isAdminAccount ? newPin.length < 6 : !/^[0-9]{4}$/.test(newPin)) {
+    showToast(isAdminAccount ? 'La contraseña de Admin debe tener mínimo 6 caracteres.' : 'El PIN debe ser de 4 dígitos.');
+    return;
+  }
+  if (!confirm(`¿Confirmas este cambio?\n\nNuevo PIN/contraseña para "${name}".`)) return;
+  try {
+    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminResetUserPin', name, newPin }) });
+    const result = await res.json();
+    if (result.error) { showToast(result.error); return; }
+    input.value = '';
+    showToast('PIN/password reset ✓');
   } catch(e) { showToast('Connection error.'); }
 }
 
