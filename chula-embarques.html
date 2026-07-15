@@ -671,10 +671,7 @@
       <p style="font-size:11.5px;color:var(--text-faint);margin:-2px 0 8px;">El estándar aplica cuando ningún cliente/tienda de abajo tiene su propio valor. HEB se detecta por el producto, no por cliente.</p>
       <div class="settings-group"><div class="settings-row"><label>Estándar</label><input type="number" id="setting-standardDivisor"></div></div>
       <div class="settings-group"><div class="settings-row"><label>HEB</label><input type="number" id="setting-hebDivisor"></div></div>
-      <button class="btn-primary" style="margin-top:10px;" onclick="saveCajasSettings()">Save changes</button>
-      <p class="upload-status show" id="admin-cajas-status" style="display:none;"></p>
-
-      <div class="settings-group" style="margin-top:14px;">
+      <div class="settings-group">
         <div class="settings-row">
           <label>SAM'S</label>
           <div style="display:flex;gap:8px;align-items:center;">
@@ -682,8 +679,10 @@
             <span class="admin-toggle-btn" onclick="submitClientCajas(&quot;SAM'S&quot;, this)">Save</span>
           </div>
         </div>
-        <p class="settings-caption">Aplica a las 10 tiendas de SAM'S automáticamente (a menos que alguna tenga su propio valor puesto en la lista de Clients de abajo). Necesitas tener un cliente llamado exactamente "SAM'S" creado primero.</p>
+        <p class="settings-caption">Aplica a las 10 tiendas de SAM'S automáticamente (a menos que alguna tenga su propio valor puesto en la lista de Clients de abajo). Necesitas tener un cliente llamado exactamente "SAM'S" creado primero. Este campo se guarda con su propio botón "Save" — el de "Save changes" de aquí abajo es solo para Estándar y HEB.</p>
       </div>
+      <button class="btn-primary" style="margin-top:10px;" onclick="saveCajasSettings()">Save changes</button>
+      <p class="upload-status show" id="admin-cajas-status" style="display:none;"></p>
 
       <div class="checklist" style="margin:20px 0 16px;">
         <p class="checklist-title">Add client</p>
