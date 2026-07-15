@@ -674,6 +674,17 @@
       <button class="btn-primary" style="margin-top:10px;" onclick="saveCajasSettings()">Save changes</button>
       <p class="upload-status show" id="admin-cajas-status" style="display:none;"></p>
 
+      <div class="settings-group" style="margin-top:14px;">
+        <div class="settings-row">
+          <label>SAM'S</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="number" id="setting-samsDivisorTop" placeholder="no creado" style="width:90px;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;text-align:right;">
+            <span class="admin-toggle-btn" onclick="submitClientCajas(&quot;SAM'S&quot;, this)">Save</span>
+          </div>
+        </div>
+        <p class="settings-caption">Aplica a las 10 tiendas de SAM'S automáticamente (a menos que alguna tenga su propio valor puesto en la lista de Clients de abajo). Necesitas tener un cliente llamado exactamente "SAM'S" creado primero.</p>
+      </div>
+
       <div class="checklist" style="margin:20px 0 16px;">
         <p class="checklist-title">Add client</p>
         <p style="font-size:11px;color:var(--text-faint);margin:-4px 0 4px;">Un cliente "sombrilla" (ej. SAM'S) agrupa tiendas — o, si no tiene tiendas, funciona igual que antes: un cliente normal.</p>
@@ -1509,6 +1520,9 @@ async function loadAdminClients() {
     const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'getClients' }) });
     const clients = await res.json();
     if (clients.error) { list.innerHTML = `<div class="empty-state"><i class="ti ti-alert-circle"></i>${clients.error}</div>`; return; }
+    const samsClient = Array.isArray(clients) ? clients.find(c => c.nombrePatron.toLowerCase() === "sam's") : null;
+    const samsField = document.getElementById('setting-samsDivisorTop');
+    if (samsField) samsField.value = samsClient ? (samsClient.cajasPorTarima || '') : '';
     if (!clients.length) { list.innerHTML = '<div class="empty-state"><i class="ti ti-building-store"></i>No clients yet.</div>'; return; }
     const topLevel = clients.filter(c => !c.parent);
     list.innerHTML = topLevel.map(c => renderClientCard(c, clients)).join('');
@@ -1556,7 +1570,9 @@ async function submitClientCajas(nombrePatron, btnEl) {
   const cajasPorTarima = input.value.trim();
   if (!confirm(`¿Confirmas este cambio?\n\nCajas por tarima para "${nombrePatron}": ${cajasPorTarima || '(heredar / estándar)'}`)) return;
   try {
-    await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminSetClientCajas', nombrePatron, cajasPorTarima: cajasPorTarima || 0 }) });
+    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminSetClientCajas', nombrePatron, cajasPorTarima: cajasPorTarima || 0 }) });
+    const result = await res.json();
+    if (result.error) { showToast(`"${nombrePatron}" — ${result.error}. Créalo primero con Add client.`); return; }
     showToast('Cajas por tarima actualizado ✓');
     loadAdminClients();
     clientsConfigLoaded = false;
