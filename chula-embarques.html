@@ -410,7 +410,7 @@
       </div>
       <p class="pin-sub" id="pw-toggle-link" onclick="togglePasswordInput()" style="display:none;cursor:pointer;text-decoration:underline;">Use a password instead</p>
       <form id="pw-form" style="display:none;flex-direction:column;gap:12px;align-items:stretch;" onsubmit="event.preventDefault(); submitPassword();">
-        <input type="password" id="pw-input" placeholder="Password" autocomplete="current-password" enterkeyhint="go" style="height:48px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 14px;font-family:'IBM Plex Mono',monospace;font-size:15px;text-align:center;">
+        <input type="password" id="pw-input" placeholder="Password" autocomplete="off" enterkeyhint="go" style="height:48px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 14px;font-family:'IBM Plex Mono',monospace;font-size:15px;text-align:center;">
         <button type="submit" class="btn-primary">Enter</button>
       </form>
       <p class="pin-error" id="pin-error">Incorrect PIN. Try again.</p>
@@ -644,7 +644,7 @@
         <p class="checklist-title">Add user</p>
         <form style="display:flex;flex-direction:column;gap:8px;" onsubmit="event.preventDefault(); adminAddUser();">
           <input id="admin-new-name" type="text" placeholder="Name" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'Inter',sans-serif;font-size:14px;">
-          <input id="admin-new-pin" type="text" inputmode="numeric" maxlength="4" enterkeyhint="go" placeholder="4-digit PIN" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;">
+          <input id="admin-new-pin" type="text" inputmode="numeric" maxlength="4" enterkeyhint="go" autocomplete="off" placeholder="4-digit PIN" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;">
           <div style="display:flex;flex-direction:column;gap:4px;">
             <label style="font-size:12px;color:var(--text-muted);">Shipping access</label>
             <select id="admin-new-perm-shipping" onchange="updateNewUserPinField()" style="height:38px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 8px;font-family:'Inter',sans-serif;font-size:13px;">
@@ -1320,7 +1320,7 @@ async function loadAdminUsers() {
         <div>
           <span class="admin-toggle-btn" onclick="toggleResetPinPanel(this)">Reset PIN</span>
           <form class="reset-pin-panel" style="display:none;gap:8px;align-items:center;margin-top:8px;" onsubmit="event.preventDefault(); submitResetUserPin('${safeName}', this);">
-            <input type="password" class="reset-pw-input" enterkeyhint="go" placeholder="${perms.includes('admin') ? 'New password (min. 6 chars)' : 'New 4-digit PIN'}" style="flex:1;height:34px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;">
+            <input type="password" class="reset-pw-input" enterkeyhint="go" autocomplete="off" placeholder="${perms.includes('admin') ? 'New password (min. 6 chars)' : 'New 4-digit PIN'}" style="flex:1;height:34px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;">
             <button type="submit" class="btn-primary" style="height:34px;padding:0 14px;font-size:12.5px;white-space:nowrap;">Confirm</button>
             <span class="admin-toggle-btn" style="white-space:nowrap;" onclick="toggleResetPinPanel(this)">Cancel</span>
           </form>
