@@ -645,8 +645,15 @@
         <form style="display:flex;flex-direction:column;gap:8px;" onsubmit="event.preventDefault(); adminAddUser();">
           <input id="admin-new-name" type="text" placeholder="Name" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'Inter',sans-serif;font-size:14px;">
           <input id="admin-new-pin" type="text" inputmode="numeric" maxlength="4" enterkeyhint="go" placeholder="4-digit PIN" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;">
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-size:12px;color:var(--text-muted);">Shipping access</label>
+            <select id="admin-new-perm-shipping" onchange="updateNewUserPinField()" style="height:38px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 8px;font-family:'Inter',sans-serif;font-size:13px;">
+              <option value="clerk" selected>Full edit (Clerk)</option>
+              <option value="shipping_view">View only</option>
+              <option value="">No access</option>
+            </select>
+          </div>
           <div style="display:flex;gap:14px;padding:4px 2px;font-size:13px;color:var(--text-muted);flex-wrap:wrap;">
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-clerk" checked onchange="updateNewUserPinField()"> Shipping Clerk</label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-analytics" onchange="updateNewUserPinField()"> Data Analysis</label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-admin" onchange="updateNewUserPinField()"> Admin</label>
           </div>
@@ -660,14 +667,22 @@
     </div>
 
     <div class="admin-tab-panel" id="admin-tab-clients" style="display:none;">
-      <div class="checklist" style="margin-bottom:16px;">
+      <p class="section-label">Cajas por tarima</p>
+      <p style="font-size:11.5px;color:var(--text-faint);margin:-2px 0 8px;">El estándar aplica cuando ningún cliente/tienda de abajo tiene su propio valor. HEB se detecta por el producto, no por cliente.</p>
+      <div class="settings-group"><div class="settings-row"><label>Estándar</label><input type="number" id="setting-standardDivisor"></div></div>
+      <div class="settings-group"><div class="settings-row"><label>HEB</label><input type="number" id="setting-hebDivisor"></div></div>
+      <button class="btn-primary" style="margin-top:10px;" onclick="saveCajasSettings()">Save changes</button>
+      <p class="upload-status show" id="admin-cajas-status" style="display:none;"></p>
+
+      <div class="checklist" style="margin:20px 0 16px;">
         <p class="checklist-title">Add client</p>
-        <div style="display:flex;flex-direction:column;gap:8px;">
+        <p style="font-size:11px;color:var(--text-faint);margin:-4px 0 4px;">Un cliente "sombrilla" (ej. SAM'S) agrupa tiendas — o, si no tiene tiendas, funciona igual que antes: un cliente normal.</p>
+        <form style="display:flex;flex-direction:column;gap:8px;" onsubmit="event.preventDefault(); adminAddClient();">
           <input id="admin-new-client-pattern" type="text" placeholder="Nombre patrón (como aparece en el PDF)" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'Inter',sans-serif;font-size:14px;">
           <input id="admin-new-client-short" type="text" placeholder="Nombre corto (cómo se muestra)" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'Inter',sans-serif;font-size:14px;">
           <input id="admin-new-client-boxes" type="number" placeholder="Cajas por tarima (déjalo vacío para usar el estándar)" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;">
-          <button class="btn-primary" onclick="adminAddClient()">Add client</button>
-        </div>
+          <button type="submit" class="btn-primary">Add client</button>
+        </form>
         <p class="upload-status show" id="admin-add-client-status" style="display:none;"></p>
       </div>
       <p class="section-label">Clients</p>
@@ -692,11 +707,7 @@
     </div>
 
     <div class="admin-tab-panel" id="admin-tab-settings" style="display:none;">
-      <p class="section-label">Cajas por tarima</p>
-      <div class="settings-group"><div class="settings-row"><label>Estándar</label><input type="number" id="setting-standardDivisor"></div></div>
-      <div class="settings-group"><div class="settings-row"><label>HEB</label><input type="number" id="setting-hebDivisor"></div></div>
-      <div class="settings-group"><div class="settings-row"><label>SAM'S</label><input type="number" id="setting-samsDivisor"></div></div>
-      <p class="section-label" style="margin-top:1.5rem;">Umbrales</p>
+      <p class="section-label">Umbrales</p>
       <div class="settings-group"><div class="settings-row"><label>Horas para marcar "Stalled"</label><input type="number" id="setting-stalledHours"></div></div>
       <div class="settings-group"><div class="settings-row"><label>Horas para bloquear edición</label><input type="number" id="setting-lockHours"></div></div>
       <button class="btn-primary" style="margin-top:14px;" onclick="saveAdminSettings()">Save changes</button>
@@ -741,7 +752,7 @@
       <p class="top-bar-title">Shipping Panel <span id="shippingUserLabel" style="font-weight:400;color:var(--text-muted);font-size:12px;"></span></p>
       <div style="display:flex;gap:8px;">
         <button class="btn-back" onclick="loadOrdenes()" title="Refresh" style="padding:5px 9px;"><i class="ti ti-refresh"></i></button>
-        <button class="btn-back" onclick="goPapayaUpload('screen-enc')">Upload</button>
+        <button class="btn-back" id="shippingUploadBtn" onclick="goPapayaUpload('screen-enc')">Upload</button>
         <button class="btn-back" onclick="goRol()">Sign out</button>
       </div>
     </div>
@@ -861,7 +872,7 @@ function escapeHtml(str) {
 
 // Valores editables desde Admin → Settings. Estos son el "de fábrica" mientras se
 // cargan de verdad (justo después del login); ver loadAppSettings()/loadClientsConfig().
-let APP_SETTINGS = { standardDivisor: 48, hebDivisor: 60, samsDivisor: 40, stalledHours: 6, lockHours: 48, chofRefreshSeconds: 30, chofShowClientName: 1, chofShowProducts: 1 };
+let APP_SETTINGS = { standardDivisor: 48, hebDivisor: 60, stalledHours: 6, lockHours: 48, chofRefreshSeconds: 30, chofShowClientName: 1, chofShowProducts: 1 };
 let CLIENTS_CONFIG = []; // [{ nombrePatron, nombreCorto, cajasPorTarima, activo }], desde Admin → Clients
 let clientsConfigLoaded = false;
 async function loadAppSettings() {
@@ -1048,7 +1059,7 @@ function goRol() {
   // token viejo no sigue sirviendo hasta que expire solo a las 10 horas.
   const tokenToKill = SESSION_TOKEN || ADMIN_SESSION_TOKEN;
   if (tokenToKill) fetch(API, { method:'POST', body: JSON.stringify({ action:'logout', sessionToken: tokenToKill }) }).catch(()=>{});
-  pinVal=""; updateDots(); currentUser=null; selectedUser=null; SESSION_TOKEN=null; ADMIN_SESSION_TOKEN=null; pendingUploadAfterLogin=false; show('screen-rol'); prefetchUsers();
+  pinVal=""; updateDots(); currentUser=null; selectedUser=null; SESSION_TOKEN=null; ADMIN_SESSION_TOKEN=null; pendingUploadAfterLogin=false; SHIPPING_READ_ONLY=false; show('screen-rol'); prefetchUsers();
 }
 function goChofer() {
   document.getElementById('error-msg').style.display='none';
@@ -1101,7 +1112,8 @@ function chooseAccess(key) {
 // Si la cuenta tiene 2+ permisos, "Back" regresa al menú de elegir a dónde entrar
 // (en vez de cerrar sesión); si solo tiene acceso a Analytics, es lo mismo que Sign out.
 function analyticsBack() {
-  if (loginPermissions.includes('clerk') && loginPermissions.includes('analytics')) {
+  const hasShipping = loginPermissions.includes('clerk') || loginPermissions.includes('shipping_view');
+  if (hasShipping && loginPermissions.includes('analytics')) {
     showAccessChooser();
   } else {
     goRol();
@@ -1191,6 +1203,10 @@ function renderPinScreen() {
 }
 function updateDots() { for(let i=0;i<4;i++) document.getElementById('pd'+i).className='pin-dot'+(i<pinVal.length?' filled':''); }
 
+// true si la cuenta puede VER Shipping pero no tiene permiso "clerk" (edición
+// completa) — el server ya rechaza updateStatus/setExpectedReady/syncDraft/writeDraft
+// para estas cuentas; esto solo controla que los botones ni se vean como clickeables.
+let SHIPPING_READ_ONLY = false;
 async function completeLogin(result) {
   currentUser = selectedUser;
   SESSION_TOKEN = result.sessionToken;
@@ -1198,13 +1214,15 @@ async function completeLogin(result) {
   const perms = String(result.permissions || 'clerk').split(',').map(s => s.trim()).filter(Boolean);
   loginPermissions = perms;
   cachedLoginOrders = Array.isArray(result.orders) ? result.orders : null;
+  const hasClerk = perms.includes('clerk'), hasShippingView = perms.includes('shipping_view');
+  SHIPPING_READ_ONLY = hasShippingView && !hasClerk;
   if (pendingUploadAfterLogin) {
     pendingUploadAfterLogin = false;
     goPapayaUpload('screen-enc');
     return;
   }
-  const hasClerk = perms.includes('clerk'), hasAnalytics = perms.includes('analytics');
-  if (hasClerk && hasAnalytics) {
+  const hasShippingAccess = hasClerk || hasShippingView, hasAnalytics = perms.includes('analytics');
+  if (hasShippingAccess && hasAnalytics) {
     showAccessChooser();
   } else if (hasAnalytics) {
     show('screen-analytics'); initAnalyticsScreen();
@@ -1288,8 +1306,14 @@ async function loadAdminUsers() {
           <span class="name${u.active?'':' inactive'}">${escapeHtml(u.name)}</span>
           <span class="admin-toggle-btn ${u.active?'is-active':'is-inactive'}" onclick="adminToggleUser('${safeName}', ${!u.active})">${u.active?'Active':'Inactive'}</span>
         </div>
-        <div style="display:flex;gap:14px;font-size:12.5px;color:var(--text-muted);flex-wrap:wrap;">
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="clerk" ${perms.includes('clerk')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"> Shipping Clerk</label>
+        <div style="display:flex;gap:14px;align-items:center;font-size:12.5px;color:var(--text-muted);flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:6px;">Shipping:
+            <select data-perm-shipping onchange="adminEditPermissions('${safeName}', this)" style="height:30px;border:1px solid var(--border);border-radius:6px;padding:0 6px;font-family:'Inter',sans-serif;font-size:12.5px;">
+              <option value="clerk" ${perms.includes('clerk')?'selected':''}>Full edit</option>
+              <option value="shipping_view" ${perms.includes('shipping_view')?'selected':''}>View only</option>
+              <option value="" ${!perms.includes('clerk') && !perms.includes('shipping_view')?'selected':''}>No access</option>
+            </select>
+          </label>
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="analytics" ${perms.includes('analytics')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"> Data Analysis</label>
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="admin" ${perms.includes('admin')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"> Admin</label>
         </div>
@@ -1306,11 +1330,17 @@ async function loadAdminUsers() {
   } catch(e) { list.innerHTML = '<div class="empty-state"><i class="ti ti-alert-circle"></i>Connection error.</div>'; }
 }
 
-async function adminEditPermissions(name, checkboxEl) {
-  const row = checkboxEl.closest('.admin-user-row');
+async function adminEditPermissions(name, el) {
+  const row = el.closest('.admin-user-row');
   const finalPerms = [];
+  const shippingSel = row.querySelector('select[data-perm-shipping]');
+  if (shippingSel && shippingSel.value) finalPerms.push(shippingSel.value);
   row.querySelectorAll('input[data-perm]').forEach(b => { if (b.checked) finalPerms.push(b.dataset.perm); });
-  if (!finalPerms.length) { showToast('Debe tener al menos un acceso'); checkboxEl.checked = true; return; }
+  if (!finalPerms.length) {
+    showToast('Debe tener al menos un acceso');
+    if (el.tagName === 'SELECT') el.value = 'clerk'; else el.checked = true;
+    return;
+  }
   try {
     await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminSetPermissions', name, permissions: finalPerms }) });
     showToast('Permissions updated ✓');
@@ -1369,7 +1399,8 @@ async function adminAddUser() {
   const name = nameEl.value.trim();
   const userPin = pinEl.value.trim();
   const perms = [];
-  if (document.getElementById('admin-new-perm-clerk').checked) perms.push('clerk');
+  const shippingAccess = document.getElementById('admin-new-perm-shipping').value; // '', 'clerk', o 'shipping_view'
+  if (shippingAccess) perms.push(shippingAccess);
   if (document.getElementById('admin-new-perm-analytics').checked) perms.push('analytics');
   const isAdmin = document.getElementById('admin-new-perm-admin').checked;
   if (isAdmin) perms.push('admin');
@@ -1386,7 +1417,7 @@ async function adminAddUser() {
     const result = await res.json();
     if (result.error) { statusEl.textContent = result.error; statusEl.className = 'upload-status show err'; return; }
     nameEl.value = ''; pinEl.value = '';
-    document.getElementById('admin-new-perm-clerk').checked = true;
+    document.getElementById('admin-new-perm-shipping').value = 'clerk';
     document.getElementById('admin-new-perm-analytics').checked = false;
     document.getElementById('admin-new-perm-admin').checked = false;
     updateNewUserPinField();
@@ -1411,7 +1442,7 @@ function showAdminTab(tab) {
   document.querySelectorAll('.admin-tab-panel').forEach(p => p.style.display = 'none');
   document.getElementById('admin-tab-' + tab).style.display = '';
   document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-  if (tab === 'clients' && !adminClientsLoaded) { adminClientsLoaded = true; loadAdminClients(); }
+  if (tab === 'clients' && !adminClientsLoaded) { adminClientsLoaded = true; loadAdminClients(); loadCajasSettings(); }
   if (tab === 'settings' && !adminSettingsLoaded) { adminSettingsLoaded = true; loadAdminSettings(); }
   if (tab === 'driver' && !adminDriverLoaded) { adminDriverLoaded = true; loadDriverScreenSettings(); }
 }
@@ -1431,6 +1462,45 @@ function confirmSettingsDiff(oldVals, newVals, labels) {
 }
 
 // ── CLIENTS (Admin) ──
+// Un cliente "sombrilla" (ej. SAM'S) puede tener tiendas debajo (Terrell, Robert...).
+// La tienda es la que hace match contra el pedido real; si no trae su propio "cajas
+// por tarima", hereda el del cliente — eso se resuelve en divisorFor() más abajo.
+// Un cliente sin tiendas se comporta exactamente igual que el sistema plano de antes.
+function renderClientRowControls(c) {
+  const safePattern = c.nombrePatron.replace(/'/g, "\\'");
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span class="name${c.activo?'':' inactive'}">${escapeHtml(c.nombrePatron)}${c.nombreCorto ? ' → ' + escapeHtml(c.nombreCorto) : ''}</span>
+      <span class="admin-toggle-btn ${c.activo?'is-active':'is-inactive'}" onclick="adminToggleClient('${safePattern}', ${!c.activo})">${c.activo?'Active':'Inactive'}</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--text-muted);">
+      <span>Cajas por tarima:</span>
+      <input type="number" class="cajas-input" value="${c.cajasPorTarima || ''}" placeholder="${c.parent ? 'hereda de ' + escapeHtml(c.parent) : 'estándar'}" style="width:100px;height:28px;border:1px solid var(--border);border-radius:6px;padding:0 6px;font-family:'IBM Plex Mono',monospace;font-size:12px;">
+      <span class="admin-toggle-btn" style="padding:4px 10px;" onclick="submitClientCajas('${safePattern}', this)">Save</span>
+    </div>
+    <div style="font-size:11px;color:var(--text-faint);">Lo que ve el chofer/cliente en su pantalla de tracking:</div>
+    <div style="display:flex;gap:8px;">
+      <span class="admin-toggle-btn ${c.mostrarProductos?'is-active':'is-inactive'}" onclick="adminToggleClientDisplay('${safePattern}','mostrarProductos',${!c.mostrarProductos})">${c.mostrarProductos?'Products: shown':'Products: hidden'}</span>
+      <span class="admin-toggle-btn ${c.mostrarCliente?'is-active':'is-inactive'}" onclick="adminToggleClientDisplay('${safePattern}','mostrarCliente',${!c.mostrarCliente})">${c.mostrarCliente?'Name: shown':'Name: hidden'}</span>
+    </div>`;
+}
+function renderClientCard(c, allClients) {
+  const stores = allClients.filter(s => s.parent && s.parent.toLowerCase() === c.nombrePatron.toLowerCase());
+  const safePattern = c.nombrePatron.replace(/'/g, "\\'");
+  return `
+  <div class="admin-user-row" style="flex-direction:column;align-items:stretch;gap:6px;">
+    ${renderClientRowControls(c)}
+    <div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px;">Stores${stores.length ? ' (' + stores.length + ')' : ''}</div>
+      ${stores.map(s => `<div style="padding:8px;margin-bottom:6px;background:#F7F5F0;border-radius:8px;display:flex;flex-direction:column;gap:6px;">${renderClientRowControls(s)}</div>`).join('')}
+      <div style="display:flex;gap:6px;margin-top:4px;">
+        <input type="text" class="add-store-name" placeholder="Store name" style="flex:1;height:34px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-size:12.5px;">
+        <input type="number" class="add-store-cajas" placeholder="cajas" style="width:70px;height:34px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;">
+        <span class="admin-toggle-btn" onclick="submitAddStore('${safePattern}', this)">Add store</span>
+      </div>
+    </div>
+  </div>`;
+}
 async function loadAdminClients() {
   const list = document.getElementById('admin-client-list');
   list.innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i>Loading...</div>';
@@ -1439,22 +1509,8 @@ async function loadAdminClients() {
     const clients = await res.json();
     if (clients.error) { list.innerHTML = `<div class="empty-state"><i class="ti ti-alert-circle"></i>${clients.error}</div>`; return; }
     if (!clients.length) { list.innerHTML = '<div class="empty-state"><i class="ti ti-building-store"></i>No clients yet.</div>'; return; }
-    list.innerHTML = clients.map(c => {
-      const safePattern = c.nombrePatron.replace(/'/g, "\\'");
-      return `
-      <div class="admin-user-row" style="flex-direction:column;align-items:stretch;gap:6px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span class="name${c.activo?'':' inactive'}">${escapeHtml(c.nombrePatron)}${c.nombreCorto ? ' → ' + escapeHtml(c.nombreCorto) : ''}</span>
-          <span class="admin-toggle-btn ${c.activo?'is-active':'is-inactive'}" onclick="adminToggleClient('${safePattern}', ${!c.activo})">${c.activo?'Active':'Inactive'}</span>
-        </div>
-        <div style="font-size:12px;color:var(--text-muted);">Cajas por tarima: ${c.cajasPorTarima || '(usa el estándar)'}</div>
-        <div style="font-size:11px;color:var(--text-faint);">Lo que ve el chofer/cliente en su pantalla de tracking:</div>
-        <div style="display:flex;gap:8px;">
-          <span class="admin-toggle-btn ${c.mostrarProductos?'is-active':'is-inactive'}" onclick="adminToggleClientDisplay('${safePattern}','mostrarProductos',${!c.mostrarProductos})">${c.mostrarProductos?'Products: shown':'Products: hidden'}</span>
-          <span class="admin-toggle-btn ${c.mostrarCliente?'is-active':'is-inactive'}" onclick="adminToggleClientDisplay('${safePattern}','mostrarCliente',${!c.mostrarCliente})">${c.mostrarCliente?'Name: shown':'Name: hidden'}</span>
-        </div>
-      </div>`;
-    }).join('');
+    const topLevel = clients.filter(c => !c.parent);
+    list.innerHTML = topLevel.map(c => renderClientCard(c, clients)).join('');
   } catch(e) { list.innerHTML = '<div class="empty-state"><i class="ti ti-alert-circle"></i>Connection error.</div>'; }
 }
 async function adminAddClient() {
@@ -1478,6 +1534,33 @@ async function adminAddClient() {
     clientsConfigLoaded = false; // se vuelve a jalar la próxima vez que se abra el subidor de PDF
   } catch(e) { statusEl.textContent = 'Connection error.'; statusEl.className = 'upload-status show err'; }
 }
+async function submitAddStore(parentName, btnEl) {
+  const wrap = btnEl.parentElement;
+  const nameInput = wrap.querySelector('.add-store-name');
+  const cajasInput = wrap.querySelector('.add-store-cajas');
+  const nombrePatron = nameInput.value.trim();
+  const cajasPorTarima = cajasInput.value.trim();
+  if (!nombrePatron) { showToast('Escribe el nombre de la tienda.'); return; }
+  try {
+    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminAddClient', nombrePatron, nombreCorto: '', cajasPorTarima: cajasPorTarima ? parseInt(cajasPorTarima, 10) : null, parent: parentName }) });
+    const result = await res.json();
+    if (result.error) { showToast(result.error); return; }
+    showToast('Store added ✓');
+    loadAdminClients();
+    clientsConfigLoaded = false;
+  } catch(e) { showToast('Connection error.'); }
+}
+async function submitClientCajas(nombrePatron, btnEl) {
+  const input = btnEl.previousElementSibling;
+  const cajasPorTarima = input.value.trim();
+  if (!confirm(`¿Confirmas este cambio?\n\nCajas por tarima para "${nombrePatron}": ${cajasPorTarima || '(heredar / estándar)'}`)) return;
+  try {
+    await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminSetClientCajas', nombrePatron, cajasPorTarima: cajasPorTarima || 0 }) });
+    showToast('Cajas por tarima actualizado ✓');
+    loadAdminClients();
+    clientsConfigLoaded = false;
+  } catch(e) { showToast('Connection error.'); }
+}
 async function adminToggleClient(nombrePatron, active) {
   if (!confirm(`¿Confirmas este cambio?\n\n"${nombrePatron}": ${active ? 'Inactive' : 'Active'} → ${active ? 'Active' : 'Inactive'}`)) return;
   try {
@@ -1496,29 +1579,20 @@ async function adminToggleClientDisplay(nombrePatron, field, value) {
 }
 
 // ── SETTINGS (Admin) ──
-const GENERAL_SETTINGS_LABELS = { standardDivisor: 'Estándar', hebDivisor: 'HEB', samsDivisor: "SAM'S", stalledHours: 'Horas "Stalled"', lockHours: 'Horas para bloquear edición' };
+const GENERAL_SETTINGS_LABELS = { stalledHours: 'Horas "Stalled"', lockHours: 'Horas para bloquear edición' };
 let loadedGeneralSettings = {};
 async function loadAdminSettings() {
   try {
     const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'getSettings' }) });
     const s = await res.json();
-    document.getElementById('setting-standardDivisor').value = s.standardDivisor;
-    document.getElementById('setting-hebDivisor').value = s.hebDivisor;
-    document.getElementById('setting-samsDivisor').value = s.samsDivisor;
     document.getElementById('setting-stalledHours').value = s.stalledHours;
     document.getElementById('setting-lockHours').value = s.lockHours;
-    loadedGeneralSettings = {
-      standardDivisor: s.standardDivisor, hebDivisor: s.hebDivisor, samsDivisor: s.samsDivisor,
-      stalledHours: s.stalledHours, lockHours: s.lockHours
-    };
+    loadedGeneralSettings = { stalledHours: s.stalledHours, lockHours: s.lockHours };
   } catch(e) { showToast('Connection error loading settings.'); }
 }
 async function saveAdminSettings() {
   const statusEl = document.getElementById('admin-settings-status');
   const payload = {
-    standardDivisor: parseInt(document.getElementById('setting-standardDivisor').value, 10) || 48,
-    hebDivisor: parseInt(document.getElementById('setting-hebDivisor').value, 10) || 60,
-    samsDivisor: parseInt(document.getElementById('setting-samsDivisor').value, 10) || 40,
     stalledHours: parseInt(document.getElementById('setting-stalledHours').value, 10) || 6,
     lockHours: parseInt(document.getElementById('setting-lockHours').value, 10) || 48
   };
@@ -1534,6 +1608,40 @@ async function saveAdminSettings() {
     statusEl.textContent = '✓ Settings saved.'; statusEl.className = 'upload-status show ok';
     Object.assign(APP_SETTINGS, payload); // aplica de inmediato en esta misma sesión también
     loadedGeneralSettings = payload;
+  } catch(e) { statusEl.textContent = 'Connection error.'; statusEl.className = 'upload-status show err'; }
+}
+
+// ── CAJAS POR TARIMA (ahora vive en la pestaña Clients, junto a los overrides
+// por cliente/tienda, en vez de separado en Settings) ──
+const CAJAS_SETTINGS_LABELS = { standardDivisor: 'Estándar', hebDivisor: 'HEB' };
+let loadedCajasSettings = {};
+async function loadCajasSettings() {
+  try {
+    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'getSettings' }) });
+    const s = await res.json();
+    document.getElementById('setting-standardDivisor').value = s.standardDivisor;
+    document.getElementById('setting-hebDivisor').value = s.hebDivisor;
+    loadedCajasSettings = { standardDivisor: s.standardDivisor, hebDivisor: s.hebDivisor };
+  } catch(e) { showToast('Connection error loading settings.'); }
+}
+async function saveCajasSettings() {
+  const statusEl = document.getElementById('admin-cajas-status');
+  const payload = {
+    standardDivisor: parseInt(document.getElementById('setting-standardDivisor').value, 10) || 48,
+    hebDivisor: parseInt(document.getElementById('setting-hebDivisor').value, 10) || 60
+  };
+  const check = confirmSettingsDiff(loadedCajasSettings, payload, CAJAS_SETTINGS_LABELS);
+  statusEl.style.display = 'block';
+  if (check === 'nochange') { statusEl.textContent = 'No changes to save.'; statusEl.className = 'upload-status show'; return; }
+  if (!check) { statusEl.style.display = 'none'; return; }
+  statusEl.textContent = 'Saving...'; statusEl.className = 'upload-status show loading';
+  try {
+    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminSetSettings', settings: payload }) });
+    const result = await res.json();
+    if (result.error) { statusEl.textContent = result.error; statusEl.className = 'upload-status show err'; return; }
+    statusEl.textContent = '✓ Settings saved.'; statusEl.className = 'upload-status show ok';
+    Object.assign(APP_SETTINGS, payload);
+    loadedCajasSettings = payload;
   } catch(e) { statusEl.textContent = 'Connection error.'; statusEl.className = 'upload-status show err'; }
 }
 
@@ -2108,6 +2216,10 @@ async function loadOrdenes() {
 
 function buildClerkCard(o) {
   const locked = isOlderThan48h(o.actualizado);
+  // "locked" (por edad) y solo-lectura (por permisos) son 2 cosas distintas — locked
+  // sigue mostrando el badge "Locked" (el pedido es viejo), mientras que solo-lectura
+  // no tiene badge propio, solo apaga los mismos controles sin decir "esto está viejo".
+  const canEdit = !locked && !SHIPPING_READ_ONLY;
   const est = parseInt(o.estatus) || 1;
   const isExpanded = globalViewMode === 'expanded' || expandedOrders.has(String(o.orden));
 
@@ -2143,8 +2255,8 @@ function buildClerkCard(o) {
       const circles = LETTERS.slice(0, 3).map((letter, ci) => {
         const idx = ci + 1;
         const activeCls = pStat === idx ? ` active p${idx}` : '';
-        const clickAttr = locked ? '' : `onclick="event.stopPropagation();setProductStatus('${o.orden}',${i},${idx})"`;
-        return `<div class="pcircle${activeCls}${locked ? ' disabled' : ''}" ${clickAttr}>${letter}</div>`;
+        const clickAttr = canEdit ? `onclick="event.stopPropagation();setProductStatus('${o.orden}',${i},${idx})"` : '';
+        return `<div class="pcircle${activeCls}${!canEdit ? ' disabled' : ''}" ${clickAttr}>${letter}</div>`;
       }).join('');
       return `<div class="product-item"><span class="product-name">${escapeHtml(p)}</span><div class="pcircle-row">${circles}</div></div>`;
     }).join('');
@@ -2160,12 +2272,12 @@ function buildClerkCard(o) {
   const driverBadgeExpanded = o.driverArrived ? `<span class="driver-here-badge">🚗 Driver Here${o.driverArrived.rampa ? ' — ' + escapeHtml(o.driverArrived.rampa) : ''}</span>` : '';
   const expectedReadyRow = est < 3 ? `<div class="expected-ready-row" onclick="event.stopPropagation();">
     <label for="er-${o.orden}">Expected ready</label>
-    <input type="datetime-local" id="er-${o.orden}" value="${o.expectedReady || ''}" ${locked ? 'disabled' : ''} onchange="setExpectedReady('${o.orden}', this.value)" />
+    <input type="datetime-local" id="er-${o.orden}" value="${o.expectedReady || ''}" ${!canEdit ? 'disabled' : ''} onchange="setExpectedReady('${o.orden}', this.value)" />
   </div>` : '';
 
   const btns = LABELS.map((l, i) => {
     const idx = i + 1;
-    return `<button class="sbtn${est === idx ? ' ' + SEL[i] : ''}" onclick="event.stopPropagation();setOrderStatus('${o.orden}',${idx})" ${locked ? 'disabled' : ''}><span class="sbtn-letter">${LETTERS[i]}</span><span class="sbtn-text">${l}</span></button>`;
+    return `<button class="sbtn${est === idx ? ' ' + SEL[i] : ''}" onclick="event.stopPropagation();setOrderStatus('${o.orden}',${idx})" ${!canEdit ? 'disabled' : ''}><span class="sbtn-letter">${LETTERS[i]}</span><span class="sbtn-text">${l}</span></button>`;
   }).join('');
 
   return `<div class="order-card${locked ? ' locked' : ''}${state ? ' ' + state + '-expanded' : ''}" id="card-${o.orden}">
@@ -2299,7 +2411,9 @@ function renderAttentionCounts(attention) {
 
 function renderOrdenes() {
   const userLabel = document.getElementById('shippingUserLabel');
-  if (userLabel) userLabel.textContent = currentUser ? '— ' + currentUser : '';
+  if (userLabel) userLabel.textContent = currentUser ? '— ' + currentUser + (SHIPPING_READ_ONLY ? ' (view only)' : '') : '';
+  const uploadBtn = document.getElementById('shippingUploadBtn');
+  if (uploadBtn) uploadBtn.style.display = SHIPPING_READ_ONLY ? 'none' : '';
   const today = todayStr();
   const visible = ordenes.filter(o => !isOlderThan48h(o.actualizado)).filter(o => !statusFilter.size || statusFilter.has(parseInt(o.estatus) || 1));
 
@@ -2578,6 +2692,12 @@ function divisorFor(clientKey, isHeb) {
   if (isHeb) return APP_SETTINGS.hebDivisor;
   const override = CLIENTS_CONFIG.find(c => c.activo && String(c.nombrePatron || '').toLowerCase() === String(clientKey || '').toLowerCase());
   if (override && override.cajasPorTarima) return override.cajasPorTarima;
+  // Si la tienda no trae su propio valor, hereda el de su cliente sombrilla (ej.
+  // Terrell hereda de SAM'S) antes de caer al estándar general.
+  if (override && override.parent) {
+    const parentClient = CLIENTS_CONFIG.find(c => c.activo && String(c.nombrePatron || '').toLowerCase() === String(override.parent).toLowerCase());
+    if (parentClient && parentClient.cajasPorTarima) return parentClient.cajasPorTarima;
+  }
   return APP_SETTINGS.standardDivisor;
 }
 
