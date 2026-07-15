@@ -1237,6 +1237,7 @@ async function submitPassword() {
   const pwEl = document.getElementById('pw-input');
   const pw = pwEl.value;
   if (!pw) return;
+  pwEl.blur(); // quita el cursor de inmediato — antes se quedaba parpadeando y parecía que no había pasado nada
   try {
     const res = await fetch(API, { method:'POST', body: JSON.stringify({ action: 'loginUser', name: selectedUser, userPin: pw }) });
     const result = await res.json();
