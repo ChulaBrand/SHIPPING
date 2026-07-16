@@ -30,8 +30,18 @@
     --border: rgba(0,0,0,0.10); --border-strong: rgba(0,0,0,0.18);
     --radius: 12px; --radius-sm: 8px;
   }
+  html, body { overscroll-behavior-y: contain; }
   body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:2rem 1rem 4rem; }
   .container { width:100%; max-width:420px; }
+  .pull-refresh-indicator {
+    position:fixed; top:8px; left:50%; z-index:999; width:32px; height:32px; border-radius:50%;
+    background:var(--text); color:#fff; display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none; transform:translate(-50%,-40px) rotate(0deg);
+    transition:transform .15s ease, opacity .15s ease;
+  }
+  .pull-refresh-indicator.pulling { opacity:1; }
+  .pull-refresh-indicator.spinning i { animation:pull-refresh-spin .6s linear infinite; }
+  @keyframes pull-refresh-spin { to { transform:rotate(360deg); } }
   @media (min-width:640px) {
     .container { max-width:600px; }
     body { font-size:16px; }
@@ -353,6 +363,7 @@
 </style>
 </head>
 <body>
+<div class="pull-refresh-indicator" id="pull-refresh-indicator"><i class="ti ti-refresh"></i></div>
 <div class="container">
   <div class="logo-row">
     <div class="logo-mark">
@@ -635,7 +646,7 @@
       <button class="admin-tab-btn active" data-tab="users" onclick="showAdminTab('users')">Users</button>
       <button class="admin-tab-btn" data-tab="clients" onclick="showAdminTab('clients')">Clients</button>
       <button class="admin-tab-btn" data-tab="driver" onclick="showAdminTab('driver')">Driver/Client Screen</button>
-      <button class="admin-tab-btn" data-tab="settings" onclick="showAdminTab('settings')">Settings</button>
+      <button class="admin-tab-btn" data-tab="settings" onclick="showAdminTab('settings')">Order Coordinator</button>
       <button class="admin-tab-btn" data-tab="analytics" onclick="showAdminTab('analytics')">Analytics Layout</button>
     </div>
 
@@ -719,9 +730,16 @@
     <div class="admin-tab-panel" id="admin-tab-settings" style="display:none;">
       <p class="section-label">Umbrales</p>
       <div class="settings-group"><div class="settings-row"><label>Horas para marcar "Stalled"</label><input type="number" id="setting-stalledHours"></div></div>
+      <div class="settings-group"><div class="settings-row"><label>Horas para marcar "Soon"</label><input type="number" id="setting-soonHours"></div></div>
       <div class="settings-group"><div class="settings-row"><label>Horas para bloquear edición</label><input type="number" id="setting-lockHours"></div></div>
       <button class="btn-primary" style="margin-top:14px;" onclick="saveAdminSettings()">Save changes</button>
       <p class="upload-status show" id="admin-settings-status" style="display:none;"></p>
+
+      <p class="section-label" style="margin-top:1.5rem;">Orden de estatus (Today's orders)</p>
+      <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:8px;">Define en qué orden aparecen las secciones dentro de "Today's orders" (Departed y Needs Attention siempre van aparte, esto no los afecta).</p>
+      <div id="admin-status-order-list"></div>
+      <button class="btn-primary" style="margin-top:10px;" onclick="saveStatusOrder()">Save order</button>
+      <p class="upload-status show" id="admin-status-order-status" style="display:none;"></p>
     </div>
 
     <div class="admin-tab-panel" id="admin-tab-analytics" style="display:none;">
@@ -761,6 +779,7 @@
     <div class="top-bar">
       <p class="top-bar-title">Shipping Panel <span id="shippingUserLabel" style="font-weight:400;color:var(--text-muted);font-size:12px;"></span></p>
       <div style="display:flex;gap:8px;">
+        <button class="btn-back" onclick="shippingBack()">← Back</button>
         <button class="btn-back" onclick="loadOrdenes()" title="Refresh" style="padding:5px 9px;"><i class="ti ti-refresh"></i></button>
         <button class="btn-back" id="shippingUploadBtn" onclick="goPapayaUpload('screen-enc')">Upload</button>
         <button class="btn-back" onclick="goRol()">Sign out</button>
@@ -882,7 +901,7 @@ function escapeHtml(str) {
 
 // Valores editables desde Admin → Settings. Estos son el "de fábrica" mientras se
 // cargan de verdad (justo después del login); ver loadAppSettings()/loadClientsConfig().
-let APP_SETTINGS = { standardDivisor: 48, hebDivisor: 60, stalledHours: 6, lockHours: 48, chofRefreshSeconds: 30, chofShowClientName: 1, chofShowProducts: 1 };
+let APP_SETTINGS = { standardDivisor: 48, hebDivisor: 60, stalledHours: 6, soonHours: 1, lockHours: 48, chofRefreshSeconds: 30, chofShowClientName: 1, chofShowProducts: 1, statusRank1: 1, statusRank2: 2, statusRank3: 3, statusRank4: 4, statusRank5: 5 };
 let CLIENTS_CONFIG = []; // [{ nombrePatron, nombreCorto, cajasPorTarima, activo }], desde Admin → Clients
 let clientsConfigLoaded = false;
 async function loadAppSettings() {
@@ -952,7 +971,8 @@ function isOlderThan48h(fecha) {
 // "Expected ready" — lo pone el Shipping Clerk manualmente; si queda vacío, no se
 // muestra nada (ni al chofer ni como aviso). Una vez que el pedido llega a "Ready"
 // (estatus 3) o más adelante, ya no aplica — ni el aviso ni el campo se muestran más.
-// Devuelve: 'overdue' (ya se pasó la hora), 'soon' (falta 1h o menos), o null (todo bien / no aplica).
+// Devuelve: 'overdue' (ya se pasó la hora), 'soon' (falta APP_SETTINGS.soonHours o menos,
+// editable en Admin → Order Coordinator), o null (todo bien / no aplica).
 function expectedReadyState(o) {
   if (!o.expectedReady) return null;
   const est = parseInt(o.estatus) || 1;
@@ -961,7 +981,7 @@ function expectedReadyState(o) {
   if (isNaN(d)) return null;
   const diffMs = d - new Date();
   if (diffMs < 0) return 'overdue';
-  if (diffMs <= 3600000) return 'soon';
+  if (diffMs <= (APP_SETTINGS.soonHours || 1) * 3600000) return 'soon';
   return null;
 }
 
@@ -1124,6 +1144,15 @@ function chooseAccess(key) {
 function analyticsBack() {
   const hasShipping = loginPermissions.includes('clerk') || loginPermissions.includes('shipping_view');
   if (hasShipping && loginPermissions.includes('analytics')) {
+    showAccessChooser();
+  } else {
+    goRol();
+  }
+}
+// Mismo patrón que analyticsBack(): si la cuenta también tiene Data Analysis, "Back"
+// regresa al menú de elegir a dónde entrar en vez de cerrar sesión de una vez.
+function shippingBack() {
+  if (loginPermissions.includes('analytics')) {
     showAccessChooser();
   } else {
     goRol();
@@ -1595,21 +1624,31 @@ async function adminToggleClientDisplay(nombrePatron, field, value) {
 }
 
 // ── SETTINGS (Admin) ──
-const GENERAL_SETTINGS_LABELS = { stalledHours: 'Horas "Stalled"', lockHours: 'Horas para bloquear edición' };
+const GENERAL_SETTINGS_LABELS = { stalledHours: 'Horas "Stalled"', soonHours: 'Horas "Soon"', lockHours: 'Horas para bloquear edición' };
 let loadedGeneralSettings = {};
+// Las 5 secciones de "Today's orders" (Departed/estatus 6 nunca entra aquí, siempre va aparte).
+const STATUS_ORDER_CODES = [1, 2, 3, 4, 5];
+let statusOrderConfig = []; // [{ est, label }], en el orden que el Admin haya guardado
 async function loadAdminSettings() {
   try {
     const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'getSettings' }) });
     const s = await res.json();
     document.getElementById('setting-stalledHours').value = s.stalledHours;
+    document.getElementById('setting-soonHours').value = s.soonHours;
     document.getElementById('setting-lockHours').value = s.lockHours;
-    loadedGeneralSettings = { stalledHours: s.stalledHours, lockHours: s.lockHours };
+    loadedGeneralSettings = { stalledHours: s.stalledHours, soonHours: s.soonHours, lockHours: s.lockHours };
+    statusOrderConfig = STATUS_ORDER_CODES
+      .map(est => ({ est, label: LABELS[est - 1], rank: s['statusRank' + est] || est }))
+      .sort((a, b) => a.rank - b.rank)
+      .map(({ est, label }) => ({ est, label }));
+    renderStatusOrderConfig();
   } catch(e) { showToast('Connection error loading settings.'); }
 }
 async function saveAdminSettings() {
   const statusEl = document.getElementById('admin-settings-status');
   const payload = {
     stalledHours: parseInt(document.getElementById('setting-stalledHours').value, 10) || 6,
+    soonHours: parseInt(document.getElementById('setting-soonHours').value, 10) || 1,
     lockHours: parseInt(document.getElementById('setting-lockHours').value, 10) || 48
   };
   const check = confirmSettingsDiff(loadedGeneralSettings, payload, GENERAL_SETTINGS_LABELS);
@@ -1624,6 +1663,42 @@ async function saveAdminSettings() {
     statusEl.textContent = '✓ Settings saved.'; statusEl.className = 'upload-status show ok';
     Object.assign(APP_SETTINGS, payload); // aplica de inmediato en esta misma sesión también
     loadedGeneralSettings = payload;
+  } catch(e) { statusEl.textContent = 'Connection error.'; statusEl.className = 'upload-status show err'; }
+}
+
+// Reordenar con flechas ▲▼ (mismo patrón que Analytics Layout), guarda como
+// statusRank1..5 (rank = posición) para reusar el esquema genérico Key|Value de Settings.
+function renderStatusOrderConfig() {
+  const list = document.getElementById('admin-status-order-list');
+  list.innerHTML = statusOrderConfig.map((c, i) => `
+    <div class="admin-user-row">
+      <div style="display:flex;gap:10px;align-items:center;">
+        <div style="display:flex;gap:4px;">
+          <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveStatusOrder(${i},-1)" title="Move up" ${i === 0 ? 'disabled' : ''}>▲</button>
+          <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveStatusOrder(${i},1)" title="Move down" ${i === statusOrderConfig.length - 1 ? 'disabled' : ''}>▼</button>
+        </div>
+        <span class="name">${c.label}</span>
+      </div>
+    </div>`).join('');
+}
+function moveStatusOrder(index, dir) {
+  const target = index + dir;
+  if (target < 0 || target >= statusOrderConfig.length) return;
+  const tmp = statusOrderConfig[index]; statusOrderConfig[index] = statusOrderConfig[target]; statusOrderConfig[target] = tmp;
+  renderStatusOrderConfig();
+}
+async function saveStatusOrder() {
+  const statusEl = document.getElementById('admin-status-order-status');
+  const payload = {};
+  statusOrderConfig.forEach((c, i) => { payload['statusRank' + c.est] = i + 1; });
+  statusEl.style.display = 'block'; statusEl.textContent = 'Saving...'; statusEl.className = 'upload-status show loading';
+  try {
+    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminSetSettings', settings: payload }) });
+    const result = await res.json();
+    if (result.error) { statusEl.textContent = result.error; statusEl.className = 'upload-status show err'; return; }
+    statusEl.textContent = '✓ Order saved.'; statusEl.className = 'upload-status show ok';
+    Object.assign(APP_SETTINGS, payload);
+    renderOrdenes();
   } catch(e) { statusEl.textContent = 'Connection error.'; statusEl.className = 'upload-status show err'; }
 }
 
@@ -2464,9 +2539,8 @@ function renderOrdenes() {
   }
 
   const list = document.getElementById('orders-list');
-  list.innerHTML = '';
   if (!todayOrders.length) { list.innerHTML = '<div class="empty-state"><i class="ti ti-inbox"></i>No orders today</div>'; }
-  else todayOrders.forEach(o => { list.innerHTML += buildClerkCard(o); });
+  else list.innerHTML = groupByStatusHtml(todayOrders);
 
   const departedToday = departed.filter(o => o.fecha === today);
   const departedYesterday = departed.filter(o => o.fecha !== today);
@@ -2491,9 +2565,24 @@ function renderOrdenes() {
   const pastList = document.getElementById('past-list');
   if (pastOrders.length > 0) {
     pastSection.style.display = 'block';
-    pastList.innerHTML = '';
-    pastOrders.forEach(o => { pastList.innerHTML += buildClerkCard(o); });
+    pastList.innerHTML = groupByStatusHtml(pastOrders);
   } else { pastSection.style.display = 'none'; }
+}
+
+// Agrupa en secciones por estatus (1-5, Departed nunca llega aquí) en el orden que el
+// Admin haya guardado en Order Coordinator → Orden de estatus (APP_SETTINGS.statusRank1..5).
+function groupByStatusHtml(orders) {
+  const buckets = {};
+  orders.forEach(o => {
+    const est = Math.min(parseInt(o.estatus) || 1, 5);
+    (buckets[est] = buckets[est] || []).push(o);
+  });
+  const estCodes = Object.keys(buckets).map(Number)
+    .sort((a, b) => (APP_SETTINGS['statusRank' + a] || a) - (APP_SETTINGS['statusRank' + b] || b));
+  return estCodes.map(est => `
+    <p class="section-label" style="margin-top:14px;">${LABELS[est - 1]}</p>
+    <div class="orders-list">${buckets[est].map(buildClerkCard).join('')}</div>
+  `).join('');
 }
 
 let searchActive = false;
@@ -2524,6 +2613,60 @@ function showToast(msg) {
   const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2500);
 }
+
+// ── Pull to refresh (Shipping Panel y Data Analysis) ──
+// El navegador ya tiene un "pull to refresh" nativo, pero recarga la página entera
+// (perdiendo la sesión) — por eso arriba se puso overscroll-behavior-y:contain para
+// apagarlo, y aquí se arma uno propio que solo vuelve a pedir los datos del panel
+// activo, sin perder el login.
+(function () {
+  const PULL_REFRESH_FNS = { 'screen-enc': loadOrdenes, 'screen-analytics': refreshAllPanels };
+  const THRESHOLD = 70;
+  const indicator = document.getElementById('pull-refresh-indicator');
+  let startY = null, pulling = false, refreshing = false;
+
+  function activeRefreshFn() {
+    const active = document.querySelector('.screen.active');
+    return active && PULL_REFRESH_FNS[active.id];
+  }
+
+  document.addEventListener('touchstart', (e) => {
+    if (refreshing || window.scrollY > 0 || !activeRefreshFn()) { startY = null; pulling = false; return; }
+    startY = e.touches[0].clientY;
+    pulling = true;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (e) => {
+    if (!pulling || startY === null) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy <= 0 || window.scrollY > 0) { pulling = false; indicator.classList.remove('pulling'); indicator.style.transform = ''; return; }
+    const dist = Math.min(dy, THRESHOLD * 1.6);
+    indicator.classList.add('pulling');
+    indicator.style.transform = `translate(-50%, ${dist - 40}px) rotate(${dist * 3}deg)`;
+  }, { passive: true });
+
+  document.addEventListener('touchend', (e) => {
+    if (!pulling || startY === null) { pulling = false; startY = null; return; }
+    const dy = e.changedTouches[0].clientY - startY;
+    pulling = false; startY = null;
+    const fn = dy >= THRESHOLD ? activeRefreshFn() : null;
+    if (fn) {
+      refreshing = true;
+      indicator.classList.add('spinning');
+      indicator.style.transform = 'translate(-50%, 30px) rotate(0deg)';
+      Promise.resolve(fn()).finally(() => {
+        setTimeout(() => {
+          refreshing = false;
+          indicator.classList.remove('pulling', 'spinning');
+          indicator.style.transform = '';
+        }, 400);
+      });
+    } else {
+      indicator.classList.remove('pulling');
+      indicator.style.transform = '';
+    }
+  }, { passive: true });
+})();
 
 // ===========================================================================
 // PAPAYA PALLET REPORT — standalone tool, corre 100% en el navegador
