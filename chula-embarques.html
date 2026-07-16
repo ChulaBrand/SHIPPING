@@ -736,7 +736,7 @@
       <p class="upload-status show" id="admin-settings-status" style="display:none;"></p>
 
       <p class="section-label" style="margin-top:1.5rem;">Orden de estatus (Today's orders)</p>
-      <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:8px;">Define en qué orden aparecen las secciones dentro de "Today's orders" (Departed y Needs Attention siempre van aparte, esto no los afecta).</p>
+      <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:8px;">Define en qué orden se acomodan los pedidos dentro de "Today's orders" (Departed y Needs Attention siempre van aparte, esto no los afecta).</p>
       <div id="admin-status-order-list"></div>
       <button class="btn-primary" style="margin-top:10px;" onclick="saveStatusOrder()">Save order</button>
       <p class="upload-status show" id="admin-status-order-status" style="display:none;"></p>
@@ -2399,6 +2399,21 @@ function toggleCardExpand(orden) {
   renderOrdenes();
 }
 
+// Tocar/clickear fuera de una tarjeta abierta la cierra (no aplica en "View all",
+// que expande todo a propósito). Los controles de adentro (botones, checklist, fecha)
+// ya usan event.stopPropagation(), así que solo llega aquí un click realmente "afuera".
+document.addEventListener('click', (e) => {
+  if (!expandedOrders.size || globalViewMode === 'expanded') return;
+  if (document.querySelector('.screen.active')?.id !== 'screen-enc') return;
+  if (e.target.closest('.order-card, .order-card-compact')) return;
+  expandedOrders.clear();
+  if (searchActive) {
+    const raw = document.getElementById('enc-search').value.trim();
+    if (raw) { renderSearchResults(raw); return; }
+  }
+  renderOrdenes();
+});
+
 function toggleGlobalView() {
   globalViewMode = globalViewMode === 'compact' ? 'expanded' : 'compact';
   expandedOrders.clear(); // el toggle general manda: limpia las expansiones manuales
@@ -2569,20 +2584,15 @@ function renderOrdenes() {
   } else { pastSection.style.display = 'none'; }
 }
 
-// Agrupa en secciones por estatus (1-5, Departed nunca llega aquí) en el orden que el
-// Admin haya guardado en Order Coordinator → Orden de estatus (APP_SETTINGS.statusRank1..5).
+// Ordena por estatus (1-5, Departed nunca llega aquí) según el orden que el Admin haya
+// guardado en Order Coordinator → Orden de estatus (APP_SETTINGS.statusRank1..5) — sin
+// títulos de sección, solo cambia el acomodo de las tarjetas dentro de la misma lista.
 function groupByStatusHtml(orders) {
-  const buckets = {};
-  orders.forEach(o => {
-    const est = Math.min(parseInt(o.estatus) || 1, 5);
-    (buckets[est] = buckets[est] || []).push(o);
+  const sorted = orders.slice().sort((a, b) => {
+    const ea = Math.min(parseInt(a.estatus) || 1, 5), eb = Math.min(parseInt(b.estatus) || 1, 5);
+    return (APP_SETTINGS['statusRank' + ea] || ea) - (APP_SETTINGS['statusRank' + eb] || eb);
   });
-  const estCodes = Object.keys(buckets).map(Number)
-    .sort((a, b) => (APP_SETTINGS['statusRank' + a] || a) - (APP_SETTINGS['statusRank' + b] || b));
-  return estCodes.map(est => `
-    <p class="section-label" style="margin-top:14px;">${LABELS[est - 1]}</p>
-    <div class="orders-list">${buckets[est].map(buildClerkCard).join('')}</div>
-  `).join('');
+  return sorted.map(buildClerkCard).join('');
 }
 
 let searchActive = false;
