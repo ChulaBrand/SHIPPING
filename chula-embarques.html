@@ -853,7 +853,7 @@
         <p class="section-label" style="color:#B91C1C;">⚠️ Needs Attention</p>
         <div class="orders-list" id="attention-list"></div>
       </div>
-      <p class="section-label">Today's orders</p>
+      <p class="section-label" id="orders-list-label">Today's orders</p>
       <div class="orders-list" id="orders-list"></div>
       <div id="past-section" style="display:none;">
         <p class="section-label" style="margin-top:1.25rem;">Previous orders</p>
@@ -1121,6 +1121,10 @@ async function setExpectedReady(orden, value) {
     o.expectedReady = value;
     const card = document.getElementById('card-' + orden);
     if (card) card.outerHTML = buildClerkCard(o);
+    // Si estás viendo el panel de "Expected Ready Set" y acabas de quitarle la hora
+    // (value queda vacío), esta orden ya no debe seguir apareciendo ahí — sin esto,
+    // se quedaba la tarjeta pegada mostrando "--" aunque ya no tuviera hora de verdad.
+    if (currentOrderView === 'eta') renderEtaView();
   }
   try {
     await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'setExpectedReady', orden, expectedReady: value }) });
@@ -2838,6 +2842,7 @@ function renderOrdenes() {
   // primera, dejando la otra desincronizada.
   if (currentOrderView === 'eta') { renderEtaView(); return; }
   if (currentOrderView === 'cancelled') { return; }
+  document.getElementById('orders-list-label').textContent = "Today's orders"; // por si veníamos de una búsqueda
   const today = todayStr();
   const visible = ordenes.filter(o => !isOlderThan48h(o.actualizado)).filter(o => !statusFilter.size || statusFilter.has(parseInt(o.estatus) || 1));
 
@@ -2938,6 +2943,10 @@ function renderSearchResults(raw) {
   const exact = ordenes.find(o=>String(o.orden).toLowerCase()===val.toLowerCase());
   const list=document.getElementById('orders-list');
   list.innerHTML='';
+  // La búsqueda no filtra por fecha ni estatus (puede traer pedidos viejos/Departed),
+  // así que el título de arriba ya no debe decir "Today's orders" — antes se quedaba
+  // ese texto y hacía parecer que órdenes de ayer/Departed eran de hoy.
+  document.getElementById('orders-list-label').textContent = 'Search results';
   document.getElementById('past-section').style.display='none';
   document.getElementById('attention-section').style.display='none';
   document.getElementById('departed-today-section').style.display='none';
