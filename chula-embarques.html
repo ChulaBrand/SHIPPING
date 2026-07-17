@@ -124,6 +124,7 @@
   .order-producto-lbl { font-size:12px; color:var(--text-muted); margin-bottom:10px; }
   .highlight-badge { display:inline-block; font-size:10px; font-weight:600; background:var(--green-dark); color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
   .locked-badge { display:inline-block; font-size:10px; font-weight:600; background:#6b7280; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
+  .date-badge { display:inline-block; font-size:10px; font-weight:600; background:var(--border); color:var(--text-muted); border-radius:99px; padding:2px 8px; vertical-align:middle; }
   .overdue-badge { display:inline-block; font-size:10px; font-weight:600; background:#DC2626; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
   .soon-badge { display:inline-block; font-size:10px; font-weight:600; background:#CA8A04; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
   .stalled-badge { display:inline-block; font-size:10px; font-weight:600; background:#2563EB; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
@@ -1119,12 +1120,11 @@ async function setExpectedReady(orden, value) {
   const o = ordenes.find(x => String(x.orden) === String(orden));
   if (o) {
     o.expectedReady = value;
-    const card = document.getElementById('card-' + orden);
-    if (card) card.outerHTML = buildClerkCard(o);
-    // Si estás viendo el panel de "Expected Ready Set" y acabas de quitarle la hora
-    // (value queda vacío), esta orden ya no debe seguir apareciendo ahí — sin esto,
-    // se quedaba la tarjeta pegada mostrando "--" aunque ya no tuviera hora de verdad.
-    if (currentOrderView === 'eta') renderEtaView();
+    // Cambiar la hora esperada puede sacar/meter la orden de Needs Attention (Overdue/
+    // Soon) o del panel de "Expected Ready Set" — renderOrdenes() reclasifica todo de
+    // nuevo (ya sabe si tiene que dibujar la vista normal o la de ETA, según toque),
+    // en vez de solo repintar la tarjeta donde ya estaba y dejarla en la sección vieja.
+    renderOrdenes();
   }
   try {
     await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'setExpectedReady', orden, expectedReady: value }) });
@@ -2448,6 +2448,21 @@ async function loadOrdenes() {
   finally { hideRefreshSpinner(); }
 }
 
+// Cuando buscas, los resultados no filtran por fecha (a propósito, para poder
+// encontrar cualquier pedido) — sin esto, un pedido de ayer se ve igual que uno de
+// hoy. Solo se muestra cuando NO es de hoy, para no saturar la vista normal.
+function dateBadgeIfNotToday(fecha) {
+  const today = todayStr();
+  if (!fecha || fecha === today) return '';
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let label;
+  if (fecha === yesterdayStr()) label = 'Yesterday';
+  else {
+    const parts = String(fecha).split('-');
+    label = parts.length === 3 ? `${months[parseInt(parts[1], 10) - 1]} ${parseInt(parts[2], 10)}` : fecha;
+  }
+  return ` · <span class="date-badge">${label}</span>`;
+}
 function buildClerkCard(o) {
   const locked = isOlderThan48h(o.actualizado);
   // "locked" (por edad) y solo-lectura (por permisos) son 2 cosas distintas — locked
@@ -2461,9 +2476,10 @@ function buildClerkCard(o) {
     const state = attentionState(o);
     const badge = state ? ' · ' + attentionBadgeHtml(state) : '';
     const driverBadge = o.driverArrived ? ' · <span class="driver-here-badge">🚗 Driver Here' + (o.driverArrived.rampa ? ' — ' + escapeHtml(o.driverArrived.rampa) : '') + '</span>' : '';
+    const dateBadge = dateBadgeIfNotToday(o.fecha);
     return `<div class="order-card-compact${locked ? ' locked' : ''}${state ? ' ' + state : ''}" id="card-${o.orden}" onclick="toggleCardExpand('${o.orden}')">
       <div class="oc-left">
-        <p class="oc-num">Order #${escapeHtml(o.orden)}${locked ? ' · <span class="locked-badge">Locked</span>' : ''}${badge}${driverBadge}</p>
+        <p class="oc-num">Order #${escapeHtml(o.orden)}${locked ? ' · <span class="locked-badge">Locked</span>' : ''}${dateBadge}${badge}${driverBadge}</p>
         <p class="oc-cliente">${escapeHtml(o.cliente)}</p>
       </div>
       <span class="status-pill ${BANNER_CLS[est - 1]}">${BANNER_ICONS[est - 1]} ${LABELS[est - 1]}</span>
@@ -2527,7 +2543,7 @@ function buildClerkCard(o) {
   return `<div class="order-card${locked ? ' locked' : ''}${state ? ' ' + state + '-expanded' : ''}" id="card-${o.orden}">
     <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;cursor:pointer;" onclick="toggleCardExpand('${o.orden}')">
       <div>
-        <p class="order-num">Order #${escapeHtml(o.orden)}${locked ? '<span class="locked-badge">Locked</span>' : ''}${badgeExpanded}${driverBadgeExpanded}</p>
+        <p class="order-num">Order #${escapeHtml(o.orden)}${locked ? '<span class="locked-badge">Locked</span>' : ''}${dateBadgeIfNotToday(o.fecha)}${badgeExpanded}${driverBadgeExpanded}</p>
         <p class="order-cliente">${escapeHtml(o.cliente)}</p>
       </div>
       <i class="ti ti-chevron-up" style="color:var(--text-faint);font-size:18px;flex-shrink:0;"></i>
@@ -2764,9 +2780,7 @@ function setProductStatus(orden, idx, status) {
     o.estatus = minProd;
     pushOrderStatus(orden, minProd);
   } else {
-    const card = document.getElementById('card-' + orden);
-    if (card) card.outerHTML = buildClerkCard(o);
-    pushOrderStatus(orden, o.estatus); // el estatus general no cambia, pero sí se persiste el detalle por producto
+    pushOrderStatus(orden, o.estatus); // el estatus general no cambia, pero sí se persiste el detalle por producto; ya repinta todo
   }
 }
 
@@ -2803,8 +2817,11 @@ async function pushOrderStatus(orden, estatus) {
   // el próximo refresh automático (2 min) porque la copia local del navegador no sabía
   // que el estatus acababa de cambiar.
   if (o) { o.hora = clientNowTime(); o.actualizado = todayStr(); }
-  const card = document.getElementById('card-' + orden);
-  if (card && o) card.outerHTML = buildClerkCard(o);
+  // Antes esto solo repintaba la tarjeta donde ya estaba (card.outerHTML) — pero un
+  // cambio de estatus puede sacarla de Needs Attention, mandarla a Departed, o
+  // meterla/sacarla de otras secciones. renderOrdenes() sí reclasifica todo de nuevo,
+  // así la tarjeta aparece en la sección correcta en vez de quedarse pegada.
+  renderOrdenes();
   showToast('Status updated ✓');
   const body = { sessionToken: SESSION_TOKEN, action: 'updateStatus', orden, estatus, usuario: currentUser };
   if (productState[orden]) body.productEstatus = productState[orden]; // persiste el detalle por producto
