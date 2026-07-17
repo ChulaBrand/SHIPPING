@@ -258,6 +258,8 @@
   .driver-product-badge { font-size:9.5px; font-weight:700; padding:3px 8px; border-radius:99px; white-space:nowrap; }
   .driver-product-badge.not-shipped { background:#FEE2E2; color:#B91C1C; }
   .status-desc-lbl { font-size:11px; color:var(--text-faint); font-style:italic; text-align:center; min-height:16px; }
+  .btn-cancel-order { display:block; width:100%; margin-top:10px; padding:8px; background:none; border:1px solid #FCA5A5; border-radius:var(--radius-sm); color:#B91C1C; font-size:11.5px; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer; }
+  .btn-cancel-order:hover { background:#FEF2F2; }
   .warn-note { font-size:11px; color:#92400E; background:#FEF3C7; border:1px solid #FDE68A; border-radius:var(--radius-sm); padding:6px 10px; text-align:center; margin-bottom:8px; }
   .user-select-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:1.75rem 1rem; background:var(--white); border:1.5px solid var(--border); border-radius:16px; cursor:pointer; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; color:var(--text); text-align:center; transition:border-color .15s,transform .1s,box-shadow .15s; }
   .user-select-btn:hover { border-color:var(--purple); box-shadow:0 6px 16px rgba(91,42,134,.10); }
@@ -2464,6 +2466,12 @@ function buildClerkCard(o) {
     return `<button class="sbtn${est === idx ? ' ' + SEL[i] : ''}" onclick="event.stopPropagation();setOrderStatus('${o.orden}',${idx})" ${!canEdit ? 'disabled' : ''}><span class="sbtn-letter">${LETTERS[i]}</span><span class="sbtn-text">${l}</span></button>`;
   }).join('');
 
+  // Cancelar solo tiene caso antes de Departed — una vez que ya salió, no hay nada
+  // que "cancelar". Pide confirmación en submitCancelOrder() antes de tocar el servidor.
+  const cancelBtn = (canEdit && est < 6)
+    ? `<button class="btn-cancel-order" onclick="event.stopPropagation();submitCancelOrder('${o.orden}')">🗑 Cancel Order</button>`
+    : '';
+
   return `<div class="order-card${locked ? ' locked' : ''}${state ? ' ' + state + '-expanded' : ''}" id="card-${o.orden}">
     <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;cursor:pointer;" onclick="toggleCardExpand('${o.orden}')">
       <div>
@@ -2477,7 +2485,30 @@ function buildClerkCard(o) {
     ${warnHtml}
     <div class="status-btns">${btns}</div>
     <p class="status-desc-lbl" id="desc-${o.orden}">${DESCS[est - 1]}</p>
+    ${cancelBtn}
   </div>`;
+}
+
+// "Botón de seguro": pide confirmación con el número de orden y cliente, y no se
+// puede deshacer desde la app — si es un error, hay que volver a subir el pedido.
+async function submitCancelOrder(orden) {
+  const o = ordenes.find(x => String(x.orden) === String(orden));
+  const label = o ? `#${orden} — ${o.cliente}` : `#${orden}`;
+  if (!confirm(`¿Seguro que quieres cancelar la orden ${label}?\n\nEsto la quita de la lista por completo y no se puede deshacer desde la app.`)) return;
+  try {
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'cancelOrder', orden }) });
+    const result = await res.json();
+    if (result.error) { showToast(result.error); return; }
+    expandedOrders.delete(String(orden));
+    ordenes = ordenes.filter(x => String(x.orden) !== String(orden));
+    showToast('Order cancelled');
+    if (searchActive) {
+      const raw = document.getElementById('enc-search').value.trim();
+      if (raw) { renderSearchResults(raw); return; }
+      searchActive = false;
+    }
+    renderOrdenes();
+  } catch (e) { showToast('Connection error.'); }
 }
 
 function toggleCardExpand(orden) {
