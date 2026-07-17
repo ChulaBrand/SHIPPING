@@ -187,7 +187,7 @@
   .progress-gauge-legend b { color:var(--text); }
   .expected-ready-row { display:flex; align-items:center; justify-content:space-between; gap:8px; background:#F7F5F0; border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; margin-bottom:10px; }
   .expected-ready-row label { font-size:12px; color:var(--text-muted); font-weight:500; }
-  .expected-ready-row input[type="datetime-local"] { font-family:'Inter',sans-serif; font-size:12.5px; border:1px solid var(--border); border-radius:6px; padding:4px 6px; color:var(--text); background:#fff; }
+  .expected-ready-row select { font-family:'Inter',sans-serif; font-size:12.5px; border:1px solid var(--border); border-radius:6px; padding:4px 6px; color:var(--text); background:#fff; }
   .producto-row { display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--bg); border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:1rem; }
   .producto-row i { font-size:15px; color:var(--text-faint); }
   .producto-row span { font-size:13px; color:var(--text); font-weight:500; }
@@ -1120,6 +1120,25 @@ async function setExpectedReady(orden, value) {
   try {
     await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'setExpectedReady', orden, expectedReady: value }) });
   } catch (e) { showToast('Connection error — no se guardó la hora esperada'); }
+}
+// Genera las opciones del <select> de "Expected ready": cada 30 min, todo el día,
+// mostradas en formato 12h ("8:00 AM") pero guardadas en 24h ("08:00") para armar
+// el valor completo con la fecha de hoy en setExpectedReadyTime().
+function timeSlotOptions(selectedHHMM) {
+  let html = '<option value=""' + (selectedHHMM ? '' : ' selected') + '>--</option>';
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      const hh = String(h).padStart(2, '0'), mm = String(m).padStart(2, '0');
+      const val = `${hh}:${mm}`;
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const h12 = ((h + 11) % 12) + 1;
+      html += `<option value="${val}"${val === selectedHHMM ? ' selected' : ''}>${h12}:${mm} ${ampm}</option>`;
+    }
+  }
+  return html;
+}
+function setExpectedReadyTime(orden, hhmm) {
+  setExpectedReady(orden, hhmm ? todayStr() + 'T' + hhmm : '');
 }
 
 function show(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
@@ -2471,9 +2490,14 @@ function buildClerkCard(o) {
   const state = attentionState(o);
   const badgeExpanded = state ? attentionBadgeHtml(state) : '';
   const driverBadgeExpanded = o.driverArrived ? `<span class="driver-here-badge">🚗 Driver Here${o.driverArrived.rampa ? ' — ' + escapeHtml(o.driverArrived.rampa) : ''}</span>` : '';
+  // La fecha casi siempre es hoy — lo que de verdad importa es la hora. En vez del
+  // selector nativo datetime-local (su "step" de 30 min no lo respetan varios
+  // navegadores móviles, sobre todo iOS), un <select> con horas cada 30 min: siempre
+  // exacto, sin importar el navegador, y más rápido de tocar en el celular.
+  const currentHHMM = o.expectedReady && o.expectedReady.length >= 16 ? o.expectedReady.slice(11, 16) : '';
   const expectedReadyRow = est < 3 ? `<div class="expected-ready-row" onclick="event.stopPropagation();">
-    <label for="er-${o.orden}">Expected ready</label>
-    <input type="datetime-local" id="er-${o.orden}" value="${o.expectedReady || ''}" step="1800" ${!canEdit ? 'disabled' : ''} onchange="setExpectedReady('${o.orden}', this.value)" />
+    <label for="er-${o.orden}">Expected ready (today)</label>
+    <select id="er-${o.orden}" ${!canEdit ? 'disabled' : ''} onchange="setExpectedReadyTime('${o.orden}', this.value)">${timeSlotOptions(currentHHMM)}</select>
   </div>` : '';
 
   const btns = LABELS.map((l, i) => {
