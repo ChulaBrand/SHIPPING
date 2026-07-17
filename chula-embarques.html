@@ -3152,34 +3152,13 @@ function buildReportRows(orders) {
     parsed.push({ sp: o.sp, cliente_full: o.name, cliente_corto: shortName, note: o.note, papaya_types: papayaTypes });
   }
 
-  const groups = new Map();
-  for (const p of parsed) {
-    if (!groups.has(p.cliente_corto)) groups.set(p.cliente_corto, []);
-    groups.get(p.cliente_corto).push(p);
-  }
-
-  const entries = [];
-  for (const [name, group] of groups.entries()) {
-    if (group.length === 1) {
-      const g = group[0];
-      entries.push({ sp: g.sp, cliente_full: g.cliente_full, cliente_corto: name, base_name: name, papaya_types: g.papaya_types });
-      continue;
-    }
-    const distinctNotes = new Set(group.filter(g => g.note).map(g => g.note));
-    if (distinctNotes.size === group.length) {
-      for (const g of group) {
-        entries.push({ sp: g.sp, cliente_full: g.cliente_full, cliente_corto: name, base_name: name, papaya_types: g.papaya_types });
-      }
-    } else {
-      const combined = new Map();
-      const sps = [];
-      for (const g of group) {
-        sps.push(g.sp);
-        for (const [k, v] of g.papaya_types.entries()) combined.set(k, (combined.get(k) || 0) + v);
-      }
-      entries.push({ sp: sps.join(" + "), cliente_full: group[0].cliente_full, cliente_corto: name, base_name: name, papaya_types: combined });
-    }
-  }
+  // Antes, dos órdenes con el mismo nombre de cliente "acortado" y sin nota que las
+  // distinguiera (CANTU, MARVIN, etc.) se combinaban en una sola fila sumando cajas.
+  // Se quitó a propósito: cada SP siempre queda como su propia fila, nunca se juntan.
+  const entries = parsed.map(p => ({
+    sp: p.sp, cliente_full: p.cliente_full, cliente_corto: p.cliente_corto,
+    base_name: p.cliente_corto, papaya_types: p.papaya_types
+  }));
 
   const rows = [], flags = [];
   for (const e of entries) {
