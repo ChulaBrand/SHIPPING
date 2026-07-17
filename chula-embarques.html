@@ -844,6 +844,7 @@
         <button class="view-toggle-btn" id="viewToggleBtn" onclick="toggleGlobalView()" title="View all"><i class="ti ti-arrows-maximize"></i></button>
         <button class="view-toggle-btn" id="dailySummaryBtn" onclick="goDailySummary()" title="Download today's summary"><i class="ti ti-file-spreadsheet"></i></button>
         <button class="view-toggle-btn" id="cancelledViewBtn" onclick="toggleCancelledView()" title="View cancelled orders"><i class="ti ti-trash"></i></button>
+        <button class="view-toggle-btn" id="etaViewBtn" onclick="toggleEtaView()" title="View orders with Expected ready set"><i class="ti ti-clock"></i></button>
       </div>
     </div>
     <div id="normal-orders-wrap">
@@ -870,6 +871,10 @@
     <div id="cancelled-section" style="display:none;">
       <p class="section-label" style="color:#B91C1C;">🗑 Cancelled Orders</p>
       <div class="orders-list" id="cancelled-list"></div>
+    </div>
+    <div id="eta-section" style="display:none;">
+      <p class="section-label" style="color:#CA8A04;">🕒 Expected Ready Set</p>
+      <div class="orders-list" id="eta-list"></div>
     </div>
   </div>
 
@@ -2578,18 +2583,46 @@ async function submitCancelOrder(orden) {
   } catch (e) { showToast('Connection error.'); }
 }
 
-// ── Vista de Cancelled Orders — botón aparte arriba, no junto a los filtros de
-// estatus. Reutiliza el mismo patrón de 3 pasos que cancelar, pero para restaurar. ──
-let cancelledViewActive = false;
+// ── Vistas especiales arriba (Cancelled, Expected Ready) — botones aparte, no junto
+// a los filtros de estatus. Solo una a la vez; la vista normal es la de por default. ──
+let currentOrderView = 'normal'; // 'normal' | 'cancelled' | 'eta'
+function showOrderView(view) {
+  currentOrderView = view;
+  document.getElementById('normal-orders-wrap').style.display = view === 'normal' ? '' : 'none';
+  document.getElementById('cancelled-section').style.display = view === 'cancelled' ? 'block' : 'none';
+  document.getElementById('eta-section').style.display = view === 'eta' ? 'block' : 'none';
+  document.getElementById('cancelledViewBtn').classList.toggle('active', view === 'cancelled');
+  document.getElementById('etaViewBtn').classList.toggle('active', view === 'eta');
+}
+
 let cancelledOrders = [];
 const restoreFlowStep = {}; // orden -> 0 (escondido) | 1 (menú) | 2 (confirmando)
 
 async function toggleCancelledView() {
-  cancelledViewActive = !cancelledViewActive;
-  document.getElementById('cancelledViewBtn').classList.toggle('active', cancelledViewActive);
-  document.getElementById('normal-orders-wrap').style.display = cancelledViewActive ? 'none' : '';
-  document.getElementById('cancelled-section').style.display = cancelledViewActive ? 'block' : 'none';
-  if (cancelledViewActive) loadCancelledOrders();
+  const goingTo = currentOrderView === 'cancelled' ? 'normal' : 'cancelled';
+  showOrderView(goingTo);
+  if (goingTo === 'cancelled') loadCancelledOrders();
+  else renderOrdenes(); // normal-orders-wrap no se actualizó mientras estaba escondido
+}
+
+// Filtra las órdenes que ya tienen "Expected ready" puesto, más próximas primero —
+// usa el mismo arreglo "ordenes" que ya está cargado (sin pedir nada nuevo al
+// servidor), y las tarjetas son las normales (con sus botones de estatus/cancelar),
+// no una copia aparte, así que cualquier cambio ahí se refleja igual en todos lados.
+function toggleEtaView() {
+  const goingTo = currentOrderView === 'eta' ? 'normal' : 'eta';
+  showOrderView(goingTo);
+  if (goingTo === 'eta') renderEtaView();
+  else renderOrdenes(); // normal-orders-wrap no se actualizó mientras estaba escondido
+}
+function renderEtaView() {
+  const list = document.getElementById('eta-list');
+  if (!list) return;
+  const withEta = ordenes
+    .filter(o => o.expectedReady && !isOlderThan48h(o.actualizado))
+    .sort((a, b) => String(a.expectedReady).localeCompare(String(b.expectedReady)));
+  if (!withEta.length) { list.innerHTML = '<div class="empty-state"><i class="ti ti-clock"></i>No orders with Expected ready set</div>'; return; }
+  list.innerHTML = withEta.map(buildClerkCard).join('');
 }
 
 async function loadCancelledOrders() {
@@ -2798,6 +2831,13 @@ function renderOrdenes() {
   if (userLabel) userLabel.textContent = currentUser ? '— ' + currentUser + (SHIPPING_READ_ONLY ? ' (view only)' : '') : '';
   const uploadBtn = document.getElementById('shippingUploadBtn');
   if (uploadBtn) uploadBtn.style.display = SHIPPING_READ_ONLY ? 'none' : '';
+  // Si está activa una vista especial (Cancelled/ETA), no se reconstruye normal-orders-
+  // wrap aunque esté escondido — si no, terminan existiendo 2 tarjetas con el mismo
+  // id="card-<orden>" al mismo tiempo (una ahí, otra en la vista especial), y las
+  // funciones que buscan ese id para actualizarlo de un click solo encuentran la
+  // primera, dejando la otra desincronizada.
+  if (currentOrderView === 'eta') { renderEtaView(); return; }
+  if (currentOrderView === 'cancelled') { return; }
   const today = todayStr();
   const visible = ordenes.filter(o => !isOlderThan48h(o.actualizado)).filter(o => !statusFilter.size || statusFilter.has(parseInt(o.estatus) || 1));
 
@@ -2860,6 +2900,7 @@ function renderOrdenes() {
     pastSection.style.display = 'block';
     pastList.innerHTML = groupByStatusHtml(pastOrders);
   } else { pastSection.style.display = 'none'; }
+
 }
 
 // Ordena por estatus (1-5, Departed nunca llega aquí) según el orden que el Admin haya
