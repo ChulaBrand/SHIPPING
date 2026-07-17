@@ -1121,19 +1121,24 @@ async function setExpectedReady(orden, value) {
     await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'setExpectedReady', orden, expectedReady: value }) });
   } catch (e) { showToast('Connection error — no se guardó la hora esperada'); }
 }
-// Genera las opciones del <select> de "Expected ready": cada 30 min, todo el día,
-// mostradas en formato 12h ("8:00 AM") pero guardadas en 24h ("08:00") para armar
-// el valor completo con la fecha de hoy en setExpectedReadyTime().
+// Genera las opciones del <select> de "Expected ready": cada 30 min, mostradas en
+// formato 12h ("8:00 AM") pero guardadas en 24h ("08:00") para armar el valor completo
+// con la fecha de hoy en setExpectedReadyTime(). Solo muestra horas que todavía no han
+// pasado (redondeando hacia el siguiente :00/:30) — si la orden ya tenía guardada una
+// hora que ya pasó, esa se deja ver igual (para no perder lo ya elegido), pero no se
+// ofrecen más horas viejas aparte de esa.
 function timeSlotOptions(selectedHHMM) {
+  const now = new Date();
+  const nextSlotMinutes = Math.ceil((now.getHours() * 60 + now.getMinutes()) / 30) * 30;
   let html = '<option value=""' + (selectedHHMM ? '' : ' selected') + '>--</option>';
-  for (let h = 0; h < 24; h++) {
-    for (let m = 0; m < 60; m += 30) {
-      const hh = String(h).padStart(2, '0'), mm = String(m).padStart(2, '0');
-      const val = `${hh}:${mm}`;
-      const ampm = h >= 12 ? 'PM' : 'AM';
-      const h12 = ((h + 11) % 12) + 1;
-      html += `<option value="${val}"${val === selectedHHMM ? ' selected' : ''}>${h12}:${mm} ${ampm}</option>`;
-    }
+  for (let mins = 0; mins < 24 * 60; mins += 30) {
+    const h = Math.floor(mins / 60), m = mins % 60;
+    const hh = String(h).padStart(2, '0'), mm = String(m).padStart(2, '0');
+    const val = `${hh}:${mm}`;
+    if (mins < nextSlotMinutes && val !== selectedHHMM) continue;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = ((h + 11) % 12) + 1;
+    html += `<option value="${val}"${val === selectedHHMM ? ' selected' : ''}>${h12}:${mm} ${ampm}</option>`;
   }
   return html;
 }
