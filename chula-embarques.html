@@ -847,12 +847,12 @@
         <button class="view-toggle-btn" id="cancelledViewBtn" onclick="toggleCancelledView()" title="View cancelled orders"><i class="ti ti-trash"></i></button>
       </div>
     </div>
-    <div class="controls-row" style="justify-content:flex-end;margin-top:8px;">
+    <div class="controls-row" style="justify-content:flex-start;margin-top:8px;">
       <div class="controls-actions">
         <button class="view-toggle-btn" id="etaViewBtn" onclick="toggleEtaView()" title="View orders with Expected ready set"><i class="ti ti-clock"></i></button>
         <div class="dropdown-wrap">
           <button class="view-toggle-btn" id="productDropdownBtn" onclick="toggleDropdown('product')" title="Filter by product"><i class="ti ti-filter"></i></button>
-          <div class="dropdown-panel" id="productDropdownPanel" style="right:0;left:auto;">
+          <div class="dropdown-panel" id="productDropdownPanel">
             <label class="dropdown-checkbox"><input type="checkbox" id="product-filter-all" checked onchange="toggleAllProductFilter(this)"> All</label>
             <label class="dropdown-checkbox"><input type="checkbox" class="product-filter-check" value="papaya" checked onchange="onProductFilterCheck()"> Papaya</label>
             <label class="dropdown-checkbox"><input type="checkbox" class="product-filter-check" value="limes" checked onchange="onProductFilterCheck()"> Limes</label>
