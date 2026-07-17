@@ -846,6 +846,19 @@
         <button class="view-toggle-btn" id="dailySummaryBtn" onclick="goDailySummary()" title="Download today's summary"><i class="ti ti-file-spreadsheet"></i></button>
         <button class="view-toggle-btn" id="cancelledViewBtn" onclick="toggleCancelledView()" title="View cancelled orders"><i class="ti ti-trash"></i></button>
         <button class="view-toggle-btn" id="etaViewBtn" onclick="toggleEtaView()" title="View orders with Expected ready set"><i class="ti ti-clock"></i></button>
+        <div class="dropdown-wrap">
+          <button class="view-toggle-btn" id="productDropdownBtn" onclick="toggleDropdown('product')" title="Filter by product"><i class="ti ti-filter"></i></button>
+          <div class="dropdown-panel" id="productDropdownPanel" style="right:0;left:auto;">
+            <label class="dropdown-checkbox"><input type="checkbox" id="product-filter-all" checked onchange="toggleAllProductFilter(this)"> All</label>
+            <label class="dropdown-checkbox"><input type="checkbox" class="product-filter-check" value="papaya" checked onchange="onProductFilterCheck()"> Papaya</label>
+            <label class="dropdown-checkbox"><input type="checkbox" class="product-filter-check" value="limes" checked onchange="onProductFilterCheck()"> Limes</label>
+            <label class="dropdown-checkbox"><input type="checkbox" class="product-filter-check" value="pineapples" checked onchange="onProductFilterCheck()"> Pineapples</label>
+            <label class="dropdown-checkbox"><input type="checkbox" class="product-filter-check" value="bananas_plantains" checked onchange="onProductFilterCheck()"> Bananas/Plantains</label>
+            <label class="dropdown-checkbox"><input type="checkbox" class="product-filter-check" value="aloe" checked onchange="onProductFilterCheck()"> Aloe Vera</label>
+            <label class="dropdown-checkbox"><input type="checkbox" class="product-filter-check" value="cucumbers" checked onchange="onProductFilterCheck()"> Cucumbers</label>
+            <label class="dropdown-checkbox"><input type="checkbox" class="product-filter-check" value="other" checked onchange="onProductFilterCheck()"> Other</label>
+          </div>
+        </div>
       </div>
     </div>
     <div id="normal-orders-wrap">
@@ -1001,6 +1014,44 @@ let globalViewMode = 'compact';
 const expandedOrders = new Set();
 // filtro por estatus activo (vacío = mostrar todos)
 const statusFilter = new Set();
+// filtro por producto activo (vacío = mostrar todos) — ej. solo Limes, o Limes+Pineapples
+const productFilter = new Set();
+// Mismas categorías que PRODUCT_CATEGORIES/categorizeProduct() en Code.gs, para poder
+// filtrar aquí sin pedirle nada al servidor.
+const PRODUCT_CATEGORIES = [
+  ["papaya", /^papaya/i],
+  ["limes", /^limes?\b/i],
+  ["pineapples", /^pineapples?\b/i],
+  ["bananas_plantains", /^(bananas?|plantains?)\b/i],
+  ["aloe", /^(fresh\s+)?aloe/i],
+  ["cucumbers", /^cucumbers?\b/i]
+];
+function categorizeProductDesc(desc) {
+  const d = String(desc || '').trim();
+  for (const [key, re] of PRODUCT_CATEGORIES) { if (re.test(d)) return key; }
+  return 'other';
+}
+// El texto de cada línea trae la cantidad pegada al inicio ("144 Papaya 3/4...") —
+// se le quita antes de comparar, igual que hace parseProductosString() en el servidor.
+function orderMatchesProductFilter(o) {
+  if (!productFilter.size) return true;
+  return parseProductos(o.productos).some(line => {
+    const m = line.match(/^(\d+)\s+(.*)$/);
+    return productFilter.has(categorizeProductDesc(m ? m[2] : line));
+  });
+}
+function toggleAllProductFilter(el) {
+  document.querySelectorAll('.product-filter-check').forEach(c => c.checked = el.checked);
+  onProductFilterCheck();
+}
+function onProductFilterCheck() {
+  const boxes = [...document.querySelectorAll('.product-filter-check')];
+  document.getElementById('product-filter-all').checked = boxes.every(b => b.checked);
+  productFilter.clear();
+  if (!boxes.every(b => b.checked)) boxes.filter(b => b.checked).forEach(b => productFilter.add(b.value));
+  document.getElementById('productDropdownBtn').classList.toggle('active', productFilter.size > 0);
+  renderOrdenes();
+}
 
 // "Día de negocio" en vez de día de calendario — el turno normal corre de ~6am a las
 // 4:59am del día siguiente. Restar 5h antes de sacar la fecha logra ese corte: todo lo
@@ -2640,6 +2691,7 @@ function renderEtaView() {
   if (!list) return;
   const withEta = ordenes
     .filter(o => o.expectedReady && !isOlderThan48h(o.actualizado))
+    .filter(orderMatchesProductFilter)
     .sort((a, b) => String(a.expectedReady).localeCompare(String(b.expectedReady)));
   if (!withEta.length) { list.innerHTML = '<div class="empty-state"><i class="ti ti-clock"></i>No orders with Expected ready set</div>'; return; }
   list.innerHTML = withEta.map(buildClerkCard).join('');
@@ -2861,7 +2913,7 @@ function renderOrdenes() {
   if (currentOrderView === 'cancelled') { return; }
   document.getElementById('orders-list-label').textContent = "Today's orders"; // por si veníamos de una búsqueda
   const today = todayStr();
-  const visible = ordenes.filter(o => !isOlderThan48h(o.actualizado)).filter(o => !statusFilter.size || statusFilter.has(parseInt(o.estatus) || 1));
+  const visible = ordenes.filter(o => !isOlderThan48h(o.actualizado)).filter(o => !statusFilter.size || statusFilter.has(parseInt(o.estatus) || 1)).filter(orderMatchesProductFilter);
 
   // Clasifica cada orden en: Departed (est 6, va al fondo) / Needs Attention
   // (overdue, stalled o soon — ya no aparece también en Today/Past, para no duplicar)
