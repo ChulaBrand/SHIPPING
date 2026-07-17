@@ -2369,9 +2369,23 @@ async function buscar() {
 document.getElementById('orden-input').addEventListener('keydown',e=>{if(e.key==='Enter')buscar();});
 
 // ── CLERK ────────────────────────────────────────────────
+// Indicador de "cargando" arriba del todo — visible sin importar en qué parte de la
+// pantalla estés (Today's orders puede quedar debajo del fold, tapado por Needs
+// Attention). Se usa tanto para el pull-to-refresh como para el botón manual de
+// Refresh, así los dos se sienten igual.
+const refreshIndicatorEl = document.getElementById('pull-refresh-indicator');
+function showRefreshSpinner() {
+  refreshIndicatorEl.classList.add('pulling', 'spinning');
+  refreshIndicatorEl.style.transform = 'translate(-50%, 30px) rotate(0deg)';
+}
+function hideRefreshSpinner() {
+  refreshIndicatorEl.classList.remove('pulling', 'spinning');
+  refreshIndicatorEl.style.transform = '';
+}
 async function loadOrdenes() {
   const list=document.getElementById('orders-list');
   list.innerHTML='<div class="empty-state"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i>Loading...</div>';
+  showRefreshSpinner();
   try {
     const r=await fetch(`${API}?action=getAll&sessionToken=${encodeURIComponent(SESSION_TOKEN)}`); ordenes=await r.json();
     if (searchActive) {
@@ -2381,6 +2395,7 @@ async function loadOrdenes() {
     }
     renderOrdenes();
   } catch(e){ list.innerHTML='<div class="empty-state">Connection error</div>'; }
+  finally { hideRefreshSpinner(); }
 }
 
 function buildClerkCard(o) {
