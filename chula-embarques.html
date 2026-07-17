@@ -258,8 +258,14 @@
   .driver-product-badge { font-size:9.5px; font-weight:700; padding:3px 8px; border-radius:99px; white-space:nowrap; }
   .driver-product-badge.not-shipped { background:#FEE2E2; color:#B91C1C; }
   .status-desc-lbl { font-size:11px; color:var(--text-faint); font-style:italic; text-align:center; min-height:16px; }
-  .btn-cancel-order { display:block; width:100%; margin-top:10px; padding:8px; background:none; border:1px solid #FCA5A5; border-radius:var(--radius-sm); color:#B91C1C; font-size:11.5px; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer; }
-  .btn-cancel-order:hover { background:#FEF2F2; }
+  .btn-cancel-dots { display:block; margin-top:8px; margin-left:auto; background:none; border:none; color:var(--text-faint); font-size:15px; letter-spacing:1px; cursor:pointer; padding:4px 10px; line-height:1; }
+  .cancel-flow-row { display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding:7px 10px; background:#FEF2F2; border-radius:var(--radius-sm); }
+  .cancel-flow-link { color:#B91C1C; font-size:12px; font-weight:600; cursor:pointer; }
+  .cancel-flow-back { color:var(--text-faint); cursor:pointer; font-size:14px; padding:0 4px; }
+  .cancel-flow-confirm { margin-top:8px; padding:10px; background:#FEF2F2; border:1px solid #FCA5A5; border-radius:var(--radius-sm); }
+  .cancel-flow-confirm p { font-size:11.5px; color:#7F1D1D; margin-bottom:8px; }
+  .btn-cancel-final { flex:1; padding:8px; background:#DC2626; color:#fff; border:none; border-radius:var(--radius-sm); font-size:12px; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer; }
+  .btn-cancel-back { flex:1; padding:8px; background:none; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px; font-family:'Inter',sans-serif; cursor:pointer; color:var(--text-muted); }
   .warn-note { font-size:11px; color:#92400E; background:#FEF3C7; border:1px solid #FDE68A; border-radius:var(--radius-sm); padding:6px 10px; text-align:center; margin-bottom:8px; }
   .user-select-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:1.75rem 1rem; background:var(--white); border:1.5px solid var(--border); border-radius:16px; cursor:pointer; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; color:var(--text); text-align:center; transition:border-color .15s,transform .1s,box-shadow .15s; }
   .user-select-btn:hover { border-color:var(--purple); box-shadow:0 6px 16px rgba(91,42,134,.10); }
@@ -826,7 +832,8 @@
     <div class="search-card">
       <div style="display:flex;flex:1;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);overflow:hidden;">
         <span style="padding:0 8px;height:42px;display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-faint);background:var(--border);white-space:nowrap;border-right:1px solid var(--border);">SP00</span>
-        <input id="enc-search" type="text" placeholder="Order or customer" maxlength="40" style="flex:1;border:none;outline:none;padding:0 10px;height:42px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);background:var(--bg);min-width:0;" />
+        <input id="enc-search" type="text" placeholder="Order or customer" maxlength="40" style="flex:1;border:none;outline:none;padding:0 10px;height:42px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);background:var(--bg);min-width:0;" oninput="toggleSearchClearBtn()" />
+        <button id="enc-search-clear" onclick="clearEncSearch()" title="Clear" style="display:none;border:none;background:none;color:var(--text-faint);font-size:16px;width:32px;height:42px;cursor:pointer;flex-shrink:0;">✕</button>
       </div>
       <button class="btn-search-sm" onclick="encBuscar()">Search</button>
     </div>
@@ -2467,10 +2474,9 @@ function buildClerkCard(o) {
   }).join('');
 
   // Cancelar solo tiene caso antes de Departed — una vez que ya salió, no hay nada
-  // que "cancelar". Pide confirmación en submitCancelOrder() antes de tocar el servidor.
-  const cancelBtn = (canEdit && est < 6)
-    ? `<button class="btn-cancel-order" onclick="event.stopPropagation();submitCancelOrder('${o.orden}')">🗑 Cancel Order</button>`
-    : '';
+  // que "cancelar". 3 pasos a propósito (⋯ -> "Cancel this order" -> confirmar) y
+  // metido chiquito hasta abajo, para que nadie lo toque sin querer.
+  const cancelBtn = (canEdit && est < 6) ? cancelFlowHtml(o) : '';
 
   return `<div class="order-card${locked ? ' locked' : ''}${state ? ' ' + state + '-expanded' : ''}" id="card-${o.orden}">
     <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;cursor:pointer;" onclick="toggleCardExpand('${o.orden}')">
@@ -2489,12 +2495,36 @@ function buildClerkCard(o) {
   </div>`;
 }
 
-// "Botón de seguro": pide confirmación con el número de orden y cliente, y no se
-// puede deshacer desde la app — si es un error, hay que volver a subir el pedido.
-async function submitCancelOrder(orden) {
+// Paso 1: solo un "⋯" chiquito y gris, casi invisible entre los demás controles.
+// Paso 2: se abre una franja con la opción real de cancelar (y una X para cerrarla).
+// Paso 3: confirmación final con el número de orden y cliente antes de tocar el servidor.
+const cancelFlowStep = {}; // orden -> 0 (escondido) | 1 (menú) | 2 (confirmando)
+function cancelFlowHtml(o) {
+  const step = cancelFlowStep[o.orden] || 0;
+  if (step === 0) {
+    return `<div style="text-align:right;"><button class="btn-cancel-dots" onclick="event.stopPropagation();setCancelFlowStep('${o.orden}',1)" title="More options">⋯</button></div>`;
+  }
+  if (step === 1) {
+    return `<div class="cancel-flow-row" onclick="event.stopPropagation();">
+      <span class="cancel-flow-link" onclick="setCancelFlowStep('${o.orden}',2)">🗑 Cancel this order</span>
+      <span class="cancel-flow-back" onclick="setCancelFlowStep('${o.orden}',0)">✕</span>
+    </div>`;
+  }
+  return `<div class="cancel-flow-confirm" onclick="event.stopPropagation();">
+    <p>Cancel order #${escapeHtml(o.orden)} — ${escapeHtml(o.cliente)}? This can't be undone from the app.</p>
+    <div style="display:flex;gap:8px;">
+      <button class="btn-cancel-final" onclick="submitCancelOrder('${o.orden}')">Yes, cancel it</button>
+      <button class="btn-cancel-back" onclick="setCancelFlowStep('${o.orden}',0)">No, keep it</button>
+    </div>
+  </div>`;
+}
+function setCancelFlowStep(orden, step) {
+  cancelFlowStep[orden] = step;
   const o = ordenes.find(x => String(x.orden) === String(orden));
-  const label = o ? `#${orden} — ${o.cliente}` : `#${orden}`;
-  if (!confirm(`¿Seguro que quieres cancelar la orden ${label}?\n\nEsto la quita de la lista por completo y no se puede deshacer desde la app.`)) return;
+  const card = document.getElementById('card-' + orden);
+  if (card && o) card.outerHTML = buildClerkCard(o);
+}
+async function submitCancelOrder(orden) {
   try {
     const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'cancelOrder', orden }) });
     const result = await res.json();
@@ -2730,6 +2760,17 @@ function encBuscar() {
   if (!raw) { searchActive = false; renderOrdenes(); return; }
   searchActive = true;
   renderSearchResults(raw);
+}
+function toggleSearchClearBtn() {
+  document.getElementById('enc-search-clear').style.display = document.getElementById('enc-search').value ? '' : 'none';
+}
+function clearEncSearch() {
+  const input = document.getElementById('enc-search');
+  input.value = '';
+  toggleSearchClearBtn();
+  input.focus();
+  searchActive = false;
+  renderOrdenes();
 }
 function renderSearchResults(raw) {
   const isNum = /^[0-9]+$/.test(raw);
