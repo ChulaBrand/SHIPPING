@@ -650,6 +650,24 @@
         </div>
         <div class="chart-scroll-wrap" id="chartBayUsage-wrap"><canvas id="chartBayUsage"></canvas></div>
       </div>
+      <div class="analytics-panel" id="analytics-panel-leftBehind">
+        <div class="panel-title-row">
+          <p class="panel-title">Left Behind per Day</p>
+          <div class="panel-title-row-right">
+            <span class="panel-range-badge" id="badge-leftBehind">Last 7 days</span>
+            <div class="mini-dropdown-wrap">
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('leftBehind')" title="Filter this indicator">⋯</button>
+              <div class="dropdown-panel mini" id="panel-dd-leftBehind">
+                <button class="dropdown-option" data-range="day" onclick="setPanelRange('leftBehind','day')">Day</button>
+                <button class="dropdown-option" data-range="week" onclick="setPanelRange('leftBehind','week')">Week</button>
+                <button class="dropdown-option" data-range="month" onclick="setPanelRange('leftBehind','month')">Month</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--text-faint);margin-bottom:6px;">Pedidos que no llegaron a Departed cuando cerró su día (corte 4am) — número fijo, no cambia aunque salgan después.</p>
+        <canvas id="chartLeftBehind"></canvas>
+      </div>
     </div>
   </div>
 
@@ -961,8 +979,12 @@ const expandedOrders = new Set();
 // filtro por estatus activo (vacío = mostrar todos)
 const statusFilter = new Set();
 
+// "Día de negocio" en vez de día de calendario — el turno normal corre de ~6am a las
+// 3:59am del día siguiente. Restar 4h antes de sacar la fecha logra ese corte: todo lo
+// que pase entre medianoche y 3:59am todavía cuenta como el día anterior. Igual que
+// en Code.gs — mismo criterio en cliente y servidor.
 function todayStr() {
-  const d = new Date();
+  const d = new Date(Date.now() - 4*3600000);
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 // Mismo formato que nowTime() en Code.gs ("hh:mm a") — se usa solo para reflejar de
@@ -975,7 +997,7 @@ function clientNowTime() {
   return String(h).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') + ' ' + ampm;
 }
 function yesterdayStr() {
-  const d = new Date(); d.setDate(d.getDate()-1);
+  const d = new Date(Date.now() - 4*3600000); d.setDate(d.getDate()-1);
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 function formatLastUpdated(hora, fecha) {
@@ -1808,7 +1830,7 @@ async function saveDriverScreenSettings() {
 // Summary y Boxes quedan fijos (como estaban antes) — el Admin solo puede reordenar
 // y poner el default de las 6 gráficas de abajo.
 const ANALYTICS_TOP_KEYS = ['core', 'boxes'];
-const ANALYTICS_PANEL_LABELS = { core: 'Summary', boxes: 'Boxes', status: 'Orders by Status', product: 'Boxes by Product', day: 'Departed per Day', complete: 'Complete vs Incomplete', shipped: 'Shipped vs Not Shipped', person: 'Activity by Person', vendedor: 'Boxes by Salesperson', bayUsage: 'Bay Usage' };
+const ANALYTICS_PANEL_LABELS = { core: 'Summary', boxes: 'Boxes', status: 'Orders by Status', product: 'Boxes by Product', day: 'Departed per Day', complete: 'Complete vs Incomplete', shipped: 'Shipped vs Not Shipped', person: 'Activity by Person', vendedor: 'Boxes by Salesperson', bayUsage: 'Bay Usage', leftBehind: 'Left Behind per Day' };
 let analyticsChartConfig = [];
 async function loadAdminAnalyticsConfig() {
   const list = document.getElementById('admin-analytics-list');
@@ -1883,10 +1905,11 @@ const CHART_PALETTE = ['#5B21B6', '#16A34A', '#CA8A04', '#DC2626', '#2563EB', '#
 // poco útil) — mientras el filtro general esté en Day, estos usan Week por su cuenta,
 // a menos que el usuario los anule con su propio botón chiquito.
 // Default "de fábrica" de cada panel — se usa cuando el filtro general está en "Default"
-// y el panel no tiene su propia anulación puesta. Solo "Departed per Day" arranca en
-// Week (una tendencia de un solo día no dice mucho); el resto arranca en Day.
-let DEFAULT_RANGE_FOR_PANEL = { core: 'day', boxes: 'day', status: 'day', product: 'day', day: 'week', person: 'day', complete: 'day', shipped: 'day', vendedor: 'day', bayUsage: 'day' };
-const ALL_PANEL_KEYS = ['core', 'boxes', 'status', 'product', 'day', 'person', 'complete', 'shipped', 'vendedor', 'bayUsage'];
+// y el panel no tiene su propia anulación puesta. "Departed per Day" y "Left Behind
+// per Day" arrancan en Week (una tendencia de un solo día no dice mucho); el resto
+// arranca en Day.
+let DEFAULT_RANGE_FOR_PANEL = { core: 'day', boxes: 'day', status: 'day', product: 'day', day: 'week', person: 'day', complete: 'day', shipped: 'day', vendedor: 'day', bayUsage: 'day', leftBehind: 'week' };
+const ALL_PANEL_KEYS = ['core', 'boxes', 'status', 'product', 'day', 'person', 'complete', 'shipped', 'vendedor', 'bayUsage', 'leftBehind'];
 let analyticsLayoutLoaded = false;
 // Jala el acomodo (orden de paneles + default de cada uno) que el Admin haya guardado.
 // Si nunca ha guardado nada, el servidor regresa los valores de fábrica y no cambia nada.
@@ -1961,7 +1984,7 @@ function toISO(d) {
   return `${y}-${m}-${day}`;
 }
 function computeRangeDates(range) {
-  const now = new Date();
+  const now = new Date(Date.now() - 4*3600000); // corte de "día de negocio" a las 4am, igual que todayStr()
   if (range === 'day') return { start: toISO(now), end: toISO(now) };
   if (range === 'week') {
     // "Last 7 days" en vez de "desde el lunes" — así un martes no muestra una
@@ -2236,10 +2259,21 @@ function renderBayUsageChart(d) {
     }
   });
 }
+function renderLeftBehindChart(d) {
+  const dayEntries = Object.entries(d.leftBehindByDay || {}).sort((a, b) => a[0].localeCompare(b[0]));
+  makeChart('chartLeftBehind', {
+    type: 'line',
+    data: {
+      labels: dayEntries.map(([day]) => day.slice(5)),
+      datasets: [{ data: dayEntries.map(([, v]) => v), borderColor: '#DC2626', backgroundColor: 'rgba(220,38,38,0.15)', fill: true, tension: 0.3, pointRadius: 3 }]
+    },
+    options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { font: { size: 10 } } }, x: { ticks: { font: { size: 9 } } } } }
+  });
+}
 const RENDER_FNS = {
   core: renderCoreKpis, boxes: renderBoxesKpis, status: renderStatusChart, product: renderProductChart,
   day: renderDayChart, person: renderPersonChart, complete: renderCompleteChart, shipped: renderShippedChart,
-  vendedor: renderVendedorChart, bayUsage: renderBayUsageChart
+  vendedor: renderVendedorChart, bayUsage: renderBayUsageChart, leftBehind: renderLeftBehindChart
 };
 
 
