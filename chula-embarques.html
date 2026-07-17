@@ -665,7 +665,7 @@
             </div>
           </div>
         </div>
-        <p style="font-size:11px;color:var(--text-faint);margin-bottom:6px;">Pedidos que no llegaron a Departed cuando cerró su día (corte 4am) — número fijo, no cambia aunque salgan después.</p>
+        <p style="font-size:11px;color:var(--text-faint);margin-bottom:6px;">Pedidos que no llegaron a Departed cuando cerró su día (corte 5am) — número fijo, no cambia aunque salgan después.</p>
         <canvas id="chartLeftBehind"></canvas>
       </div>
     </div>
@@ -980,11 +980,11 @@ const expandedOrders = new Set();
 const statusFilter = new Set();
 
 // "Día de negocio" en vez de día de calendario — el turno normal corre de ~6am a las
-// 3:59am del día siguiente. Restar 4h antes de sacar la fecha logra ese corte: todo lo
-// que pase entre medianoche y 3:59am todavía cuenta como el día anterior. Igual que
+// 4:59am del día siguiente. Restar 5h antes de sacar la fecha logra ese corte: todo lo
+// que pase entre medianoche y 4:59am todavía cuenta como el día anterior. Igual que
 // en Code.gs — mismo criterio en cliente y servidor.
 function todayStr() {
-  const d = new Date(Date.now() - 4*3600000);
+  const d = new Date(Date.now() - 5*3600000);
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 // Mismo formato que nowTime() en Code.gs ("hh:mm a") — se usa solo para reflejar de
@@ -997,7 +997,7 @@ function clientNowTime() {
   return String(h).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') + ' ' + ampm;
 }
 function yesterdayStr() {
-  const d = new Date(Date.now() - 4*3600000); d.setDate(d.getDate()-1);
+  const d = new Date(Date.now() - 5*3600000); d.setDate(d.getDate()-1);
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 function formatLastUpdated(hora, fecha) {
@@ -1984,7 +1984,7 @@ function toISO(d) {
   return `${y}-${m}-${day}`;
 }
 function computeRangeDates(range) {
-  const now = new Date(Date.now() - 4*3600000); // corte de "día de negocio" a las 4am, igual que todayStr()
+  const now = new Date(Date.now() - 5*3600000); // corte de "día de negocio" a las 5am, igual que todayStr()
   if (range === 'day') return { start: toISO(now), end: toISO(now) };
   if (range === 'week') {
     // "Last 7 days" en vez de "desde el lunes" — así un martes no muestra una
