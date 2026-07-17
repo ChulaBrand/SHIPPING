@@ -2473,7 +2473,7 @@ function buildClerkCard(o) {
   const driverBadgeExpanded = o.driverArrived ? `<span class="driver-here-badge">🚗 Driver Here${o.driverArrived.rampa ? ' — ' + escapeHtml(o.driverArrived.rampa) : ''}</span>` : '';
   const expectedReadyRow = est < 3 ? `<div class="expected-ready-row" onclick="event.stopPropagation();">
     <label for="er-${o.orden}">Expected ready</label>
-    <input type="datetime-local" id="er-${o.orden}" value="${o.expectedReady || ''}" ${!canEdit ? 'disabled' : ''} onchange="setExpectedReady('${o.orden}', this.value)" />
+    <input type="datetime-local" id="er-${o.orden}" value="${o.expectedReady || ''}" step="1800" ${!canEdit ? 'disabled' : ''} onchange="setExpectedReady('${o.orden}', this.value)" />
   </div>` : '';
 
   const btns = LABELS.map((l, i) => {
