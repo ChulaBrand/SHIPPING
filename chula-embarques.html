@@ -948,6 +948,15 @@ function todayStr() {
   const d = new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
+// Mismo formato que nowTime() en Code.gs ("hh:mm a") — se usa solo para reflejar de
+// inmediato en pantalla un cambio de estatus, antes de que llegue la respuesta real
+// del servidor (ver pushOrderStatus()).
+function clientNowTime() {
+  const d = new Date();
+  let h = d.getHours() % 12; if (h === 0) h = 12;
+  const ampm = d.getHours() >= 12 ? 'PM' : 'AM';
+  return String(h).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') + ' ' + ampm;
+}
 function yesterdayStr() {
   const d = new Date(); d.setDate(d.getDate()-1);
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -2488,6 +2497,11 @@ function setOrderStatus(orden, status) {
 
 async function pushOrderStatus(orden, estatus) {
   const o = ordenes.find(x => String(x.orden) === String(orden));
+  // El servidor va a guardar "ahora" como el último cambio (igual que updateStatus() en
+  // Code.gs) — se refleja aquí también, si no la tarjeta se sigue viendo "Stalled" hasta
+  // el próximo refresh automático (2 min) porque la copia local del navegador no sabía
+  // que el estatus acababa de cambiar.
+  if (o) { o.hora = clientNowTime(); o.actualizado = todayStr(); }
   const card = document.getElementById('card-' + orden);
   if (card && o) card.outerHTML = buildClerkCard(o);
   showToast('Status updated ✓');
