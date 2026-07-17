@@ -633,6 +633,23 @@
         </div>
         <div class="chart-scroll-wrap" id="chartVendedor-wrap"><canvas id="chartVendedor"></canvas></div>
       </div>
+      <div class="analytics-panel" id="analytics-panel-bayUsage">
+        <div class="panel-title-row">
+          <p class="panel-title">Bay Usage</p>
+          <div class="panel-title-row-right">
+            <span class="panel-range-badge" id="badge-bayUsage">Day</span>
+            <div class="mini-dropdown-wrap">
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('bayUsage')" title="Filter this indicator">⋯</button>
+              <div class="dropdown-panel mini" id="panel-dd-bayUsage">
+                <button class="dropdown-option" data-range="day" onclick="setPanelRange('bayUsage','day')">Day</button>
+                <button class="dropdown-option" data-range="week" onclick="setPanelRange('bayUsage','week')">Week</button>
+                <button class="dropdown-option" data-range="month" onclick="setPanelRange('bayUsage','month')">Month</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="chart-scroll-wrap" id="chartBayUsage-wrap"><canvas id="chartBayUsage"></canvas></div>
+      </div>
     </div>
   </div>
 
@@ -1791,7 +1808,7 @@ async function saveDriverScreenSettings() {
 // Summary y Boxes quedan fijos (como estaban antes) — el Admin solo puede reordenar
 // y poner el default de las 6 gráficas de abajo.
 const ANALYTICS_TOP_KEYS = ['core', 'boxes'];
-const ANALYTICS_PANEL_LABELS = { core: 'Summary', boxes: 'Boxes', status: 'Orders by Status', product: 'Boxes by Product', day: 'Departed per Day', complete: 'Complete vs Incomplete', shipped: 'Shipped vs Not Shipped', person: 'Activity by Person', vendedor: 'Boxes by Salesperson' };
+const ANALYTICS_PANEL_LABELS = { core: 'Summary', boxes: 'Boxes', status: 'Orders by Status', product: 'Boxes by Product', day: 'Departed per Day', complete: 'Complete vs Incomplete', shipped: 'Shipped vs Not Shipped', person: 'Activity by Person', vendedor: 'Boxes by Salesperson', bayUsage: 'Bay Usage' };
 let analyticsChartConfig = [];
 async function loadAdminAnalyticsConfig() {
   const list = document.getElementById('admin-analytics-list');
@@ -1868,8 +1885,8 @@ const CHART_PALETTE = ['#5B21B6', '#16A34A', '#CA8A04', '#DC2626', '#2563EB', '#
 // Default "de fábrica" de cada panel — se usa cuando el filtro general está en "Default"
 // y el panel no tiene su propia anulación puesta. Solo "Departed per Day" arranca en
 // Week (una tendencia de un solo día no dice mucho); el resto arranca en Day.
-let DEFAULT_RANGE_FOR_PANEL = { core: 'day', boxes: 'day', status: 'day', product: 'day', day: 'week', person: 'day', complete: 'day', shipped: 'day', vendedor: 'day' };
-const ALL_PANEL_KEYS = ['core', 'boxes', 'status', 'product', 'day', 'person', 'complete', 'shipped', 'vendedor'];
+let DEFAULT_RANGE_FOR_PANEL = { core: 'day', boxes: 'day', status: 'day', product: 'day', day: 'week', person: 'day', complete: 'day', shipped: 'day', vendedor: 'day', bayUsage: 'day' };
+const ALL_PANEL_KEYS = ['core', 'boxes', 'status', 'product', 'day', 'person', 'complete', 'shipped', 'vendedor', 'bayUsage'];
 let analyticsLayoutLoaded = false;
 // Jala el acomodo (orden de paneles + default de cada uno) que el Admin haya guardado.
 // Si nunca ha guardado nada, el servidor regresa los valores de fábrica y no cambia nada.
@@ -2201,10 +2218,28 @@ function renderShippedChart(d) {
       <div class="progress-gauge-legend"><span>🟢 Shipped: <b>${v.departed}</b></span><span>⚪ Not shipped: <b>${v.pending}</b></span></div>
     </div>`;
 }
+function renderBayUsageChart(d) {
+  const entries = Object.entries(d.bayUsage || {}).sort((a, b) => b[1] - a[1]);
+  sizeHorizontalBarChart('chartBayUsage-wrap', entries.length);
+  makeChart('chartBayUsage', {
+    type: 'bar',
+    data: { labels: entries.map(([n]) => n), datasets: [{ data: entries.map(([, v]) => v), backgroundColor: '#2563EB', borderRadius: 4 }] },
+    plugins: [ChartDataLabels],
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      layout: { padding: { right: 26 } },
+      plugins: {
+        legend: { display: false },
+        datalabels: { color: '#1a1a1a', anchor: 'end', align: 'end', font: { size: 10, weight: '600' } }
+      },
+      scales: { x: { beginAtZero: true, ticks: { font: { size: 10 } } }, y: { ticks: { font: { size: 10 }, autoSkip: false } } }
+    }
+  });
+}
 const RENDER_FNS = {
   core: renderCoreKpis, boxes: renderBoxesKpis, status: renderStatusChart, product: renderProductChart,
   day: renderDayChart, person: renderPersonChart, complete: renderCompleteChart, shipped: renderShippedChart,
-  vendedor: renderVendedorChart
+  vendedor: renderVendedorChart, bayUsage: renderBayUsageChart
 };
 
 
