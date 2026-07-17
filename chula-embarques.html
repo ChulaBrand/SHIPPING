@@ -351,6 +351,7 @@
   .controls-actions { display:flex; gap:6px; flex-shrink:0; }
   .view-toggle-btn { width:34px; height:34px; font-size:14px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--white); color:var(--text-muted); cursor:pointer; display:flex; align-items:center; justify-content:center; font-family:'Inter',sans-serif; }
   .view-toggle-btn:active { background:var(--bg); }
+  .view-toggle-btn.active { background:#FEE2E2; border-color:#FCA5A5; color:#B91C1C; }
   .filter-chips { display:flex; flex-wrap:wrap; gap:6px; }
   .filter-chip { font-size:12px; font-weight:700; width:30px; height:30px; border-radius:50%; border:1.5px solid var(--border-strong); background:var(--white); color:var(--text-muted); cursor:pointer; font-family:'Inter',sans-serif; display:flex; align-items:center; justify-content:center; }
   .filter-chip.active { border-color:var(--purple); color:var(--purple); background:#F5F0FE; }
@@ -842,26 +843,33 @@
       <div class="controls-actions">
         <button class="view-toggle-btn" id="viewToggleBtn" onclick="toggleGlobalView()" title="View all"><i class="ti ti-arrows-maximize"></i></button>
         <button class="view-toggle-btn" id="dailySummaryBtn" onclick="goDailySummary()" title="Download today's summary"><i class="ti ti-file-spreadsheet"></i></button>
+        <button class="view-toggle-btn" id="cancelledViewBtn" onclick="toggleCancelledView()" title="View cancelled orders"><i class="ti ti-trash"></i></button>
       </div>
     </div>
-    <div class="attention-counts" id="attentionCounts"></div>
-    <div id="attention-section" style="display:none;">
-      <p class="section-label" style="color:#B91C1C;">⚠️ Needs Attention</p>
-      <div class="orders-list" id="attention-list"></div>
+    <div id="normal-orders-wrap">
+      <div class="attention-counts" id="attentionCounts"></div>
+      <div id="attention-section" style="display:none;">
+        <p class="section-label" style="color:#B91C1C;">⚠️ Needs Attention</p>
+        <div class="orders-list" id="attention-list"></div>
+      </div>
+      <p class="section-label">Today's orders</p>
+      <div class="orders-list" id="orders-list"></div>
+      <div id="past-section" style="display:none;">
+        <p class="section-label" style="margin-top:1.25rem;">Previous orders</p>
+        <div class="orders-list" id="past-list"></div>
+      </div>
+      <div id="departed-today-section" style="display:none;">
+        <p class="section-label" style="margin-top:1.25rem;">📦 Departed today</p>
+        <div class="orders-list" id="departed-today-list"></div>
+      </div>
+      <div id="departed-yesterday-section" style="display:none;">
+        <p class="section-label" style="margin-top:1.25rem;">📦 Departed yesterday</p>
+        <div class="orders-list" id="departed-yesterday-list"></div>
+      </div>
     </div>
-    <p class="section-label">Today's orders</p>
-    <div class="orders-list" id="orders-list"></div>
-    <div id="past-section" style="display:none;">
-      <p class="section-label" style="margin-top:1.25rem;">Previous orders</p>
-      <div class="orders-list" id="past-list"></div>
-    </div>
-    <div id="departed-today-section" style="display:none;">
-      <p class="section-label" style="margin-top:1.25rem;">📦 Departed today</p>
-      <div class="orders-list" id="departed-today-list"></div>
-    </div>
-    <div id="departed-yesterday-section" style="display:none;">
-      <p class="section-label" style="margin-top:1.25rem;">📦 Departed yesterday</p>
-      <div class="orders-list" id="departed-yesterday-list"></div>
+    <div id="cancelled-section" style="display:none;">
+      <p class="section-label" style="color:#B91C1C;">🗑 Cancelled Orders</p>
+      <div class="orders-list" id="cancelled-list"></div>
     </div>
   </div>
 
@@ -2538,6 +2546,88 @@ async function submitCancelOrder(orden) {
       searchActive = false;
     }
     renderOrdenes();
+  } catch (e) { showToast('Connection error.'); }
+}
+
+// ── Vista de Cancelled Orders — botón aparte arriba, no junto a los filtros de
+// estatus. Reutiliza el mismo patrón de 3 pasos que cancelar, pero para restaurar. ──
+let cancelledViewActive = false;
+let cancelledOrders = [];
+const restoreFlowStep = {}; // orden -> 0 (escondido) | 1 (menú) | 2 (confirmando)
+
+async function toggleCancelledView() {
+  cancelledViewActive = !cancelledViewActive;
+  document.getElementById('cancelledViewBtn').classList.toggle('active', cancelledViewActive);
+  document.getElementById('normal-orders-wrap').style.display = cancelledViewActive ? 'none' : '';
+  document.getElementById('cancelled-section').style.display = cancelledViewActive ? 'block' : 'none';
+  if (cancelledViewActive) loadCancelledOrders();
+}
+
+async function loadCancelledOrders() {
+  const list = document.getElementById('cancelled-list');
+  list.innerHTML = '<div class="empty-state"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i>Loading...</div>';
+  try {
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getCancelledOrders' }) });
+    cancelledOrders = await res.json();
+    renderCancelledOrders();
+  } catch (e) { list.innerHTML = '<div class="empty-state">Connection error</div>'; }
+}
+
+function renderCancelledOrders() {
+  const list = document.getElementById('cancelled-list');
+  if (!Array.isArray(cancelledOrders) || !cancelledOrders.length) {
+    list.innerHTML = '<div class="empty-state"><i class="ti ti-inbox"></i>No cancelled orders</div>';
+    return;
+  }
+  list.innerHTML = cancelledOrders.map(buildCancelledCard).join('');
+}
+
+function buildCancelledCard(o) {
+  const cancelledAtStr = o.cancelledAt ? new Date(o.cancelledAt).toLocaleString() : '';
+  return `<div class="order-card-compact" id="cancelled-card-${o.orden}" style="flex-direction:column;align-items:stretch;">
+    <div class="oc-left" style="margin-bottom:6px;">
+      <p class="oc-num">Order #${escapeHtml(o.orden)} · cancelled by ${escapeHtml(o.cancelledBy || '?')}${cancelledAtStr ? ' · ' + escapeHtml(cancelledAtStr) : ''}</p>
+      <p class="oc-cliente">${escapeHtml(o.cliente)}</p>
+    </div>
+    ${restoreFlowHtml(o)}
+  </div>`;
+}
+
+function restoreFlowHtml(o) {
+  const step = restoreFlowStep[o.orden] || 0;
+  if (step === 0) {
+    return `<div style="text-align:right;"><button class="btn-cancel-dots" onclick="setRestoreFlowStep('${o.orden}',1)" title="More options">⋯</button></div>`;
+  }
+  if (step === 1) {
+    return `<div class="cancel-flow-row" style="background:#F0FDF4;">
+      <span class="cancel-flow-link" style="color:#15803D;" onclick="setRestoreFlowStep('${o.orden}',2)">↩ Restore this order</span>
+      <span class="cancel-flow-back" onclick="setRestoreFlowStep('${o.orden}',0)">✕</span>
+    </div>`;
+  }
+  return `<div class="cancel-flow-confirm" style="background:#F0FDF4;border-color:#86EFAC;">
+    <p style="color:#14532D;">Restore order #${escapeHtml(o.orden)} — ${escapeHtml(o.cliente)}? It goes back to today's orders.</p>
+    <div style="display:flex;gap:8px;">
+      <button class="btn-cancel-final" style="background:#16A34A;" onclick="submitRestoreOrder('${o.orden}')">Yes, restore it</button>
+      <button class="btn-cancel-back" onclick="setRestoreFlowStep('${o.orden}',0)">No, keep cancelled</button>
+    </div>
+  </div>`;
+}
+
+function setRestoreFlowStep(orden, step) {
+  restoreFlowStep[orden] = step;
+  const o = cancelledOrders.find(x => String(x.orden) === String(orden));
+  const card = document.getElementById('cancelled-card-' + orden);
+  if (card && o) card.outerHTML = buildCancelledCard(o);
+}
+
+async function submitRestoreOrder(orden) {
+  try {
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'restoreOrder', orden }) });
+    const result = await res.json();
+    if (result.error) { showToast(result.error); return; }
+    cancelledOrders = cancelledOrders.filter(x => String(x.orden) !== String(orden));
+    renderCancelledOrders();
+    showToast('Order restored');
   } catch (e) { showToast('Connection error.'); }
 }
 
