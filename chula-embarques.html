@@ -678,6 +678,25 @@
         <p style="font-size:11px;color:var(--text-faint);margin-bottom:6px;">Pedidos que no llegaron a Departed cuando cerró su día (corte 5am) — número fijo, no cambia aunque salgan después.</p>
         <canvas id="chartLeftBehind"></canvas>
       </div>
+      <div class="analytics-panel" id="analytics-panel-overdue">
+        <div class="panel-title-row">
+          <p class="panel-title">Overdue</p>
+          <div class="panel-title-row-right">
+            <span class="panel-range-badge" id="badge-overdue">Week</span>
+            <div class="mini-dropdown-wrap">
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('overdue')" title="Filter this indicator">⋯</button>
+              <div class="dropdown-panel mini" id="panel-dd-overdue">
+                <button class="dropdown-option" data-range="day" onclick="setPanelRange('overdue','day')">Day</button>
+                <button class="dropdown-option" data-range="week" onclick="setPanelRange('overdue','week')">Week</button>
+                <button class="dropdown-option" data-range="month" onclick="setPanelRange('overdue','month')">Month</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--text-faint);margin-bottom:6px;">Promedio de horas de más entre "Expected ready" y la hora real en que el pedido llegó a Ready. Solo cuenta pedidos que ya llegaron a Ready — uno que sigue overdue ahorita mismo no se mide aquí (ese lo marca el badge Overdue en vivo en Shipping).</p>
+        <div class="kpi-grid" id="kpis-overdue"></div>
+        <div id="overdueWorstList"></div>
+      </div>
     </div>
   </div>
 
@@ -1949,7 +1968,7 @@ async function saveDriverScreenSettings() {
 // Summary y Boxes quedan fijos (como estaban antes) — el Admin solo puede reordenar
 // y poner el default de las 6 gráficas de abajo.
 const ANALYTICS_TOP_KEYS = ['core', 'boxes'];
-const ANALYTICS_PANEL_LABELS = { core: 'Summary', boxes: 'Boxes', status: 'Orders by Status', product: 'Boxes by Product', day: 'Departed per Day', complete: 'Complete vs Incomplete', shipped: 'Shipped vs Not Shipped', person: 'Activity by Person', vendedor: 'Boxes by Salesperson', bayUsage: 'Bay Usage', leftBehind: 'Left Behind per Day' };
+const ANALYTICS_PANEL_LABELS = { core: 'Summary', boxes: 'Boxes', status: 'Orders by Status', product: 'Boxes by Product', day: 'Departed per Day', complete: 'Complete vs Incomplete', shipped: 'Shipped vs Not Shipped', person: 'Activity by Person', vendedor: 'Boxes by Salesperson', bayUsage: 'Bay Usage', leftBehind: 'Left Behind per Day', overdue: 'Overdue' };
 let analyticsChartConfig = [];
 async function loadAdminAnalyticsConfig() {
   const list = document.getElementById('admin-analytics-list');
@@ -2027,8 +2046,8 @@ const CHART_PALETTE = ['#5B21B6', '#16A34A', '#CA8A04', '#DC2626', '#2563EB', '#
 // y el panel no tiene su propia anulación puesta. "Departed per Day" y "Left Behind
 // per Day" arrancan en Week (una tendencia de un solo día no dice mucho); el resto
 // arranca en Day.
-let DEFAULT_RANGE_FOR_PANEL = { core: 'day', boxes: 'day', status: 'day', product: 'day', day: 'week', person: 'day', complete: 'day', shipped: 'day', vendedor: 'day', bayUsage: 'day', leftBehind: 'week' };
-const ALL_PANEL_KEYS = ['core', 'boxes', 'status', 'product', 'day', 'person', 'complete', 'shipped', 'vendedor', 'bayUsage', 'leftBehind'];
+let DEFAULT_RANGE_FOR_PANEL = { core: 'day', boxes: 'day', status: 'day', product: 'day', day: 'week', person: 'day', complete: 'day', shipped: 'day', vendedor: 'day', bayUsage: 'day', leftBehind: 'week', overdue: 'week' };
+const ALL_PANEL_KEYS = ['core', 'boxes', 'status', 'product', 'day', 'person', 'complete', 'shipped', 'vendedor', 'bayUsage', 'leftBehind', 'overdue'];
 let analyticsLayoutLoaded = false;
 // Jala el acomodo (orden de paneles + default de cada uno) que el Admin haya guardado.
 // Si nunca ha guardado nada, el servidor regresa los valores de fábrica y no cambia nada.
@@ -2389,10 +2408,23 @@ function renderLeftBehindChart(d) {
     options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { font: { size: 10 } } }, x: { ticks: { font: { size: 9 } } } } }
   });
 }
+function renderOverduePanel(d) {
+  const kpis = [
+    { label: 'Avg Hours Overdue', value: d.overdueAvgHours || 0, sub: (d.overdueCount || 0) + ' order' + (d.overdueCount === 1 ? '' : 's'), color: '#DC2626' }
+  ];
+  document.getElementById('kpis-overdue').innerHTML = kpiCardsHtml(kpis);
+  const worst = Array.isArray(d.overdueWorst) ? d.overdueWorst : [];
+  const list = document.getElementById('overdueWorstList');
+  if (!worst.length) { list.innerHTML = '<p style="font-size:12px;color:var(--text-faint);">No overdue orders in this range.</p>'; return; }
+  list.innerHTML = `<p class="checklist-title" style="margin-top:4px;">Worst cases</p>` + worst.map(o =>
+    `<div class="driver-product-row"><span>#${escapeHtml(o.orden)} — ${escapeHtml(o.cliente)}</span><span class="driver-product-badge not-shipped">${o.hours}h</span></div>`
+  ).join('');
+}
 const RENDER_FNS = {
   core: renderCoreKpis, boxes: renderBoxesKpis, status: renderStatusChart, product: renderProductChart,
   day: renderDayChart, person: renderPersonChart, complete: renderCompleteChart, shipped: renderShippedChart,
-  vendedor: renderVendedorChart, bayUsage: renderBayUsageChart, leftBehind: renderLeftBehindChart
+  vendedor: renderVendedorChart, bayUsage: renderBayUsageChart, leftBehind: renderLeftBehindChart,
+  overdue: renderOverduePanel
 };
 
 
