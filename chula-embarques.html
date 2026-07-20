@@ -1209,6 +1209,20 @@ function timeSlotOptions(selectedHHMM) {
 function setExpectedReadyTime(orden, hhmm) {
   setExpectedReady(orden, hhmm ? todayStr() + 'T' + hhmm : '');
 }
+// El feed de Citrus/Lima guarda la hora exacta que manda (ej. "12:07"), no alineada a
+// :00/:30 — el <select> de arriba solo tiene opciones cada 30 min, así que si nadie
+// redondea, ese valor no calza con ninguna <option> y el navegador no marca ninguna
+// como selected (se ve "--" aunque sí haya hora guardada). Redondear solo para decidir
+// qué opción mostrar seleccionada — no toca el valor guardado a menos que el usuario
+// de verdad cambie la hora desde el dropdown.
+function roundToHalfHour(hhmm) {
+  const m = String(hhmm || '').match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return '';
+  let h = parseInt(m[1], 10), min = parseInt(m[2], 10);
+  min = Math.round(min / 30) * 30;
+  if (min === 60) { min = 0; h = (h + 1) % 24; }
+  return String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
+}
 
 function show(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
 let usersPromise = null;
@@ -2579,7 +2593,7 @@ function buildClerkCard(o) {
   // selector nativo datetime-local (su "step" de 30 min no lo respetan varios
   // navegadores móviles, sobre todo iOS), un <select> con horas cada 30 min: siempre
   // exacto, sin importar el navegador, y más rápido de tocar en el celular.
-  const currentHHMM = o.expectedReady && o.expectedReady.length >= 16 ? o.expectedReady.slice(11, 16) : '';
+  const currentHHMM = o.expectedReady && o.expectedReady.length >= 16 ? roundToHalfHour(o.expectedReady.slice(11, 16)) : '';
   const expectedReadyRow = est < 3 ? `<div class="expected-ready-row" onclick="event.stopPropagation();">
     <label for="er-${o.orden}">Expected ready (today)</label>
     <select id="er-${o.orden}" ${!canEdit ? 'disabled' : ''} onchange="setExpectedReadyTime('${o.orden}', this.value)">${timeSlotOptions(currentHHMM)}</select>
