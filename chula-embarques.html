@@ -2069,7 +2069,7 @@ function applyAnalyticsLayout(config) {
   });
 }
 // Paneles cuyos números dependen del filtro de frutas (todos los demás no varían por fruta)
-const FRUIT_AWARE_PANELS = new Set(['core', 'boxes', 'product', 'complete', 'shipped']);
+const FRUIT_AWARE_PANELS = new Set(['core', 'boxes', 'product', 'complete', 'shipped', 'overdue']);
 
 // ── Dropdowns (Day/Week/Month/Custom, Filter de frutas, y el mini-filtro por panel) ──
 function toggleDropdown(which) {
@@ -2409,11 +2409,17 @@ function renderLeftBehindChart(d) {
   });
 }
 function renderOverduePanel(d) {
+  const selected = getSelectedFruits();
+  const all = Array.isArray(d.overdueList) ? d.overdueList : [];
+  const filtered = selected.length === ALL_FRUIT_KEYS.length
+    ? all
+    : all.filter(o => (o.categories || []).some(c => selected.includes(c)));
+  const avgHours = filtered.length ? Math.round((filtered.reduce((s, o) => s + o.hours, 0) / filtered.length) * 10) / 10 : 0;
   const kpis = [
-    { label: 'Avg Hours Overdue', value: d.overdueAvgHours || 0, sub: (d.overdueCount || 0) + ' order' + (d.overdueCount === 1 ? '' : 's'), color: '#DC2626' }
+    { label: 'Avg Hours Overdue', value: avgHours, sub: filtered.length + ' order' + (filtered.length === 1 ? '' : 's'), color: '#DC2626' }
   ];
   document.getElementById('kpis-overdue').innerHTML = kpiCardsHtml(kpis);
-  const worst = Array.isArray(d.overdueWorst) ? d.overdueWorst : [];
+  const worst = filtered.slice().sort((a, b) => b.hours - a.hours).slice(0, 10);
   const list = document.getElementById('overdueWorstList');
   if (!worst.length) { list.innerHTML = '<p style="font-size:12px;color:var(--text-faint);">No overdue orders in this range.</p>'; return; }
   list.innerHTML = `<p class="checklist-title" style="margin-top:4px;">Worst cases</p>` + worst.map(o =>
