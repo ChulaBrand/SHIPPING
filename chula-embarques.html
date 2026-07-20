@@ -2427,15 +2427,24 @@ function renderLeftBehindChart(d) {
     options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { font: { size: 10 } } }, x: { ticks: { font: { size: 9 } } } } }
   });
 }
+// "0.8 horas" no dice mucho de un vistazo — se muestra en minutos si es menos de 1h,
+// y "Xh Ym" si es más (nunca decimales sueltos).
+function formatHoursMin(hoursDecimal) {
+  const totalMin = Math.round(hoursDecimal * 60);
+  const h = Math.floor(totalMin / 60), m = totalMin % 60;
+  if (h === 0) return m + 'm';
+  if (m === 0) return h + 'h';
+  return h + 'h ' + m + 'm';
+}
 function renderOverduePanel(d) {
   const selected = getSelectedFruits();
   const all = Array.isArray(d.overdueList) ? d.overdueList : [];
   const filtered = selected.length === ALL_FRUIT_KEYS.length
     ? all
     : all.filter(o => (o.categories || []).some(c => selected.includes(c)));
-  const avgHours = filtered.length ? Math.round((filtered.reduce((s, o) => s + o.hours, 0) / filtered.length) * 10) / 10 : 0;
+  const avgHours = filtered.length ? filtered.reduce((s, o) => s + o.hours, 0) / filtered.length : 0;
   const kpis = [
-    { label: 'Avg Hours Overdue', value: avgHours, sub: filtered.length + ' order' + (filtered.length === 1 ? '' : 's'), color: '#DC2626' }
+    { label: 'Avg Overdue', value: formatHoursMin(avgHours), sub: filtered.length + ' order' + (filtered.length === 1 ? '' : 's'), color: '#DC2626' }
   ];
   document.getElementById('kpis-overdue').innerHTML = kpiCardsHtml(kpis);
 
@@ -2447,19 +2456,19 @@ function renderOverduePanel(d) {
     byProduct[c].sum += o.hours; byProduct[c].count++;
   }));
   const breakdown = Object.keys(byProduct)
-    .map(k => ({ key: k, avg: Math.round((byProduct[k].sum / byProduct[k].count) * 10) / 10, count: byProduct[k].count }))
+    .map(k => ({ key: k, avg: byProduct[k].sum / byProduct[k].count, count: byProduct[k].count }))
     .sort((a, b) => b.avg - a.avg);
   const byProductEl = document.getElementById('overdueByProduct');
   byProductEl.innerHTML = breakdown.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:10px;">` + breakdown.map(b => {
     const color = PRODUCT_COLORS[b.key] || CHART_PALETTE[7];
-    return `<span class="chart-legend-item"><span class="chart-legend-dot" style="background:${color}"></span>${PRODUCT_LABELS[b.key] || b.key} <b style="color:${color};">${b.avg}h avg</b></span>`;
+    return `<span class="chart-legend-item"><span class="chart-legend-dot" style="background:${color}"></span>${PRODUCT_LABELS[b.key] || b.key} <b style="color:${color};">${formatHoursMin(b.avg)} avg</b></span>`;
   }).join('') + `</div>` : '';
 
   const worst = filtered.slice().sort((a, b) => b.hours - a.hours).slice(0, 5);
   const list = document.getElementById('overdueWorstList');
   if (!worst.length) { list.innerHTML = '<p style="font-size:12px;color:var(--text-faint);">No overdue orders in this range.</p>'; return; }
   list.innerHTML = `<p class="checklist-title" style="margin-top:4px;">Top 5</p>` + worst.map(o =>
-    `<div class="driver-product-row"><span>#${escapeHtml(o.orden)} — ${escapeHtml(o.cliente)}</span><span class="driver-product-badge not-shipped">${o.hours}h</span></div>`
+    `<div class="driver-product-row"><span>#${escapeHtml(o.orden)} — ${escapeHtml(o.cliente)}</span><span class="driver-product-badge not-shipped">${formatHoursMin(o.hours)}</span></div>`
   ).join('');
 }
 const RENDER_FNS = {
