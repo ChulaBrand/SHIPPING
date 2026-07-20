@@ -693,7 +693,6 @@
             </div>
           </div>
         </div>
-        <p style="font-size:11px;color:var(--text-faint);margin-bottom:6px;">Promedio de horas de más entre "Expected ready" y la hora real en que el pedido llegó a Ready. Solo cuenta pedidos que ya llegaron a Ready — uno que sigue overdue ahorita mismo no se mide aquí (ese lo marca el badge Overdue en vivo en Shipping).</p>
         <div class="kpi-grid" id="kpis-overdue"></div>
         <div id="overdueWorstList"></div>
       </div>
@@ -2438,10 +2437,10 @@ function renderOverduePanel(d) {
     { label: 'Avg Hours Overdue', value: avgHours, sub: filtered.length + ' order' + (filtered.length === 1 ? '' : 's'), color: '#DC2626' }
   ];
   document.getElementById('kpis-overdue').innerHTML = kpiCardsHtml(kpis);
-  const worst = filtered.slice().sort((a, b) => b.hours - a.hours).slice(0, 10);
+  const worst = filtered.slice().sort((a, b) => b.hours - a.hours).slice(0, 5);
   const list = document.getElementById('overdueWorstList');
   if (!worst.length) { list.innerHTML = '<p style="font-size:12px;color:var(--text-faint);">No overdue orders in this range.</p>'; return; }
-  list.innerHTML = `<p class="checklist-title" style="margin-top:4px;">Worst cases</p>` + worst.map(o =>
+  list.innerHTML = `<p class="checklist-title" style="margin-top:4px;">Top 5</p>` + worst.map(o =>
     `<div class="driver-product-row"><span>#${escapeHtml(o.orden)} — ${escapeHtml(o.cliente)}</span><span class="driver-product-badge not-shipped">${o.hours}h</span></div>`
   ).join('');
 }
