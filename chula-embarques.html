@@ -694,6 +694,7 @@
           </div>
         </div>
         <div class="kpi-grid" id="kpis-overdue"></div>
+        <div id="overdueByProduct"></div>
         <div id="overdueWorstList"></div>
       </div>
     </div>
@@ -2437,6 +2438,23 @@ function renderOverduePanel(d) {
     { label: 'Avg Hours Overdue', value: avgHours, sub: filtered.length + ' order' + (filtered.length === 1 ? '' : 's'), color: '#DC2626' }
   ];
   document.getElementById('kpis-overdue').innerHTML = kpiCardsHtml(kpis);
+
+  // Promedio por producto — un pedido mixto (ej. Limes + Aloe) cuenta sus horas para
+  // cada producto que trae, igual que ya se hace con las cajas en el resto de Analytics.
+  const byProduct = {};
+  filtered.forEach(o => (o.categories || []).forEach(c => {
+    if (!byProduct[c]) byProduct[c] = { sum: 0, count: 0 };
+    byProduct[c].sum += o.hours; byProduct[c].count++;
+  }));
+  const breakdown = Object.keys(byProduct)
+    .map(k => ({ key: k, avg: Math.round((byProduct[k].sum / byProduct[k].count) * 10) / 10, count: byProduct[k].count }))
+    .sort((a, b) => b.avg - a.avg);
+  const byProductEl = document.getElementById('overdueByProduct');
+  byProductEl.innerHTML = breakdown.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:10px;">` + breakdown.map(b => {
+    const color = PRODUCT_COLORS[b.key] || CHART_PALETTE[7];
+    return `<span class="chart-legend-item"><span class="chart-legend-dot" style="background:${color}"></span>${PRODUCT_LABELS[b.key] || b.key} <b style="color:${color};">${b.avg}h avg</b></span>`;
+  }).join('') + `</div>` : '';
+
   const worst = filtered.slice().sort((a, b) => b.hours - a.hours).slice(0, 5);
   const list = document.getElementById('overdueWorstList');
   if (!worst.length) { list.innerHTML = '<p style="font-size:12px;color:var(--text-faint);">No overdue orders in this range.</p>'; return; }
