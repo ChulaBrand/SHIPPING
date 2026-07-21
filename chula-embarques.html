@@ -775,7 +775,7 @@
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-admin" onchange="updateNewUserPinField()"> Admin</label>
           </div>
           <p style="font-size:11px;color:var(--text-faint);margin:-2px 0 0;">Admin usa contraseña (mínimo 6 caracteres) en vez de PIN de 4 dígitos.</p>
-          <button type="submit" class="btn-primary">Add user</button>
+          <button type="submit" class="btn-primary" id="admin-add-user-btn">Add user</button>
         </form>
         <p class="upload-status show" id="admin-add-status" style="display:none;"></p>
       </div>
@@ -1714,6 +1714,9 @@ async function adminAddUser() {
     statusEl.className = 'upload-status show err'; return;
   }
   if (!perms.length) { statusEl.textContent = 'Select at least one access.'; statusEl.className = 'upload-status show err'; return; }
+  const btn = document.getElementById('admin-add-user-btn');
+  if (btn.disabled) return; // ya se está mandando — un doble-tap con wifi lento no manda 2 veces
+  btn.disabled = true;
   statusEl.textContent = 'Adding...'; statusEl.className = 'upload-status show loading';
   try {
     const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminAddUser', name, userPin, permissions: perms }) });
@@ -1727,6 +1730,7 @@ async function adminAddUser() {
     statusEl.textContent = '✓ User added.'; statusEl.className = 'upload-status show ok';
     loadAdminUsers();
   } catch(e) { statusEl.textContent = 'Connection error.'; statusEl.className = 'upload-status show err'; }
+  finally { btn.disabled = false; }
 }
 document.getElementById('admin-new-pin').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); adminAddUser(); } });
 document.getElementById('admin-new-name').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); adminAddUser(); } });
@@ -2970,7 +2974,13 @@ function setCancelFlowStep(orden, step) {
   const card = document.getElementById('card-' + orden);
   if (card && o) card.outerHTML = buildClerkCard(o);
 }
+// Pedidos con una petición de cancelar/restaurar ya en vuelo — con wifi lento, un
+// doble-tap en el botón de confirmar podía mandar la misma acción 2 veces.
+const pendingCancelRestore = new Set();
 async function submitCancelOrder(orden) {
+  const key = String(orden);
+  if (pendingCancelRestore.has(key)) return;
+  pendingCancelRestore.add(key);
   try {
     const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'cancelOrder', orden }) });
     const result = await res.json();
@@ -2985,6 +2995,7 @@ async function submitCancelOrder(orden) {
     }
     renderOrdenes();
   } catch (e) { showToast('Connection error.'); }
+  finally { pendingCancelRestore.delete(key); }
 }
 
 // ── Vistas especiales arriba (Cancelled, Expected Ready) — botones aparte, no junto
@@ -3088,6 +3099,9 @@ function setRestoreFlowStep(orden, step) {
 }
 
 async function submitRestoreOrder(orden) {
+  const key = String(orden);
+  if (pendingCancelRestore.has(key)) return;
+  pendingCancelRestore.add(key);
   try {
     const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'restoreOrder', orden }) });
     const result = await res.json();
@@ -3096,6 +3110,7 @@ async function submitRestoreOrder(orden) {
     renderCancelledOrders();
     showToast('Order restored');
   } catch (e) { showToast('Connection error.'); }
+  finally { pendingCancelRestore.delete(key); }
 }
 
 function toggleCardExpand(orden) {
