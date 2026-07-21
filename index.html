@@ -775,6 +775,24 @@
         <div id="overdueByProduct"></div>
         <div id="overdueWorstList"></div>
       </div>
+      <div class="analytics-panel" id="analytics-panel-unloading">
+        <div class="panel-title-row">
+          <p class="panel-title">Unloading Trucks</p>
+          <div class="panel-title-row-right">
+            <span class="panel-range-badge" id="badge-unloading">Week</span>
+            <div class="mini-dropdown-wrap">
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('unloading')" title="Filter this indicator" aria-label="Filter this indicator">⋯</button>
+              <div class="dropdown-panel mini" id="panel-dd-unloading">
+                <button class="dropdown-option" data-range="day" onclick="setPanelRange('unloading','day')">Day</button>
+                <button class="dropdown-option" data-range="week" onclick="setPanelRange('unloading','week')">Week</button>
+                <button class="dropdown-option" data-range="month" onclick="setPanelRange('unloading','month')">Month</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="kpi-grid" id="kpis-unloading"></div>
+        <canvas id="chartUnloadingTrend" style="margin-top:8px;"></canvas>
+      </div>
     </div>
   </div>
 
@@ -2087,7 +2105,7 @@ async function saveDriverScreenSettings() { await saveSettingsFields(DRIVER_FIEL
 // Summary y Boxes quedan fijos (como estaban antes) — el Admin solo puede reordenar
 // y poner el default de las 6 gráficas de abajo.
 const ANALYTICS_TOP_KEYS = ['core', 'boxes'];
-const ANALYTICS_PANEL_LABELS = { core: 'Summary', boxes: 'Boxes', status: 'Orders by Status', product: 'Boxes by Product', day: 'Departed per Day', complete: 'Complete vs Incomplete', shipped: 'Shipped vs Not Shipped', person: 'Activity by Person', vendedor: 'Boxes by Salesperson', bayUsage: 'Bay Usage', leftBehind: 'Left Behind per Day', overdue: 'Overdue' };
+const ANALYTICS_PANEL_LABELS = { core: 'Summary', boxes: 'Boxes', status: 'Orders by Status', product: 'Boxes by Product', day: 'Departed per Day', complete: 'Complete vs Incomplete', shipped: 'Shipped vs Not Shipped', person: 'Activity by Person', vendedor: 'Boxes by Salesperson', bayUsage: 'Bay Usage', leftBehind: 'Left Behind per Day', overdue: 'Overdue', unloading: 'Unloading Trucks' };
 let analyticsChartConfig = [];
 async function loadAdminAnalyticsConfig() {
   const list = document.getElementById('admin-analytics-list');
@@ -2229,8 +2247,8 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
 // y el panel no tiene su propia anulación puesta. "Departed per Day" y "Left Behind
 // per Day" arrancan en Week (una tendencia de un solo día no dice mucho); el resto
 // arranca en Day.
-let DEFAULT_RANGE_FOR_PANEL = { core: 'day', boxes: 'day', status: 'day', product: 'day', day: 'week', person: 'day', complete: 'day', shipped: 'day', vendedor: 'day', bayUsage: 'day', leftBehind: 'week', overdue: 'week' };
-const ALL_PANEL_KEYS = ['core', 'boxes', 'status', 'product', 'day', 'person', 'complete', 'shipped', 'vendedor', 'bayUsage', 'leftBehind', 'overdue'];
+let DEFAULT_RANGE_FOR_PANEL = { core: 'day', boxes: 'day', status: 'day', product: 'day', day: 'week', person: 'day', complete: 'day', shipped: 'day', vendedor: 'day', bayUsage: 'day', leftBehind: 'week', overdue: 'week', unloading: 'week' };
+const ALL_PANEL_KEYS = ['core', 'boxes', 'status', 'product', 'day', 'person', 'complete', 'shipped', 'vendedor', 'bayUsage', 'leftBehind', 'overdue', 'unloading'];
 let analyticsLayoutLoaded = false;
 // Jala el acomodo (orden de paneles + default de cada uno) que el Admin haya guardado.
 // Si nunca ha guardado nada, el servidor regresa los valores de fábrica y no cambia nada.
@@ -2487,6 +2505,9 @@ function exportAnalyticsCSV() {
   const leftBehind = panelData.leftBehind;
   if (leftBehind) Object.entries(leftBehind.leftBehindByDay || {}).sort((a, b) => a[0].localeCompare(b[0]))
     .forEach(([dt, v]) => rows.push(csvRow(['Left Behind per Day', dt, v])));
+  const unloading = panelData.unloading;
+  if (unloading) Object.entries(unloading.unloadingByDay || {}).sort((a, b) => a[0].localeCompare(b[0]))
+    .forEach(([dt, v]) => rows.push(csvRow(['Unloading Trucks', dt, v])));
   const overdue = panelData.overdue;
   if (overdue) {
     const all = Array.isArray(overdue.overdueList) ? overdue.overdueList : [];
@@ -2715,11 +2736,22 @@ function renderOverduePanel(d) {
     `<div class="driver-product-row"><span>#${escapeHtml(o.orden)} — ${escapeHtml(o.cliente)}</span><span class="driver-product-badge not-shipped">${formatHoursMin(o.hours)}</span></div>`
   ).join('');
 }
+// Camiones de DESCARGA (traen producto) por día — viene de la hoja de check-in,
+// columna "Loading / Unloading", ya agrupado por día del lado del servidor.
+function renderUnloadingChart(d) {
+  const dayEntries = Object.entries(d.unloadingByDay || {}).sort((a, b) => a[0].localeCompare(b[0]));
+  const total = dayEntries.reduce((sum, [, v]) => sum + v, 0);
+  const kpis = [
+    { label: 'Unloading Trucks', value: total, sub: dayEntries.length ? 'over ' + dayEntries.length + ' day' + (dayEntries.length === 1 ? '' : 's') : '', color: '#2563EB' }
+  ];
+  document.getElementById('kpis-unloading').innerHTML = kpiCardsHtml(kpis);
+  renderTrendLineChart('chartUnloadingTrend', dayEntries, '#2563EB', 'rgba(37,99,235,0.15)');
+}
 const RENDER_FNS = {
   core: renderCoreKpis, boxes: renderBoxesKpis, status: renderStatusChart, product: renderProductChart,
   day: renderDayChart, person: renderPersonChart, complete: renderCompleteChart, shipped: renderShippedChart,
   vendedor: renderVendedorChart, bayUsage: renderBayUsageChart, leftBehind: renderLeftBehindChart,
-  overdue: renderOverduePanel
+  overdue: renderOverduePanel, unloading: renderUnloadingChart
 };
 
 
