@@ -2778,7 +2778,7 @@ async function loadOrdenes() {
   list.innerHTML='<div class="empty-state"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i>Loading...</div>';
   showRefreshSpinner();
   try {
-    const r=await fetch(`${API}?action=getAll&sessionToken=${encodeURIComponent(SESSION_TOKEN)}`); ordenes=await r.json();
+    const r=await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getAll' }) }); ordenes=await r.json();
     if (searchActive) {
       const raw = document.getElementById('enc-search').value.trim();
       if (raw) { renderSearchResults(raw); return; }
