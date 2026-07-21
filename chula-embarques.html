@@ -451,7 +451,8 @@
       <p class="top-bar-title">Data Analysis</p>
       <div style="display:flex;gap:8px;">
         <button class="btn-back" onclick="analyticsBack()">← Back</button>
-        <button class="btn-back" onclick="refreshAllPanels()"><i class="ti ti-refresh"></i> Refresh</button>
+        <button class="btn-back" onclick="refreshAllPanels()" title="Refresh"><i class="ti ti-refresh"></i></button>
+        <button class="btn-back" onclick="exportAnalyticsCSV()" title="Export to CSV"><i class="ti ti-download"></i> Export</button>
       </div>
     </div>
     <div class="filter-row">
@@ -694,6 +695,7 @@
           </div>
         </div>
         <div class="kpi-grid" id="kpis-overdue"></div>
+        <canvas id="chartOverdueTrend" style="margin-top:8px;"></canvas>
         <div id="overdueByProduct"></div>
         <div id="overdueWorstList"></div>
       </div>
@@ -2267,6 +2269,89 @@ async function refreshPanel(panelKey, force) {
 }
 function refreshAllPanels() { rangeCache = {}; ALL_PANEL_KEYS.forEach(k => refreshPanel(k, true)); }
 
+// ── Export a CSV ──
+// Usa panelData (lo último que ya se pidió por panel, respetando el rango/filtro de
+// cada uno) — no vuelve a pedirle nada al servidor, solo arma el archivo con lo que
+// ya está en pantalla ahorita mismo.
+function csvEscape(val) {
+  const s = String(val === undefined || val === null ? '' : val);
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function csvRow(cells) { return cells.map(csvEscape).join(','); }
+function exportAnalyticsCSV() {
+  const selected = getSelectedFruits();
+  const rows = [csvRow(['Panel', 'Metric', 'Value'])];
+
+  const core = panelData.core;
+  if (core) {
+    const v = filteredOrderCounts(core, selected);
+    rows.push(csvRow(['Summary', 'Total Orders', v.total]), csvRow(['Summary', 'Departed', v.departed]),
+      csvRow(['Summary', 'Pending', v.pending]), csvRow(['Summary', 'Incomplete', v.incomplete]));
+  }
+  const boxes = panelData.boxes;
+  if (boxes) {
+    const sumSelected = (obj) => Object.keys(obj).reduce((sum, k) => sum + (selected.includes(k) ? obj[k] : 0), 0);
+    rows.push(csvRow(['Boxes', 'Boxes Ordered', sumSelected(boxes.boxesByCategory)]),
+      csvRow(['Boxes', 'Boxes Shipped', sumSelected(boxes.boxesByCategoryShipped)]));
+  }
+  const status = panelData.status;
+  if (status) LABELS.forEach((l, i) => rows.push(csvRow(['Orders by Status', l, status.statusCounts[i] || 0])));
+  const product = panelData.product;
+  if (product) Object.keys(product.boxesByCategory).filter(k => selected.includes(k))
+    .forEach(k => rows.push(csvRow(['Boxes by Product', PRODUCT_LABELS[k] || k, product.boxesByCategory[k]])));
+  const day = panelData.day;
+  if (day) Object.entries(day.byDay || {}).sort((a, b) => a[0].localeCompare(b[0]))
+    .forEach(([dt, v]) => rows.push(csvRow(['Departed per Day', dt, v])));
+  const complete = panelData.complete;
+  if (complete) {
+    const v = filteredOrderCounts(complete, selected);
+    rows.push(csvRow(['Complete vs Incomplete', 'Complete', v.departed - v.incomplete]),
+      csvRow(['Complete vs Incomplete', 'Incomplete', v.incomplete]));
+  }
+  const shipped = panelData.shipped;
+  if (shipped) {
+    const v = filteredOrderCounts(shipped, selected);
+    rows.push(csvRow(['Shipped vs Not Shipped', 'Shipped', v.departed]), csvRow(['Shipped vs Not Shipped', 'Not Shipped', v.pending]));
+  }
+  const person = panelData.person;
+  if (person) Object.entries(person.changesByUser || {}).sort((a, b) => b[1] - a[1])
+    .forEach(([n, v]) => rows.push(csvRow(['Activity by Person', n, v])));
+  const vendedor = panelData.vendedor;
+  if (vendedor) Object.entries(vendedor.boxesByVendedor || {}).sort((a, b) => b[1] - a[1])
+    .forEach(([n, v]) => rows.push(csvRow(['Boxes by Salesperson', n, v])));
+  const bayUsage = panelData.bayUsage;
+  if (bayUsage) Object.entries(bayUsage.bayUsage || {}).sort((a, b) => b[1] - a[1])
+    .forEach(([n, v]) => rows.push(csvRow(['Bay Usage', n, v])));
+  const leftBehind = panelData.leftBehind;
+  if (leftBehind) Object.entries(leftBehind.leftBehindByDay || {}).sort((a, b) => a[0].localeCompare(b[0]))
+    .forEach(([dt, v]) => rows.push(csvRow(['Left Behind per Day', dt, v])));
+  const overdue = panelData.overdue;
+  if (overdue) {
+    const all = Array.isArray(overdue.overdueList) ? overdue.overdueList : [];
+    const filtered = selected.length === ALL_FRUIT_KEYS.length ? all : all.filter(o => (o.categories || []).some(c => selected.includes(c)));
+    const avg = filtered.length ? filtered.reduce((s, o) => s + o.hours, 0) / filtered.length : 0;
+    rows.push(csvRow(['Overdue', 'Avg Overdue', formatHoursMin(avg)]), csvRow(['Overdue', 'Orders Overdue', filtered.length]));
+    const byProduct = {};
+    filtered.forEach(o => (o.categories || []).forEach(c => {
+      if (!byProduct[c]) byProduct[c] = { sum: 0, count: 0 };
+      byProduct[c].sum += o.hours; byProduct[c].count++;
+    }));
+    Object.keys(byProduct).sort((a, b) => (byProduct[b].sum / byProduct[b].count) - (byProduct[a].sum / byProduct[a].count))
+      .forEach(k => rows.push(csvRow(['Overdue by Product', PRODUCT_LABELS[k] || k, formatHoursMin(byProduct[k].sum / byProduct[k].count)])));
+    filtered.slice().sort((a, b) => b.hours - a.hours).slice(0, 5)
+      .forEach(o => rows.push(csvRow(['Overdue Top 5', '#' + o.orden + ' — ' + o.cliente, formatHoursMin(o.hours)])));
+  }
+
+  if (rows.length <= 1) { showToast('Nothing to export yet'); return; }
+  const csv = rows.join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'chula-data-analysis-' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 // ── Render por panel ──
 function renderCoreKpis(d) {
   const v = filteredOrderCounts(d, getSelectedFruits());
@@ -2447,6 +2532,27 @@ function renderOverduePanel(d) {
     { label: 'Avg Overdue', value: formatHoursMin(avgHours), sub: filtered.length + ' order' + (filtered.length === 1 ? '' : 's'), color: '#DC2626' }
   ];
   document.getElementById('kpis-overdue').innerHTML = kpiCardsHtml(kpis);
+
+  // Tendencia por día — promedio de horas overdue agrupado por la fecha del pedido,
+  // para ver si va mejorando o empeorando con el tiempo (no solo la foto de ahorita).
+  const byDay = {};
+  filtered.forEach(o => {
+    if (!o.fecha) return;
+    if (!byDay[o.fecha]) byDay[o.fecha] = { sum: 0, count: 0 };
+    byDay[o.fecha].sum += o.hours; byDay[o.fecha].count++;
+  });
+  const dayEntries = Object.entries(byDay).sort((a, b) => a[0].localeCompare(b[0]));
+  makeChart('chartOverdueTrend', {
+    type: 'line',
+    data: {
+      labels: dayEntries.map(([day]) => day.slice(5)),
+      datasets: [{ data: dayEntries.map(([, v]) => Math.round((v.sum / v.count) * 10) / 10), borderColor: '#DC2626', backgroundColor: 'rgba(220,38,38,0.15)', fill: true, tension: 0.3, pointRadius: 3 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { font: { size: 10 }, callback: v => formatHoursMin(v) } }, x: { ticks: { font: { size: 9 } } } }
+    }
+  });
 
   // Promedio por producto — un pedido mixto (ej. Limes + Aloe) cuenta sus horas para
   // cada producto que trae, igual que ya se hace con las cajas en el resto de Analytics.
