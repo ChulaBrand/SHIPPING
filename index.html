@@ -2570,6 +2570,15 @@ function pushSection(rows, buildFn) {
   buildFn();
   if (rows.length > before) rows.push('');
 }
+// Todas las fechas del rango, una por una — incluye los días sin nada (0 en todo) para
+// que la tabla salga completa y sin huecos, lista para graficar en Excel tal cual.
+function dateRangeDays(start, end) {
+  const days = [];
+  const cur = new Date(start + 'T00:00:00');
+  const endD = new Date(end + 'T00:00:00');
+  while (cur <= endD) { days.push(toISO(cur)); cur.setDate(cur.getDate() + 1); }
+  return days;
+}
 async function downloadAnalyticsCSV() {
   const start = document.getElementById('exportStart').value;
   const end = document.getElementById('exportEnd').value;
@@ -2583,8 +2592,65 @@ async function downloadAnalyticsCSV() {
     if (d.error) { showToast(d.error); return; }
     const selected = getSelectedFruits();
     const rangeStr = start === end ? formatShortDate(start) : `${formatShortDate(start)} to ${formatShortDate(end)}`;
-    const rows = [csvRow(['Chula Brand — Data Analysis Export']), csvRow(['Range', rangeStr]), '', csvRow(['Panel', 'Metric', 'Value']), ''];
+    const rows = [csvRow(['Chula Brand — Data Analysis Export']), csvRow(['Range', rangeStr]), ''];
+    const days = dateRangeDays(start, end);
+    const fruitFilterActive = selected.length !== ALL_FRUIT_KEYS.length;
+    const orderSummaries = Array.isArray(d.orderSummaries) ? d.orderSummaries : [];
 
+    // "Daily Breakdown" — un renglón por día (día por día, tal como se pidió) con las
+    // métricas principales, así se puede analizar/graficar la tendencia directo en Excel
+    // sin tener que armar tablas dinámicas primero. Se agrupa por o.fecha (fecha en que
+    // se CREÓ el pedido) — igual que "Departed per Day" en pantalla, a propósito, para
+    // poder ver los pedidos que nunca se actualizan.
+    pushSection(rows, () => {
+      const daily = {};
+      days.forEach(day => daily[day] = { total: 0, departed: 0, pending: 0, incomplete: 0, boxesOrdered: 0, boxesShipped: 0 });
+      orderSummaries.forEach(o => {
+        const bucket = daily[o.fecha];
+        if (!bucket) return; // fuera del rango pedido
+        if (fruitFilterActive && !(o.categories || []).some(c => selected.includes(c))) return;
+        bucket.total++;
+        if (o.estatus === 6) { bucket.departed++; if (o.incomplete) bucket.incomplete++; } else bucket.pending++;
+        Object.entries(o.boxesByCat || {}).forEach(([cat, qty]) => {
+          if (!selected.includes(cat)) return;
+          bucket.boxesOrdered += qty;
+          if (o.estatus === 6) bucket.boxesShipped += qty;
+        });
+      });
+      const overdueByDay = {};
+      (Array.isArray(d.overdueList) ? d.overdueList : []).forEach(o => {
+        if (fruitFilterActive && !(o.categories || []).some(c => selected.includes(c))) return;
+        if (!overdueByDay[o.fecha]) overdueByDay[o.fecha] = { sum: 0, count: 0 };
+        overdueByDay[o.fecha].sum += o.hours; overdueByDay[o.fecha].count++;
+      });
+      rows.push(csvRow(['Date', 'Total Orders', 'Departed', 'Pending', 'Incomplete', 'Boxes Ordered', 'Boxes Shipped', 'Left Behind', 'Unloading Trucks', 'Overdue Orders', 'Avg Overdue']));
+      days.forEach(day => {
+        const b = daily[day];
+        const od = overdueByDay[day];
+        rows.push(csvRow([day, b.total, b.departed, b.pending, b.incomplete, b.boxesOrdered, b.boxesShipped,
+          (d.leftBehindByDay || {})[day] || 0, (d.unloadingByDay || {})[day] || 0,
+          od ? od.count : 0, od ? formatHoursMin(od.sum / od.count) : '']));
+      });
+    });
+    // "Daily Boxes by Product" — mismo día por día, pero desglosado por fruta, para ver
+    // qué producto se mueve más cada día (no solo el total mezclado de arriba).
+    pushSection(rows, () => {
+      const cats = ALL_FRUIT_KEYS.filter(k => selected.includes(k));
+      const daily = {};
+      days.forEach(day => daily[day] = {});
+      orderSummaries.forEach(o => {
+        const bucket = daily[o.fecha];
+        if (!bucket) return;
+        Object.entries(o.boxesByCat || {}).forEach(([cat, qty]) => {
+          if (!selected.includes(cat)) return;
+          bucket[cat] = (bucket[cat] || 0) + qty;
+        });
+      });
+      rows.push(csvRow(['Date', ...cats.map(c => PRODUCT_LABELS[c] || c)]));
+      days.forEach(day => rows.push(csvRow([day, ...cats.map(c => daily[day][c] || 0)])));
+    });
+
+    rows.push(csvRow(['Panel', 'Metric', 'Value']), '');
     pushSection(rows, () => {
       const v = filteredOrderCounts(d, selected);
       rows.push(csvRow(['Summary', 'Total Orders', v.total]), csvRow(['Summary', 'Departed', v.departed]),
@@ -2602,10 +2668,6 @@ async function downloadAnalyticsCSV() {
       Object.keys(d.boxesByCategory).filter(k => selected.includes(k))
         .sort((a, b) => d.boxesByCategory[b] - d.boxesByCategory[a])
         .forEach(k => rows.push(csvRow(['Boxes by Product', PRODUCT_LABELS[k] || k, d.boxesByCategory[k]])));
-    });
-    pushSection(rows, () => {
-      Object.entries(d.byDay || {}).sort((a, b) => a[0].localeCompare(b[0]))
-        .forEach(([dt, v]) => rows.push(csvRow(['Departed per Day', dt, v])));
     });
     pushSection(rows, () => {
       const v = filteredOrderCounts(d, selected);
@@ -2627,14 +2689,6 @@ async function downloadAnalyticsCSV() {
     pushSection(rows, () => {
       Object.entries(d.bayUsage || {}).sort((a, b) => b[1] - a[1])
         .forEach(([n, v]) => rows.push(csvRow(['Bay Usage', n, v])));
-    });
-    pushSection(rows, () => {
-      Object.entries(d.leftBehindByDay || {}).sort((a, b) => a[0].localeCompare(b[0]))
-        .forEach(([dt, v]) => rows.push(csvRow(['Left Behind per Day', dt, v])));
-    });
-    pushSection(rows, () => {
-      Object.entries(d.unloadingByDay || {}).sort((a, b) => a[0].localeCompare(b[0]))
-        .forEach(([dt, v]) => rows.push(csvRow(['Unloading Trucks', dt, v])));
     });
     pushSection(rows, () => {
       const all = Array.isArray(d.overdueList) ? d.overdueList : [];
