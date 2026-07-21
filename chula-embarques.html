@@ -54,6 +54,7 @@
     --danger-bg:#FEF2F2; --danger-border:#FCA5A5; --danger-text:#B91C1C; --danger-text-strong:#7F1D1D;
     --success-bg:#F0FDF4; --success-border:#86EFAC; --success-text:#15803D;
     --warn-bg:#FEF3C7; --warn-border:#FDE68A; --warn-text:#92400E;
+    --accent-tint-bg:#F5F0FE;
   }
   /* Modo oscuro: sigue el sistema operativo por default; [data-theme] es el toggle
      manual (guardado en localStorage) y siempre gana sobre lo que diga el sistema. */
@@ -74,6 +75,7 @@
       --danger-bg:rgba(248,113,113,.15); --danger-border:#F87171; --danger-text:#FCA5A5; --danger-text-strong:#FECACA;
       --success-bg:rgba(74,222,128,.15); --success-border:#4ADE80; --success-text:#86EFAC;
       --warn-bg:rgba(250,204,21,.15); --warn-border:#FACC15; --warn-text:#FDE68A;
+      --accent-tint-bg:rgba(145,99,232,.18);
     }
   }
   :root[data-theme="dark"] {
@@ -92,6 +94,7 @@
     --danger-bg:rgba(248,113,113,.15); --danger-border:#F87171; --danger-text:#FCA5A5; --danger-text-strong:#FECACA;
     --success-bg:rgba(74,222,128,.15); --success-border:#4ADE80; --success-text:#86EFAC;
     --warn-bg:rgba(250,204,21,.15); --warn-border:#FACC15; --warn-text:#FDE68A;
+    --accent-tint-bg:rgba(145,99,232,.18);
   }
   html, body { overscroll-behavior-y: contain; }
   body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:2rem 1rem 4rem; }
@@ -140,7 +143,7 @@
   .role-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; }
   .role-btn { background:var(--white); border:1.5px solid var(--border); border-radius:16px; padding:2rem 1rem 1.75rem; cursor:pointer; text-align:center; transition:border-color .15s,transform .1s,box-shadow .15s; }
   .role-btn:hover { border-color:var(--purple); box-shadow:0 6px 16px rgba(91,42,134,.10); } .role-btn:active { transform:scale(.97); }
-  .role-icon-wrap { width:56px; height:56px; border-radius:50%; background:#F5F0FE; display:flex; align-items:center; justify-content:center; margin:0 auto 12px; }
+  .role-icon-wrap { width:56px; height:56px; border-radius:50%; background:var(--accent-tint-bg); display:flex; align-items:center; justify-content:center; margin:0 auto 12px; }
   .role-icon { font-size:26px; color:var(--purple); margin-bottom:0; display:block; }
   .role-title { font-size:15px; font-weight:700; margin-bottom:4px; }
   .role-desc { font-size:12.5px; color:var(--text-faint); line-height:1.4; }
@@ -172,7 +175,7 @@
   .pkey { height:54px; font-size:20px; font-weight:500; background:var(--white); border:1px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; color:var(--text); font-family:'Inter',sans-serif; }
   .pkey:active { background:var(--bg); transform:scale(.95); }
   .pkey.del { font-size:16px; color:var(--text-muted); }
-  .pin-error { font-size:13px; color:#dc2626; min-height:20px; margin-bottom:10px; }
+  .pin-error { font-size:13px; color:var(--danger-text); min-height:20px; margin-bottom:10px; }
   .inp { font-family:'IBM Plex Mono',monospace; font-size:16px; width:100%; padding:0 14px; height:48px; background:var(--white); color:var(--text); border:1px solid var(--border); border-radius:var(--radius-sm); outline:none; margin-bottom:10px; }
   .inp:focus { border-color:var(--green-dark); }
   .inp-sm { font-family:'IBM Plex Mono',monospace; font-size:13px; flex:1; padding:0 11px; height:42px; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:var(--radius-sm); outline:none; min-width:0; }
@@ -221,12 +224,12 @@
   .filter-row { display:flex; gap:8px; margin-bottom:12px; position:relative; }
   .dropdown-wrap { position:relative; }
   .dropdown-btn { display:flex; align-items:center; gap:4px; font-size:13px; font-weight:600; padding:8px 14px; border-radius:99px; border:1.5px solid var(--border-strong); background:var(--white); color:var(--text); cursor:pointer; font-family:'Inter',sans-serif; }
-  .dropdown-btn.open, .dropdown-btn.has-filter { border-color:var(--purple); color:var(--purple); background:#F5F0FE; }
+  .dropdown-btn.open, .dropdown-btn.has-filter { border-color:var(--purple); color:var(--purple); background:var(--accent-tint-bg); }
   .dropdown-panel { display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:20; background:var(--white); border:1px solid var(--border); border-radius:var(--radius-sm); box-shadow:0 6px 18px rgba(0,0,0,.12); padding:8px; min-width:190px; }
   .dropdown-panel.open { display:block; }
   .dropdown-option { display:block; width:100%; text-align:left; font-size:13px; font-family:'Inter',sans-serif; padding:8px 10px; border:none; background:none; border-radius:6px; cursor:pointer; color:var(--text); }
   .dropdown-option:hover { background:var(--bg); }
-  .dropdown-option.active { color:var(--purple); font-weight:700; background:#F5F0FE; }
+  .dropdown-option.active { color:var(--purple); font-weight:700; background:var(--accent-tint-bg); }
   .dropdown-checkbox { display:flex; align-items:center; gap:8px; font-size:13px; padding:6px 10px; cursor:pointer; color:var(--text); }
   .dropdown-checkbox:hover { background:var(--bg); border-radius:6px; }
   .analytics-panel-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px; }
@@ -294,7 +297,7 @@
   .meta-row { display:flex; justify-content:space-between; border-top:1px solid var(--border); padding-top:1rem; margin-top:.25rem; }
   .meta-label { font-size:12px; color:var(--text-faint); }
   .meta-val { font-size:12px; color:var(--text-muted); font-weight:500; }
-  .error-msg { font-size:13px; color:#dc2626; margin:10px 0 0; display:none; }
+  .error-msg { font-size:13px; color:var(--danger-text); margin:10px 0 0; display:none; }
   /* clerk status btns — 3+3 grid */
   .status-btns { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:8px; }
   .sbtn { height:40px; font-size:11px; font-weight:500; border:2px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; background:var(--bg); color:var(--text-muted); font-family:'Inter',sans-serif; line-height:1.2; padding:0 4px; }
@@ -364,7 +367,7 @@
   /* upload-status: usado por el panel de Admin (mensajes de agregar usuario) */
   .upload-status { font-size:13px; font-family:'IBM Plex Mono',monospace; text-align:center; margin-bottom:12px; display:none; }
   .upload-status.show { display:block; }
-  .upload-status.err { color:#dc2626; }
+  .upload-status.err { color:var(--danger-text); }
   .upload-status.ok { color:var(--green-dark); }
   .upload-status.loading { color:var(--purple); }
 
@@ -427,7 +430,7 @@
   .view-toggle-btn.active { background:var(--danger-bg); border-color:var(--danger-border); color:var(--danger-text); }
   .filter-chips { display:flex; flex-wrap:wrap; gap:6px; }
   .filter-chip { font-size:12.5px; font-weight:700; width:34px; height:34px; border-radius:50%; border:1.5px solid var(--border-strong); background:var(--white); color:var(--text-muted); cursor:pointer; font-family:'Inter',sans-serif; display:flex; align-items:center; justify-content:center; }
-  .filter-chip.active { border-color:var(--purple); color:var(--purple); background:#F5F0FE; }
+  .filter-chip.active { border-color:var(--purple); color:var(--purple); background:var(--accent-tint-bg); }
 
   /* Compact order card */
   .order-card-compact { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:.75rem 1rem; display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; }
@@ -962,7 +965,7 @@
     <div id="normal-orders-wrap">
       <div class="attention-counts" id="attentionCounts"></div>
       <div id="attention-section" style="display:none;">
-        <p class="section-label" style="color:#B91C1C;">⚠️ Needs Attention</p>
+        <p class="section-label" style="color:var(--danger-text);">⚠️ Needs Attention</p>
         <div class="orders-list" id="attention-list"></div>
       </div>
       <p class="section-label" id="orders-list-label">Today's orders</p>
@@ -981,11 +984,11 @@
       </div>
     </div>
     <div id="cancelled-section" style="display:none;">
-      <p class="section-label" style="color:#B91C1C;">🗑 Cancelled Orders</p>
+      <p class="section-label" style="color:var(--danger-text);">🗑 Cancelled Orders</p>
       <div class="orders-list" id="cancelled-list"></div>
     </div>
     <div id="eta-section" style="display:none;">
-      <p class="section-label" style="color:#CA8A04;">🕒 Expected Ready Set</p>
+      <p class="section-label" style="color:var(--warn-text);">🕒 Expected Ready Set</p>
       <div class="orders-list" id="eta-list"></div>
     </div>
   </div>
@@ -2585,6 +2588,10 @@ function sizeHorizontalBarChart(wrapId, count) {
 }
 function renderHorizontalBarChart(chartId, wrapId, entries, color) {
   sizeHorizontalBarChart(wrapId, entries.length);
+  // El número se dibuja FUERA de la barra, sobre el fondo del panel (var(--white)) — con
+  // #1a1a1a fijo se veía casi negro sobre negro en modo oscuro. var(--text) ya está
+  // pensado exactamente para "texto sobre la superficie de una tarjeta" en ambos temas.
+  const labelColor = getComputedStyle(document.documentElement).getPropertyValue('--text').trim();
   makeChart(chartId, {
     type: 'bar',
     data: { labels: entries.map(([n]) => n), datasets: [{ data: entries.map(([, v]) => v), backgroundColor: color, borderRadius: 4 }] },
@@ -2594,7 +2601,7 @@ function renderHorizontalBarChart(chartId, wrapId, entries, color) {
       layout: { padding: { right: 26 } },
       plugins: {
         legend: { display: false },
-        datalabels: { color: '#1a1a1a', anchor: 'end', align: 'end', font: { size: 10, weight: '600' } }
+        datalabels: { color: labelColor, anchor: 'end', align: 'end', font: { size: 10, weight: '600' } }
       },
       scales: { x: { beginAtZero: true, ticks: { font: { size: 10 } } }, y: { ticks: { font: { size: 10 }, autoSkip: false } } }
     }
@@ -2834,6 +2841,12 @@ async function loadOrdenes() {
     const r=await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getAll' }) });
     const result = await r.json();
     if (isSessionExpiredError(result)) { handleSessionExpired(); return; }
+    // Sin esto, un error genérico del servidor (ej. "El sistema está ocupado" del
+    // candado de concurrencia) dejaba "ordenes" apuntando a {error:...} en vez de un
+    // array — renderOrdenes() tronaba al primer .filter() y el catch de abajo mostraba
+    // "Connection error" (escondiendo el error real), dejando el panel roto hasta el
+    // siguiente refresh que sí funcionara.
+    if (result && result.error) { list.innerHTML = '<div class="empty-state">' + escapeHtml(result.error) + '</div>'; showToast(result.error); return; }
     ordenes = result;
     if (searchActive) {
       const raw = document.getElementById('enc-search').value.trim();
