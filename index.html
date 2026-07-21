@@ -220,6 +220,10 @@
   .kpi-value { font-size:22px; font-weight:700; line-height:1.1; color:var(--kpi-color, var(--text)); font-variant-numeric:tabular-nums; }
   .kpi-label { font-size:10.5px; color:var(--text-muted); margin-top:4px; text-transform:uppercase; letter-spacing:.04em; }
   .kpi-sub { font-size:10.5px; color:var(--text-faint); margin-top:1px; }
+  .kpi-delta { display:block; font-size:10.5px; font-weight:600; margin-top:4px; }
+  .kpi-delta.good { color:var(--success-text); }
+  .kpi-delta.bad { color:var(--danger-text); }
+  .kpi-delta.neutral { color:var(--text-faint); font-weight:500; }
   .kpi-footnote { font-size:10.5px; color:var(--text-faint); margin-bottom:1rem; }
   .filter-row { display:flex; gap:8px; margin-bottom:12px; position:relative; }
   .dropdown-wrap { position:relative; }
@@ -2172,6 +2176,8 @@ let analyticsCharts = {};         // instancias de Chart.js, para destruirlas al
 let rangeCache = {};              // "start|end" -> Promise con la respuesta del servidor (evita pedir 2 veces lo mismo)
 let panelOverride = {};           // panelKey -> 'day'|'week'|'month' | null (sigue el filtro general)
 let panelData = {};               // panelKey -> último dato usado por ese panel (para re-filtrar por fruta sin re-pedir)
+let prevPanelData = {};            // panelKey -> dato del período anterior de igual duración (solo paneles con KPI comparable)
+const COMPARISON_PANELS = ['core', 'boxes', 'overdue', 'unloading'];
 const ALL_FRUIT_KEYS = ['papaya', 'limes', 'pineapples', 'bananas_plantains', 'aloe', 'cucumbers', 'other'];
 const PRODUCT_LABELS = { papaya: 'Papaya', limes: 'Limes', pineapples: 'Pineapples', bananas_plantains: 'Bananas', aloe: 'Aloe Vera', cucumbers: 'Cucumbers', other: 'Other' };
 const PRODUCT_SHORT_LABELS = { papaya: 'PAP', limes: 'LIM', pineapples: 'PIN', bananas_plantains: 'BAN', aloe: 'ALO', cucumbers: 'CUC', other: 'OTH' };
@@ -2337,6 +2343,31 @@ function computeRangeDates(range) {
   }
   return null;
 }
+// Mismo número de días, inmediatamente antes de "start" — así "vs período anterior"
+// funciona igual para Day/Week/Month/Custom sin casos especiales (para Month no es
+// "el mes pasado" calendario, es "los mismos N días antes del 1ro", que igual sirve
+// para ver si vamos mejor o peor).
+function shiftRangeToPrevious(start, end) {
+  const startD = new Date(start + 'T00:00:00');
+  const endD = new Date(end + 'T00:00:00');
+  const days = Math.round((endD - startD) / 86400000) + 1;
+  const prevEnd = new Date(startD); prevEnd.setDate(prevEnd.getDate() - 1);
+  const prevStart = new Date(prevEnd); prevStart.setDate(prevStart.getDate() - (days - 1));
+  return { start: toISO(prevStart), end: toISO(prevEnd) };
+}
+// mode: 'good-up' (subir es bueno, ej. Boxes Shipped), 'bad-up' (subir es malo, ej.
+// Overdue/Incomplete), 'neutral' (solo volumen, sin juicio de bueno/malo, ej. Total Orders).
+function formatDelta(curr, prev, mode) {
+  if (!prev) {
+    if (!curr) return '';
+    return '<span class="kpi-delta neutral">new vs prev.</span>';
+  }
+  const pctChange = Math.round(((curr - prev) / prev) * 100);
+  if (pctChange === 0) return '<span class="kpi-delta neutral">· same as prev.</span>';
+  const up = pctChange > 0;
+  const cls = mode === 'neutral' ? 'neutral' : ((up && mode === 'good-up') || (!up && mode === 'bad-up') ? 'good' : 'bad');
+  return `<span class="kpi-delta ${cls}">${up ? '▲' : '▼'} ${Math.abs(pctChange)}% vs prev.</span>`;
+}
 // El rango que le toca a un panel en concreto: su propio override si tiene uno puesto;
 // si no, el "default inteligente" (Week) si el filtro general está en Day y este panel
 // está en la lista de excepciones; si no, sigue al filtro general tal cual.
@@ -2423,7 +2454,7 @@ function makeChart(id, config) {
   analyticsCharts[id] = new Chart(ctx, config);
 }
 function kpiCardsHtml(kpis) {
-  return kpis.map(k => `<div class="kpi-card" style="--kpi-color:${k.color};"><div class="kpi-value">${k.value}</div><div class="kpi-label">${k.label}</div><div class="kpi-sub">${k.sub}</div></div>`).join('');
+  return kpis.map(k => `<div class="kpi-card" style="--kpi-color:${k.color};"><div class="kpi-value">${k.value}</div><div class="kpi-label">${k.label}</div><div class="kpi-sub">${k.sub}</div>${k.delta || ''}</div>`).join('');
 }
 
 // ── Fetch + orquestación de todos los paneles ──
@@ -2444,6 +2475,16 @@ async function refreshPanel(panelKey, force) {
     const data = await fetchRange(r, force);
     if (data.error) return;
     panelData[panelKey] = data;
+    // Para los paneles con KPIs comparables, se pide también el período anterior
+    // (misma duración, inmediatamente antes) — mismo fetchRange/rangeCache, así que
+    // si ya se pidió ese rango para otro panel no se repite la llamada al servidor.
+    if (COMPARISON_PANELS.includes(panelKey)) {
+      try {
+        const prevRange = shiftRangeToPrevious(r.start, r.end);
+        const prevData = await fetchRange(prevRange, force);
+        if (!prevData.error) prevPanelData[panelKey] = prevData;
+      } catch (e) { /* sin comparación si falla, el panel se ve igual sin el delta */ }
+    }
     RENDER_FNS[panelKey](data);
   } catch (e) { /* silencioso: no tumba los demás paneles */ }
 }
@@ -2537,21 +2578,27 @@ function exportAnalyticsCSV() {
 
 // ── Render por panel ──
 function renderCoreKpis(d) {
-  const v = filteredOrderCounts(d, getSelectedFruits());
+  const selectedFruits = getSelectedFruits();
+  const v = filteredOrderCounts(d, selectedFruits);
+  const prev = prevPanelData.core ? filteredOrderCounts(prevPanelData.core, selectedFruits) : null;
   const kpis = [
-    { label: 'Total Orders', value: v.total, sub: '', color: '#5B21B6' },
-    { label: 'Departed', value: v.departed, sub: pct(v.departed, v.total) + '%', color: '#16A34A' },
-    { label: 'Pending', value: v.pending, sub: pct(v.pending, v.total) + '%', color: '#CA8A04' },
-    { label: 'Incomplete', value: v.incomplete, sub: v.departed ? pct(v.incomplete, v.departed) + '% of departed' : '—', color: '#DC2626' }
+    { label: 'Total Orders', value: v.total, sub: '', color: '#5B21B6', delta: prev ? formatDelta(v.total, prev.total, 'neutral') : '' },
+    { label: 'Departed', value: v.departed, sub: pct(v.departed, v.total) + '%', color: '#16A34A', delta: prev ? formatDelta(v.departed, prev.departed, 'good-up') : '' },
+    { label: 'Pending', value: v.pending, sub: pct(v.pending, v.total) + '%', color: '#CA8A04', delta: prev ? formatDelta(v.pending, prev.pending, 'neutral') : '' },
+    { label: 'Incomplete', value: v.incomplete, sub: v.departed ? pct(v.incomplete, v.departed) + '% of departed' : '—', color: '#DC2626', delta: prev ? formatDelta(v.incomplete, prev.incomplete, 'bad-up') : '' }
   ];
   document.getElementById('kpis-core').innerHTML = kpiCardsHtml(kpis);
 }
 function renderBoxesKpis(d) {
   const selected = getSelectedFruits();
   const sumSelected = (obj) => Object.keys(obj).reduce((sum, k) => sum + (selected.includes(k) ? obj[k] : 0), 0);
+  const ordered = sumSelected(d.boxesByCategory), shipped = sumSelected(d.boxesByCategoryShipped);
+  const prevD = prevPanelData.boxes;
+  const prevOrdered = prevD ? sumSelected(prevD.boxesByCategory) : null;
+  const prevShipped = prevD ? sumSelected(prevD.boxesByCategoryShipped) : null;
   const kpis = [
-    { label: 'Boxes Ordered', value: sumSelected(d.boxesByCategory).toLocaleString('en-US'), sub: '', color: '#2563EB' },
-    { label: 'Boxes Shipped', value: sumSelected(d.boxesByCategoryShipped).toLocaleString('en-US'), sub: '', color: '#0D9488' }
+    { label: 'Boxes Ordered', value: ordered.toLocaleString('en-US'), sub: '', color: '#2563EB', delta: prevD ? formatDelta(ordered, prevOrdered, 'neutral') : '' },
+    { label: 'Boxes Shipped', value: shipped.toLocaleString('en-US'), sub: '', color: '#0D9488', delta: prevD ? formatDelta(shipped, prevShipped, 'good-up') : '' }
   ];
   document.getElementById('kpis-boxes').innerHTML = kpiCardsHtml(kpis);
 }
@@ -2695,8 +2742,15 @@ function renderOverduePanel(d) {
     ? all
     : all.filter(o => (o.categories || []).some(c => selected.includes(c)));
   const avgHours = filtered.length ? filtered.reduce((s, o) => s + o.hours, 0) / filtered.length : 0;
+  const prevD = prevPanelData.overdue;
+  let prevAvgHours = null;
+  if (prevD) {
+    const prevAll = Array.isArray(prevD.overdueList) ? prevD.overdueList : [];
+    const prevFiltered = selected.length === ALL_FRUIT_KEYS.length ? prevAll : prevAll.filter(o => (o.categories || []).some(c => selected.includes(c)));
+    prevAvgHours = prevFiltered.length ? prevFiltered.reduce((s, o) => s + o.hours, 0) / prevFiltered.length : 0;
+  }
   const kpis = [
-    { label: 'Avg Overdue', value: formatHoursMin(avgHours), sub: filtered.length + ' order' + (filtered.length === 1 ? '' : 's'), color: '#DC2626' }
+    { label: 'Avg Overdue', value: formatHoursMin(avgHours), sub: filtered.length + ' order' + (filtered.length === 1 ? '' : 's'), color: '#DC2626', delta: prevD ? formatDelta(avgHours, prevAvgHours, 'bad-up') : '' }
   ];
   document.getElementById('kpis-overdue').innerHTML = kpiCardsHtml(kpis);
 
@@ -2741,8 +2795,10 @@ function renderOverduePanel(d) {
 function renderUnloadingChart(d) {
   const dayEntries = Object.entries(d.unloadingByDay || {}).sort((a, b) => a[0].localeCompare(b[0]));
   const total = dayEntries.reduce((sum, [, v]) => sum + v, 0);
+  const prevD = prevPanelData.unloading;
+  const prevTotal = prevD ? Object.values(prevD.unloadingByDay || {}).reduce((sum, v) => sum + v, 0) : null;
   const kpis = [
-    { label: 'Unloading Trucks', value: total, sub: dayEntries.length ? 'over ' + dayEntries.length + ' day' + (dayEntries.length === 1 ? '' : 's') : '', color: '#2563EB' }
+    { label: 'Unloading Trucks', value: total, sub: dayEntries.length ? 'over ' + dayEntries.length + ' day' + (dayEntries.length === 1 ? '' : 's') : '', color: '#2563EB', delta: prevD ? formatDelta(total, prevTotal, 'neutral') : '' }
   ];
   document.getElementById('kpis-unloading').innerHTML = kpiCardsHtml(kpis);
   renderTrendLineChart('chartUnloadingTrend', dayEntries, '#2563EB', 'rgba(37,99,235,0.15)');
