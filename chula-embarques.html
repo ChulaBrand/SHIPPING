@@ -1139,6 +1139,16 @@ function yesterdayStr() {
   const d = new Date(Date.now() - 5*3600000); d.setDate(d.getDate()-1);
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
+// SIN el corte de 5h — fecha real de calendario, tal cual la marca el reloj ahorita.
+// setExpectedReadyTime() la necesita así (no la de "día de negocio"): las horas del
+// dropdown (timeSlotOptions) son horas de reloj reales de HOY, así que si alguien pone
+// una hora entre medianoche y 4:59am, tiene que ir pegada a la fecha real de hoy, no a
+// la de "ayer" que da todayStr() — si no, la hora guardada queda horas en el pasado
+// desde el momento mismo en que se guarda, y el pedido sale "Overdue" de inmediato.
+function realDateStr() {
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 function formatLastUpdated(hora, fecha) {
   if(!hora || hora==='—' || hora==='undefined') return '—';
   const today = todayStr();
@@ -1268,7 +1278,7 @@ function timeSlotOptions(selectedHHMM) {
   return html;
 }
 function setExpectedReadyTime(orden, hhmm) {
-  setExpectedReady(orden, hhmm ? todayStr() + 'T' + hhmm : '');
+  setExpectedReady(orden, hhmm ? realDateStr() + 'T' + hhmm : '');
 }
 // El feed de Citrus/Lima guarda la hora exacta que manda (ej. "12:07"), no alineada a
 // :00/:30 — el <select> de arriba solo tiene opciones cada 30 min, así que si nadie
@@ -2735,8 +2745,13 @@ function renderDriverCard(o, highlighted) {
   </div>`;
 }
 
-async function buscar() {
-  const raw = document.getElementById('orden-input').value.trim();
+// overrideVal: usado por el auto-refresh para volver a buscar la ÚLTIMA orden que
+// de verdad se buscó (lastChoferSearch), sin importar qué haya a medio escribir en el
+// input ahorita — si no, el refresh automático (cada 30s) podía agarrar texto a medio
+// teclear (alguien empezando a escribir un número nuevo sin haberle dado Search) y
+// tapar el tracking válido que se estaba viendo con un "Order not found".
+async function buscar(overrideVal) {
+  const raw = overrideVal !== undefined ? overrideVal : document.getElementById('orden-input').value.trim();
   if(!raw) return;
   lastChoferSearch = raw;
   const val = 'SP00' + raw.replace(/^SP00/i, '');
@@ -4199,7 +4214,7 @@ let lastChoferSearch = '';
 function scheduleChoferRefresh() {
   setTimeout(() => {
     const choferScreen = document.getElementById('screen-chofer');
-    if (choferScreen && choferScreen.classList.contains('active') && lastChoferSearch) buscar();
+    if (choferScreen && choferScreen.classList.contains('active') && lastChoferSearch) buscar(lastChoferSearch);
     scheduleChoferRefresh();
   }, Math.max(10, CHOFER_REFRESH_SECONDS || 30) * 1000);
 }
