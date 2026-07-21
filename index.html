@@ -150,6 +150,8 @@
   .top-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; }
   .top-bar-title { font-size:17px; font-weight:600; }
   .btn-back { background:none; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px; color:var(--text-muted); cursor:pointer; padding:5px 12px; font-family:'Inter',sans-serif; }
+  .btn-back:disabled { opacity:.5; cursor:default; }
+  .spin-icon { display:inline-block; animation:spin .8s linear infinite; }
   .admin-tabs { display:flex; gap:6px; margin-bottom:1.25rem; border-bottom:1px solid var(--border); overflow-x:auto; }
   .admin-tab-btn { background:none; border:none; border-bottom:2px solid transparent; font-size:13px; font-weight:500; color:var(--text-muted); cursor:pointer; padding:8px 4px; font-family:'Inter',sans-serif; white-space:nowrap; }
   .admin-tab-btn.active { color:var(--green-dark); border-bottom-color:var(--green-dark); }
@@ -531,7 +533,7 @@
       <p class="top-bar-title">Data Analysis</p>
       <div style="display:flex;gap:8px;">
         <button class="btn-back" onclick="analyticsBack()">← Back</button>
-        <button class="btn-back" onclick="refreshAllPanels()" title="Refresh" aria-label="Refresh"><i class="ti ti-refresh"></i></button>
+        <button class="btn-back" id="analyticsRefreshBtn" onclick="refreshAllPanels()" title="Refresh" aria-label="Refresh"><i class="ti ti-refresh" id="analyticsRefreshIcon"></i></button>
         <button class="btn-back" onclick="exportAnalyticsCSV()" title="Export to CSV" aria-label="Export to CSV"><i class="ti ti-download"></i> Export</button>
       </div>
     </div>
@@ -2377,12 +2379,19 @@ function effectiveRangeFor(panelKey) {
   if (analyticsRange === 'custom') return customRangeValue;
   return computeRangeDates(analyticsRange);
 }
+function formatShortDate(iso) {
+  if (!iso) return '';
+  return new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
 // Etiqueta corta para la pastillita de cada panel — así se ve de un vistazo qué
-// rango está viendo cada quien sin tener que abrir su mini-filtro "⋯".
+// rango está viendo cada quien sin tener que abrir su mini-filtro "⋯". Para Custom,
+// en vez de solo decir "Custom" a secas, muestra las fechas de verdad que se
+// escogieron (ej. "Jul 10 – Jul 20").
 function rangeKeyLabel(key) {
   if (key === 'day') return 'Day';
   if (key === 'week') return 'Last 7 days';
   if (key === 'month') return 'Month';
+  if (customRangeValue) return formatShortDate(customRangeValue.start) + ' – ' + formatShortDate(customRangeValue.end);
   return 'Custom';
 }
 function updatePanelBadge(panelKey) {
@@ -2401,7 +2410,14 @@ function setAnalyticsRange(range) {
   analyticsRange = range;
   document.querySelectorAll('#rangeDropdownPanel .dropdown-option').forEach(b => b.classList.toggle('active', b.dataset.range === range));
   document.getElementById('analyticsCustomRange').style.display = (range === 'custom') ? 'flex' : 'none';
-  const label = range === 'default' ? 'Default' : range === 'day' ? 'Day' : range === 'week' ? 'Week' : range === 'month' ? 'Month' : 'Custom';
+  // Si ya había un rango custom aplicado antes, se deja ver las fechas de verdad
+  // (no el texto genérico "Custom") y se rellenan los inputs para poder editarlas.
+  if (range === 'custom' && customRangeValue) {
+    document.getElementById('analyticsStart').value = customRangeValue.start;
+    document.getElementById('analyticsEnd').value = customRangeValue.end;
+  }
+  const label = range === 'default' ? 'Default' : range === 'day' ? 'Day' : range === 'week' ? 'Week' : range === 'month' ? 'Month'
+    : (customRangeValue ? `${formatShortDate(customRangeValue.start)} – ${formatShortDate(customRangeValue.end)}` : 'Custom');
   document.getElementById('rangeDropdownBtn').innerHTML = `${label} <i class="ti ti-chevron-down"></i>`;
   updateAllPanelBadges();
   if (range !== 'custom') { toggleDropdown('range'); refreshAllPanels(); }
@@ -2411,7 +2427,9 @@ function applyCustomRange() {
   const e = document.getElementById('analyticsEnd').value;
   if (!s || !e) return;
   customRangeValue = { start: s, end: e };
+  document.getElementById('rangeDropdownBtn').innerHTML = `${formatShortDate(s)} – ${formatShortDate(e)} <i class="ti ti-chevron-down"></i>`;
   toggleDropdown('range');
+  updateAllPanelBadges();
   refreshAllPanels();
 }
 function setPanelRange(panelKey, range) {
@@ -2488,7 +2506,25 @@ async function refreshPanel(panelKey, force) {
     RENDER_FNS[panelKey](data);
   } catch (e) { /* silencioso: no tumba los demás paneles */ }
 }
-function refreshAllPanels() { rangeCache = {}; ALL_PANEL_KEYS.forEach(k => refreshPanel(k, true)); }
+// Antes no había ninguna señal de que el botón sí hizo algo (el ícono se quedaba
+// quieto y no avisaba nada al terminar) — ahora gira mientras carga y al final
+// muestra un toast, además de que ya se puede esperar (await) a que de verdad
+// termine, cosa que el pull-to-refresh también necesitaba para no cortar su propio
+// spinner antes de tiempo.
+async function refreshAllPanels() {
+  rangeCache = {};
+  const btn = document.getElementById('analyticsRefreshBtn');
+  const icon = document.getElementById('analyticsRefreshIcon');
+  if (btn) btn.disabled = true;
+  if (icon) icon.classList.add('spin-icon');
+  try {
+    await Promise.all(ALL_PANEL_KEYS.map(k => refreshPanel(k, true)));
+    showToast('Data updated');
+  } finally {
+    if (btn) btn.disabled = false;
+    if (icon) icon.classList.remove('spin-icon');
+  }
+}
 
 // ── Export a CSV ──
 // Usa panelData (lo último que ya se pidió por panel, respetando el rango/filtro de
@@ -2499,58 +2535,92 @@ function csvEscape(val) {
   return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 }
 function csvRow(cells) { return cells.map(csvEscape).join(','); }
+// Rango de fechas que de verdad tiene puesto ESE panel ahorita (puede ser distinto
+// panel a panel) — se imprime como su propio renglón dentro de cada sección, así
+// el Excel dice exactamente qué fechas cubre cada bloque sin tener que adivinar.
+function rangeLabelFor(panelKey) {
+  const r = effectiveRangeFor(panelKey);
+  if (!r) return '';
+  return r.start === r.end ? formatShortDate(r.start) : `${formatShortDate(r.start)} to ${formatShortDate(r.end)}`;
+}
+// Cada sección: un renglón de "Range", sus métricas, y un renglón en blanco al final
+// para que se note dónde empieza la siguiente al abrirlo en Excel/Sheets.
+function pushSection(rows, label, panelKey, buildFn) {
+  const before = rows.length;
+  buildFn();
+  if (rows.length === before) return;
+  rows.splice(before, 0, csvRow([label, 'Range', rangeLabelFor(panelKey)]));
+  rows.push('');
+}
 function exportAnalyticsCSV() {
   const selected = getSelectedFruits();
-  const rows = [csvRow(['Panel', 'Metric', 'Value'])];
+  const rows = [csvRow(['Panel', 'Metric', 'Value']), ''];
 
-  const core = panelData.core;
-  if (core) {
+  pushSection(rows, 'Summary', 'core', () => {
+    const core = panelData.core; if (!core) return;
     const v = filteredOrderCounts(core, selected);
     rows.push(csvRow(['Summary', 'Total Orders', v.total]), csvRow(['Summary', 'Departed', v.departed]),
       csvRow(['Summary', 'Pending', v.pending]), csvRow(['Summary', 'Incomplete', v.incomplete]));
-  }
-  const boxes = panelData.boxes;
-  if (boxes) {
+  });
+  pushSection(rows, 'Boxes', 'boxes', () => {
+    const boxes = panelData.boxes; if (!boxes) return;
     const sumSelected = (obj) => Object.keys(obj).reduce((sum, k) => sum + (selected.includes(k) ? obj[k] : 0), 0);
     rows.push(csvRow(['Boxes', 'Boxes Ordered', sumSelected(boxes.boxesByCategory)]),
       csvRow(['Boxes', 'Boxes Shipped', sumSelected(boxes.boxesByCategoryShipped)]));
-  }
-  const status = panelData.status;
-  if (status) LABELS.forEach((l, i) => rows.push(csvRow(['Orders by Status', l, status.statusCounts[i] || 0])));
-  const product = panelData.product;
-  if (product) Object.keys(product.boxesByCategory).filter(k => selected.includes(k))
-    .forEach(k => rows.push(csvRow(['Boxes by Product', PRODUCT_LABELS[k] || k, product.boxesByCategory[k]])));
-  const day = panelData.day;
-  if (day) Object.entries(day.byDay || {}).sort((a, b) => a[0].localeCompare(b[0]))
-    .forEach(([dt, v]) => rows.push(csvRow(['Departed per Day', dt, v])));
-  const complete = panelData.complete;
-  if (complete) {
+  });
+  pushSection(rows, 'Orders by Status', 'status', () => {
+    const status = panelData.status; if (!status) return;
+    LABELS.forEach((l, i) => rows.push(csvRow(['Orders by Status', l, status.statusCounts[i] || 0])));
+  });
+  pushSection(rows, 'Boxes by Product', 'product', () => {
+    const product = panelData.product; if (!product) return;
+    Object.keys(product.boxesByCategory).filter(k => selected.includes(k))
+      .sort((a, b) => product.boxesByCategory[b] - product.boxesByCategory[a])
+      .forEach(k => rows.push(csvRow(['Boxes by Product', PRODUCT_LABELS[k] || k, product.boxesByCategory[k]])));
+  });
+  pushSection(rows, 'Departed per Day', 'day', () => {
+    const day = panelData.day; if (!day) return;
+    Object.entries(day.byDay || {}).sort((a, b) => a[0].localeCompare(b[0]))
+      .forEach(([dt, v]) => rows.push(csvRow(['Departed per Day', dt, v])));
+  });
+  pushSection(rows, 'Complete vs Incomplete', 'complete', () => {
+    const complete = panelData.complete; if (!complete) return;
     const v = filteredOrderCounts(complete, selected);
     rows.push(csvRow(['Complete vs Incomplete', 'Complete', v.departed - v.incomplete]),
       csvRow(['Complete vs Incomplete', 'Incomplete', v.incomplete]));
-  }
-  const shipped = panelData.shipped;
-  if (shipped) {
+  });
+  pushSection(rows, 'Shipped vs Not Shipped', 'shipped', () => {
+    const shipped = panelData.shipped; if (!shipped) return;
     const v = filteredOrderCounts(shipped, selected);
     rows.push(csvRow(['Shipped vs Not Shipped', 'Shipped', v.departed]), csvRow(['Shipped vs Not Shipped', 'Not Shipped', v.pending]));
-  }
-  const person = panelData.person;
-  if (person) Object.entries(person.changesByUser || {}).sort((a, b) => b[1] - a[1])
-    .forEach(([n, v]) => rows.push(csvRow(['Activity by Person', n, v])));
-  const vendedor = panelData.vendedor;
-  if (vendedor) Object.entries(vendedor.boxesByVendedor || {}).sort((a, b) => b[1] - a[1])
-    .forEach(([n, v]) => rows.push(csvRow(['Boxes by Salesperson', n, v])));
-  const bayUsage = panelData.bayUsage;
-  if (bayUsage) Object.entries(bayUsage.bayUsage || {}).sort((a, b) => b[1] - a[1])
-    .forEach(([n, v]) => rows.push(csvRow(['Bay Usage', n, v])));
-  const leftBehind = panelData.leftBehind;
-  if (leftBehind) Object.entries(leftBehind.leftBehindByDay || {}).sort((a, b) => a[0].localeCompare(b[0]))
-    .forEach(([dt, v]) => rows.push(csvRow(['Left Behind per Day', dt, v])));
-  const unloading = panelData.unloading;
-  if (unloading) Object.entries(unloading.unloadingByDay || {}).sort((a, b) => a[0].localeCompare(b[0]))
-    .forEach(([dt, v]) => rows.push(csvRow(['Unloading Trucks', dt, v])));
-  const overdue = panelData.overdue;
-  if (overdue) {
+  });
+  pushSection(rows, 'Activity by Person', 'person', () => {
+    const person = panelData.person; if (!person) return;
+    Object.entries(person.changesByUser || {}).sort((a, b) => b[1] - a[1])
+      .forEach(([n, v]) => rows.push(csvRow(['Activity by Person', n, v])));
+  });
+  pushSection(rows, 'Boxes by Salesperson', 'vendedor', () => {
+    const vendedor = panelData.vendedor; if (!vendedor) return;
+    Object.entries(vendedor.boxesByVendedor || {}).sort((a, b) => b[1] - a[1])
+      .forEach(([n, v]) => rows.push(csvRow(['Boxes by Salesperson', n, v])));
+  });
+  pushSection(rows, 'Bay Usage', 'bayUsage', () => {
+    const bayUsage = panelData.bayUsage; if (!bayUsage) return;
+    Object.entries(bayUsage.bayUsage || {}).sort((a, b) => b[1] - a[1])
+      .forEach(([n, v]) => rows.push(csvRow(['Bay Usage', n, v])));
+  });
+  pushSection(rows, 'Left Behind per Day', 'leftBehind', () => {
+    const leftBehind = panelData.leftBehind; if (!leftBehind) return;
+    Object.entries(leftBehind.leftBehindByDay || {}).sort((a, b) => a[0].localeCompare(b[0]))
+      .forEach(([dt, v]) => rows.push(csvRow(['Left Behind per Day', dt, v])));
+  });
+  pushSection(rows, 'Unloading Trucks', 'unloading', () => {
+    const unloading = panelData.unloading; if (!unloading) return;
+    Object.entries(unloading.unloadingByDay || {}).sort((a, b) => a[0].localeCompare(b[0]))
+      .forEach(([dt, v]) => rows.push(csvRow(['Unloading Trucks', dt, v])));
+  });
+  pushSection(rows, 'Overdue', 'overdue', () => {
+    const overdue = panelData.overdue; if (!overdue) return;
     const all = Array.isArray(overdue.overdueList) ? overdue.overdueList : [];
     const filtered = selected.length === ALL_FRUIT_KEYS.length ? all : all.filter(o => (o.categories || []).some(c => selected.includes(c)));
     const avg = filtered.length ? filtered.reduce((s, o) => s + o.hours, 0) / filtered.length : 0;
@@ -2564,9 +2634,9 @@ function exportAnalyticsCSV() {
       .forEach(k => rows.push(csvRow(['Overdue by Product', PRODUCT_LABELS[k] || k, formatHoursMin(byProduct[k].sum / byProduct[k].count)])));
     filtered.slice().sort((a, b) => b.hours - a.hours).slice(0, 5)
       .forEach(o => rows.push(csvRow(['Overdue Top 5', '#' + o.orden + ' — ' + o.cliente, formatHoursMin(o.hours)])));
-  }
+  });
 
-  if (rows.length <= 1) { showToast('Nothing to export yet'); return; }
+  if (rows.length <= 2) { showToast('Nothing to export yet'); return; }
   const csv = rows.join('\r\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
