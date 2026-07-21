@@ -1,6 +1,6 @@
-const CACHE_NAME = 'chula-embarques-v5';
+const CACHE_NAME = 'chula-embarques-v6';
 const urlsToCache = [
-  './chula-embarques.html',
+  './index.html',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png'
@@ -32,7 +32,7 @@ self.addEventListener('fetch', (event) => {
 
   if (url.includes('script.google.com')) return; // siempre red, datos en vivo del Sheet
 
-  const isMainPage = url.includes('chula-embarques.html') || event.request.mode === 'navigate';
+  const isMainPage = url.includes('index.html') || event.request.mode === 'navigate';
 
   if (isMainPage) {
     event.respondWith(
