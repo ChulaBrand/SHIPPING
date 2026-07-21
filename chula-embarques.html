@@ -1244,6 +1244,7 @@ function formatExpectedReady(val) {
 }
 async function setExpectedReady(orden, value) {
   const o = ordenes.find(x => String(x.orden) === String(orden));
+  const previousValue = o ? o.expectedReady : undefined;
   if (o) {
     o.expectedReady = value;
     // Cambiar la hora esperada puede sacar/meter la orden de Needs Attention (Overdue/
@@ -1253,8 +1254,16 @@ async function setExpectedReady(orden, value) {
     renderOrdenes();
   }
   try {
-    await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'setExpectedReady', orden, expectedReady: value }) });
-  } catch (e) { showToast('Connection error — no se guardó la hora esperada'); }
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'setExpectedReady', orden, expectedReady: value }) });
+    const result = await res.json();
+    if (result.error) throw new Error(result.error);
+  } catch (e) {
+    // Sin esto, si fallaba la conexión (o el servidor rechazaba el cambio) la tarjeta
+    // se quedaba viendo el valor nuevo aunque el servidor se hubiera quedado con el
+    // viejo — hasta el próximo refresh, cuando "se regresaba sola" sin explicación.
+    if (o) { o.expectedReady = previousValue; renderOrdenes(); }
+    showToast('Connection error — no se guardó la hora esperada');
+  }
 }
 // Genera las opciones del <select> de "Expected ready": cada 30 min, mostradas en
 // formato 12h ("8:00 AM") pero guardadas en 24h ("08:00") para armar el valor completo
@@ -3127,17 +3136,18 @@ function renderStatusFilterChips() {
 // it just records that product's own prep status for the record.
 function setProductStatus(orden, idx, status) {
   if (!productState[orden]) return;
-  productState[orden][idx] = status;
   const o = ordenes.find(x => String(x.orden) === String(orden));
   if (!o) return;
+  const prevSnapshot = { estatus: o.estatus, hora: o.hora, actualizado: o.actualizado, productState: productState[orden].slice() };
+  productState[orden][idx] = status;
   const currentEst = parseInt(o.estatus) || 1;
   if (currentEst <= 3) {
     const prods = parseProductos(o.productos);
     const minProd = prods.length ? Math.min(...productState[orden]) : status;
     o.estatus = minProd;
-    pushOrderStatus(orden, minProd);
+    pushOrderStatus(orden, minProd, prevSnapshot);
   } else {
-    pushOrderStatus(orden, o.estatus); // el estatus general no cambia, pero sí se persiste el detalle por producto; ya repinta todo
+    pushOrderStatus(orden, o.estatus, prevSnapshot); // el estatus general no cambia, pero sí se persiste el detalle por producto; ya repinta todo
   }
 }
 
@@ -3153,6 +3163,7 @@ function setProductStatus(orden, idx, status) {
 function setOrderStatus(orden, status) {
   const o = ordenes.find(x => String(x.orden) === String(orden));
   if (!o) return;
+  const prevSnapshot = { estatus: o.estatus, hora: o.hora, actualizado: o.actualizado, productState: productState[orden] ? productState[orden].slice() : null };
   o.estatus = status;
 
   const prods = parseProductos(o.productos);
@@ -3164,10 +3175,16 @@ function setOrderStatus(orden, status) {
   } else if (productState[orden].length === 1) {
     productState[orden][0] = 3;
   }
-  pushOrderStatus(orden, status);
+  pushOrderStatus(orden, status, prevSnapshot);
 }
 
-async function pushOrderStatus(orden, estatus) {
+// prevSnapshot: estatus/hora/actualizado/productState de ANTES del cambio optimista —
+// si el fetch falla o el servidor rechaza el cambio (ej. candado de 48h), se usa para
+// regresar la tarjeta a como estaba. Antes, si fallaba la conexión justo después de
+// tocar un botón de estatus, la tarjeta se quedaba viendo el valor nuevo aunque el
+// servidor se hubiera quedado con el viejo — hasta el próximo refresh, cuando "se
+// regresaba sola" sin ninguna explicación para quien la estaba usando.
+async function pushOrderStatus(orden, estatus, prevSnapshot) {
   const o = ordenes.find(x => String(x.orden) === String(orden));
   // El servidor va a guardar "ahora" como el último cambio (igual que updateStatus() en
   // Code.gs) — se refleja aquí también, si no la tarjeta se sigue viendo "Stalled" hasta
@@ -3182,8 +3199,20 @@ async function pushOrderStatus(orden, estatus) {
   showToast('Status updated ✓');
   const body = { sessionToken: SESSION_TOKEN, action: 'updateStatus', orden, estatus, usuario: currentUser };
   if (productState[orden]) body.productEstatus = productState[orden]; // persiste el detalle por producto
-  try { await fetch(API, { method: 'POST', body: JSON.stringify(body) }); }
-  catch (e) { showToast('Sync error — check connection'); }
+  try {
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify(body) });
+    const result = await res.json();
+    if (result.error) throw new Error(result.error);
+  } catch (e) {
+    if (o && prevSnapshot) {
+      o.estatus = prevSnapshot.estatus;
+      o.hora = prevSnapshot.hora;
+      o.actualizado = prevSnapshot.actualizado;
+      if (prevSnapshot.productState) productState[orden] = prevSnapshot.productState;
+      renderOrdenes();
+    }
+    showToast('Sync error — check connection');
+  }
 }
 
 let attentionFilterState = null;
