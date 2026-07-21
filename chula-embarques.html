@@ -42,6 +42,18 @@
     --border: rgba(0,0,0,0.10); --border-strong: rgba(0,0,0,0.18);
     --radius: 12px; --radius-sm: 8px;
     --chart-grid: rgba(0,0,0,0.06); --chart-tick: #9ca3af; --chart-tooltip-bg: #1a1a1a; --chart-tooltip-text: #fff;
+    /* Colores de estatus (1-6) — usados en el tracker, banners, botones de estatus y
+       círculos de producto. Centralizados aquí para que el modo oscuro los pueda
+       reemplazar en un solo lugar en vez de en cada regla por separado. */
+    --s1-bg:#F3E8FF; --s1-border:#C084FC; --s1-text:#7E22CE;
+    --s2-bg:#DBEAFE; --s2-border:#93C5FD; --s2-text:#1E40AF;
+    --s3-bg:#FEF9C3; --s3-border:#FDE047; --s3-text:#854D0E;
+    --s4-bg:#FAEEDA; --s4-border:#EF9F27; --s4-text:#854F0B;
+    --s5-bg:#EAF3DE; --s5-border:#97C459; --s5-text:#3B6D11;
+    --s6-bg:#EDE9FE; --s6-border:#A78BFA; --s6-text:#5B21B6;
+    --danger-bg:#FEF2F2; --danger-border:#FCA5A5; --danger-text:#B91C1C; --danger-text-strong:#7F1D1D;
+    --success-bg:#F0FDF4; --success-border:#86EFAC; --success-text:#15803D;
+    --warn-bg:#FEF3C7; --warn-border:#FDE68A; --warn-text:#92400E;
   }
   /* Modo oscuro: sigue el sistema operativo por default; [data-theme] es el toggle
      manual (guardado en localStorage) y siempre gana sobre lo que diga el sistema. */
@@ -53,6 +65,15 @@
       --text-muted: #A6A5A0; --text-faint: #77766F;
       --border: rgba(255,255,255,0.11); --border-strong: rgba(255,255,255,0.2);
       --chart-grid: rgba(255,255,255,0.08); --chart-tick: #8f8e88; --chart-tooltip-bg: #F2F1ED; --chart-tooltip-text: #16171A;
+      --s1-bg:rgba(167,139,250,.16); --s1-border:#A78BFA; --s1-text:#D8CCFC;
+      --s2-bg:rgba(96,165,250,.18); --s2-border:#60A5FA; --s2-text:#BFDBFE;
+      --s3-bg:rgba(250,204,21,.18); --s3-border:#FACC15; --s3-text:#FDE68A;
+      --s4-bg:rgba(251,146,60,.18); --s4-border:#FB923C; --s4-text:#FED7AA;
+      --s5-bg:rgba(163,230,53,.16); --s5-border:#A3E635; --s5-text:#D9F99D;
+      --s6-bg:rgba(196,181,253,.16); --s6-border:#C4B5FD; --s6-text:#E9D5FF;
+      --danger-bg:rgba(248,113,113,.15); --danger-border:#F87171; --danger-text:#FCA5A5; --danger-text-strong:#FECACA;
+      --success-bg:rgba(74,222,128,.15); --success-border:#4ADE80; --success-text:#86EFAC;
+      --warn-bg:rgba(250,204,21,.15); --warn-border:#FACC15; --warn-text:#FDE68A;
     }
   }
   :root[data-theme="dark"] {
@@ -62,6 +83,15 @@
     --text-muted: #A6A5A0; --text-faint: #77766F;
     --border: rgba(255,255,255,0.11); --border-strong: rgba(255,255,255,0.2);
     --chart-grid: rgba(255,255,255,0.08); --chart-tick: #8f8e88; --chart-tooltip-bg: #F2F1ED; --chart-tooltip-text: #16171A;
+    --s1-bg:rgba(167,139,250,.16); --s1-border:#A78BFA; --s1-text:#D8CCFC;
+    --s2-bg:rgba(96,165,250,.18); --s2-border:#60A5FA; --s2-text:#BFDBFE;
+    --s3-bg:rgba(250,204,21,.18); --s3-border:#FACC15; --s3-text:#FDE68A;
+    --s4-bg:rgba(251,146,60,.18); --s4-border:#FB923C; --s4-text:#FED7AA;
+    --s5-bg:rgba(163,230,53,.16); --s5-border:#A3E635; --s5-text:#D9F99D;
+    --s6-bg:rgba(196,181,253,.16); --s6-border:#C4B5FD; --s6-text:#E9D5FF;
+    --danger-bg:rgba(248,113,113,.15); --danger-border:#F87171; --danger-text:#FCA5A5; --danger-text-strong:#FECACA;
+    --success-bg:rgba(74,222,128,.15); --success-border:#4ADE80; --success-text:#86EFAC;
+    --warn-bg:rgba(250,204,21,.15); --warn-border:#FACC15; --warn-text:#FDE68A;
   }
   html, body { overscroll-behavior-y: contain; }
   body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:2rem 1rem 4rem; }
@@ -236,12 +266,12 @@
   .step { flex:1; display:flex; flex-direction:column; align-items:center; position:relative; }
   .step-dot { width:24px; height:24px; border-radius:50%; border:2px solid var(--border-strong); background:var(--bg); display:flex; align-items:center; justify-content:center; font-size:11px; z-index:1; color:var(--text-faint); transition:all .2s; }
   .step-dot.done { background:var(--green-dark); border-color:var(--green-dark); color:#fff; }
-  .step-dot.s1 { background:#F3E8FF; border-color:#C084FC; color:#7E22CE; }
-  .step-dot.s2 { background:#DBEAFE; border-color:#93C5FD; color:#1E40AF; }
-  .step-dot.s3 { background:#FEF9C3; border-color:#FDE047; color:#854D0E; }
-  .step-dot.s4 { background:#FAEEDA; border-color:#EF9F27; color:#854F0B; }
-  .step-dot.s5 { background:#EAF3DE; border-color:#97C459; color:#3B6D11; }
-  .step-dot.s6 { background:#EDE9FE; border-color:#A78BFA; color:#5B21B6; }
+  .step-dot.s1 { background:var(--s1-bg); border-color:var(--s1-border); color:var(--s1-text); }
+  .step-dot.s2 { background:var(--s2-bg); border-color:var(--s2-border); color:var(--s2-text); }
+  .step-dot.s3 { background:var(--s3-bg); border-color:var(--s3-border); color:var(--s3-text); }
+  .step-dot.s4 { background:var(--s4-bg); border-color:var(--s4-border); color:var(--s4-text); }
+  .step-dot.s5 { background:var(--s5-bg); border-color:var(--s5-border); color:var(--s5-text); }
+  .step-dot.s6 { background:var(--s6-bg); border-color:var(--s6-border); color:var(--s6-text); }
   .step-line { position:absolute; top:12px; left:calc(50% + 12px); right:calc(-50% + 12px); height:2px; background:var(--border-strong); z-index:0; }
   .step-line.done { background:var(--green-dark); }
   .step:last-child .step-line { display:none; }
@@ -253,14 +283,14 @@
   .status-banner-icon { font-size:20px; flex-shrink:0; margin-top:1px; }
   .status-banner-label { font-size:13px; font-weight:600; margin-bottom:2px; }
   .status-banner-desc { font-size:12px; line-height:1.4; opacity:.85; }
-  .sb-1{background:#F3E8FF;color:#7E22CE;} .sb-2{background:#DBEAFE;color:#1E40AF;}
-  .sb-3{background:#FEF9C3;color:#854D0E;} .sb-4{background:#FAEEDA;color:#854F0B;}
-  .sb-5{background:#EAF3DE;color:#3B6D11;} .sb-6{background:#EDE9FE;color:#5B21B6;}
+  .sb-1{background:var(--s1-bg);color:var(--s1-text);} .sb-2{background:var(--s2-bg);color:var(--s2-text);}
+  .sb-3{background:var(--s3-bg);color:var(--s3-text);} .sb-4{background:var(--s4-bg);color:var(--s4-text);}
+  .sb-5{background:var(--s5-bg);color:var(--s5-text);} .sb-6{background:var(--s6-bg);color:var(--s6-text);}
   /* partial ready banner for driver */
-  .partial-banner { background:#FEF3C7; color:#92400E; border-radius:var(--radius-sm); padding:8px 12px; font-size:12px; margin-bottom:10px; }
+  .partial-banner { background:var(--warn-bg); color:var(--warn-text); border-radius:var(--radius-sm); padding:8px 12px; font-size:12px; margin-bottom:10px; }
   .partial-banner strong { display:block; font-size:13px; margin-bottom:4px; }
   .partial-item { display:flex; align-items:center; gap:6px; margin-top:4px; font-size:12px; }
-  .partial-item.ready { color:#3B6D11; } .partial-item.pending { color:#92400E; }
+  .partial-item.ready { color:var(--success-text); } .partial-item.pending { color:var(--warn-text); }
   .meta-row { display:flex; justify-content:space-between; border-top:1px solid var(--border); padding-top:1rem; margin-top:.25rem; }
   .meta-label { font-size:12px; color:var(--text-faint); }
   .meta-val { font-size:12px; color:var(--text-muted); font-weight:500; }
@@ -269,12 +299,12 @@
   .status-btns { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:8px; }
   .sbtn { height:40px; font-size:11px; font-weight:500; border:2px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; background:var(--bg); color:var(--text-muted); font-family:'Inter',sans-serif; line-height:1.2; padding:0 4px; }
   .sbtn:active { transform:scale(.97); }
-  .sbtn.sel-1{background:#F3E8FF;color:#7E22CE;border-color:#C084FC;font-weight:600;}
-  .sbtn.sel-2{background:#DBEAFE;color:#1E40AF;border-color:#93C5FD;font-weight:600;}
-  .sbtn.sel-3{background:#FEF9C3;color:#854D0E;border-color:#FDE047;font-weight:600;}
-  .sbtn.sel-4{background:#FAEEDA;color:#854F0B;border-color:#EF9F27;font-weight:600;}
-  .sbtn.sel-5{background:#EAF3DE;color:#3B6D11;border-color:#97C459;font-weight:600;}
-  .sbtn.sel-6{background:#EDE9FE;color:#5B21B6;border-color:#A78BFA;font-weight:600;}
+  .sbtn.sel-1{background:var(--s1-bg);color:var(--s1-text);border-color:var(--s1-border);font-weight:600;}
+  .sbtn.sel-2{background:var(--s2-bg);color:var(--s2-text);border-color:var(--s2-border);font-weight:600;}
+  .sbtn.sel-3{background:var(--s3-bg);color:var(--s3-text);border-color:var(--s3-border);font-weight:600;}
+  .sbtn.sel-4{background:var(--s4-bg);color:var(--s4-text);border-color:var(--s4-border);font-weight:600;}
+  .sbtn.sel-5{background:var(--s5-bg);color:var(--s5-text);border-color:var(--s5-border);font-weight:600;}
+  .sbtn.sel-6{background:var(--s6-bg);color:var(--s6-text);border-color:var(--s6-border);font-weight:600;}
   .sbtn:disabled { opacity:.45; cursor:not-allowed; }
   .sbtn-letter { display:block; font-size:9px; font-weight:700; opacity:.6; letter-spacing:.06em; margin-bottom:2px; }
   .sbtn-text { display:block; }
@@ -283,30 +313,33 @@
   .checklist-title { font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:2px; }
   .product-item { display:flex; flex-direction:column; gap:6px; }
   .product-name { font-size:12.5px; color:var(--text); line-height:1.3; }
-  .pcircle-row { display:flex; gap:5px; }
-  .pcircle { width:24px; height:24px; border-radius:50%; border:2px solid var(--border-strong); background:var(--white); display:flex; align-items:center; justify-content:center; font-size:9.5px; font-weight:700; color:var(--text-faint); cursor:pointer; font-family:'IBM Plex Mono',monospace; flex-shrink:0; }
+  .pcircle-row { display:flex; gap:8px; }
+  .pcircle { width:30px; height:30px; border-radius:50%; border:2px solid var(--border-strong); background:var(--white); display:flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:700; color:var(--text-faint); cursor:pointer; font-family:'IBM Plex Mono',monospace; flex-shrink:0; }
   .pcircle:active { transform:scale(.92); }
-  .pcircle.active.p1{background:#F3E8FF;border-color:#C084FC;color:#7E22CE;}
-  .pcircle.active.p2{background:#DBEAFE;border-color:#93C5FD;color:#1E40AF;}
-  .pcircle.active.p3{background:#FEF9C3;border-color:#FDE047;color:#854D0E;}
-  .pcircle.active.p4{background:#FAEEDA;border-color:#EF9F27;color:#854F0B;}
-  .pcircle.active.p5{background:#EAF3DE;border-color:#97C459;color:#3B6D11;}
-  .pcircle.active.p6{background:#EDE9FE;border-color:#A78BFA;color:#5B21B6;}
+  .pcircle.active.p1{background:var(--s1-bg);border-color:var(--s1-border);color:var(--s1-text);}
+  .pcircle.active.p2{background:var(--s2-bg);border-color:var(--s2-border);color:var(--s2-text);}
+  .pcircle.active.p3{background:var(--s3-bg);border-color:var(--s3-border);color:var(--s3-text);}
+  .pcircle.active.p4{background:var(--s4-bg);border-color:var(--s4-border);color:var(--s4-text);}
+  .pcircle.active.p5{background:var(--s5-bg);border-color:var(--s5-border);color:var(--s5-text);}
+  .pcircle.active.p6{background:var(--s6-bg);border-color:var(--s6-border);color:var(--s6-text);}
   .pcircle.disabled { cursor:default; opacity:.55; }
   .driver-product-row { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:12.5px; padding:3px 0; }
   .driver-product-row span:first-child { color:var(--text); }
   .driver-product-badge { font-size:9.5px; font-weight:700; padding:3px 8px; border-radius:99px; white-space:nowrap; }
-  .driver-product-badge.not-shipped { background:#FEE2E2; color:#B91C1C; }
+  .driver-product-badge.not-shipped { background:var(--danger-bg); color:var(--danger-text); }
   .status-desc-lbl { font-size:11px; color:var(--text-faint); font-style:italic; text-align:center; min-height:16px; }
   .btn-cancel-dots { display:block; margin-top:8px; margin-left:auto; background:none; border:none; color:var(--text-faint); font-size:15px; letter-spacing:1px; cursor:pointer; padding:4px 10px; line-height:1; }
-  .cancel-flow-row { display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding:7px 10px; background:#FEF2F2; border-radius:var(--radius-sm); }
-  .cancel-flow-link { color:#B91C1C; font-size:12px; font-weight:600; cursor:pointer; }
+  .cancel-flow-row { display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding:7px 10px; background:var(--danger-bg); border-radius:var(--radius-sm); }
+  .cancel-flow-row.success { background:var(--success-bg); }
+  .cancel-flow-link { color:var(--danger-text); font-size:12px; font-weight:600; cursor:pointer; }
+  .cancel-flow-link.success { color:var(--success-text); }
   .cancel-flow-back { color:var(--text-faint); cursor:pointer; font-size:14px; padding:0 4px; }
-  .cancel-flow-confirm { margin-top:8px; padding:10px; background:#FEF2F2; border:1px solid #FCA5A5; border-radius:var(--radius-sm); }
-  .cancel-flow-confirm p { font-size:11.5px; color:#7F1D1D; margin-bottom:8px; }
+  .cancel-flow-confirm { margin-top:8px; padding:10px; background:var(--danger-bg); border:1px solid var(--danger-border); border-radius:var(--radius-sm); }
+  .cancel-flow-confirm.success { background:var(--success-bg); border-color:var(--success-border); }
+  .cancel-flow-confirm p { font-size:11.5px; color:var(--danger-text-strong); margin-bottom:8px; }
   .btn-cancel-final { flex:1; padding:8px; background:#DC2626; color:#fff; border:none; border-radius:var(--radius-sm); font-size:12px; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer; }
   .btn-cancel-back { flex:1; padding:8px; background:none; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px; font-family:'Inter',sans-serif; cursor:pointer; color:var(--text-muted); }
-  .warn-note { font-size:11px; color:#92400E; background:#FEF3C7; border:1px solid #FDE68A; border-radius:var(--radius-sm); padding:6px 10px; text-align:center; margin-bottom:8px; }
+  .warn-note { font-size:11px; color:var(--warn-text); background:var(--warn-bg); border:1px solid var(--warn-border); border-radius:var(--radius-sm); padding:6px 10px; text-align:center; margin-bottom:8px; }
   .user-select-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:1.75rem 1rem; background:var(--white); border:1.5px solid var(--border); border-radius:16px; cursor:pointer; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; color:var(--text); text-align:center; transition:border-color .15s,transform .1s,box-shadow .15s; }
   .user-select-btn:hover { border-color:var(--purple); box-shadow:0 6px 16px rgba(91,42,134,.10); }
   .user-select-btn:active { transform:scale(.97); }
@@ -316,7 +349,7 @@
   .admin-user-row .inactive { color:var(--text-faint); text-decoration:line-through; }
   .admin-toggle-btn { font-size:11.5px; font-weight:600; padding:6px 12px; border-radius:99px; cursor:pointer; border:1px solid var(--border-strong); background:var(--white); }
   .admin-toggle-btn.is-active { color:var(--green-dark); border-color:var(--green-dark); }
-  .admin-toggle-btn.is-inactive { color:#B91C1C; border-color:#FCA5A5; background:#FEF2F2; }
+  .admin-toggle-btn.is-inactive { color:var(--danger-text); border-color:var(--danger-border); background:var(--danger-bg); }
   .client-header { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; margin-bottom:10px; display:flex; align-items:center; gap:10px; }
   .client-header i { font-size:18px; color:var(--text-muted); }
   .client-header-name { font-size:14px; font-weight:600; }
@@ -389,11 +422,11 @@
   /* Compact/expand toggle + status filter chips */
   .controls-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
   .controls-actions { display:flex; gap:6px; flex-shrink:0; }
-  .view-toggle-btn { width:34px; height:34px; font-size:14px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--white); color:var(--text-muted); cursor:pointer; display:flex; align-items:center; justify-content:center; font-family:'Inter',sans-serif; }
+  .view-toggle-btn { width:38px; height:38px; font-size:15px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--white); color:var(--text-muted); cursor:pointer; display:flex; align-items:center; justify-content:center; font-family:'Inter',sans-serif; }
   .view-toggle-btn:active { background:var(--bg); }
-  .view-toggle-btn.active { background:#FEE2E2; border-color:#FCA5A5; color:#B91C1C; }
+  .view-toggle-btn.active { background:var(--danger-bg); border-color:var(--danger-border); color:var(--danger-text); }
   .filter-chips { display:flex; flex-wrap:wrap; gap:6px; }
-  .filter-chip { font-size:12px; font-weight:700; width:30px; height:30px; border-radius:50%; border:1.5px solid var(--border-strong); background:var(--white); color:var(--text-muted); cursor:pointer; font-family:'Inter',sans-serif; display:flex; align-items:center; justify-content:center; }
+  .filter-chip { font-size:12.5px; font-weight:700; width:34px; height:34px; border-radius:50%; border:1.5px solid var(--border-strong); background:var(--white); color:var(--text-muted); cursor:pointer; font-family:'Inter',sans-serif; display:flex; align-items:center; justify-content:center; }
   .filter-chip.active { border-color:var(--purple); color:var(--purple); background:#F5F0FE; }
 
   /* Compact order card */
@@ -413,7 +446,7 @@
 </head>
 <body>
 <div class="pull-refresh-indicator" id="pull-refresh-indicator"><i class="ti ti-refresh"></i></div>
-<button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle dark mode"><i class="ti ti-moon"></i></button>
+<button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle dark mode" aria-label="Toggle dark mode"><i class="ti ti-moon"></i></button>
 <div class="container">
   <div class="logo-row">
     <div class="logo-mark">
@@ -491,8 +524,8 @@
       <p class="top-bar-title">Data Analysis</p>
       <div style="display:flex;gap:8px;">
         <button class="btn-back" onclick="analyticsBack()">← Back</button>
-        <button class="btn-back" onclick="refreshAllPanels()" title="Refresh"><i class="ti ti-refresh"></i></button>
-        <button class="btn-back" onclick="exportAnalyticsCSV()" title="Export to CSV"><i class="ti ti-download"></i> Export</button>
+        <button class="btn-back" onclick="refreshAllPanels()" title="Refresh" aria-label="Refresh"><i class="ti ti-refresh"></i></button>
+        <button class="btn-back" onclick="exportAnalyticsCSV()" title="Export to CSV" aria-label="Export to CSV"><i class="ti ti-download"></i> Export</button>
       </div>
     </div>
     <div class="filter-row">
@@ -532,7 +565,7 @@
           <div class="panel-title-row-right">
             <span class="panel-range-badge" id="badge-core">Day</span>
             <div class="mini-dropdown-wrap">
-              <button class="mini-filter-btn" onclick="togglePanelDropdown('core')" title="Filter this indicator">⋯</button>
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('core')" title="Filter this indicator" aria-label="Filter this indicator">⋯</button>
               <div class="dropdown-panel mini" id="panel-dd-core">
                 <button class="dropdown-option" data-range="day" onclick="setPanelRange('core','day')">Day</button>
                 <button class="dropdown-option" data-range="week" onclick="setPanelRange('core','week')">Week</button>
@@ -550,7 +583,7 @@
           <div class="panel-title-row-right">
             <span class="panel-range-badge" id="badge-boxes">Day</span>
             <div class="mini-dropdown-wrap">
-              <button class="mini-filter-btn" onclick="togglePanelDropdown('boxes')" title="Filter this indicator">⋯</button>
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('boxes')" title="Filter this indicator" aria-label="Filter this indicator">⋯</button>
               <div class="dropdown-panel mini" id="panel-dd-boxes">
                 <button class="dropdown-option" data-range="day" onclick="setPanelRange('boxes','day')">Day</button>
                 <button class="dropdown-option" data-range="week" onclick="setPanelRange('boxes','week')">Week</button>
@@ -570,7 +603,7 @@
           <div class="panel-title-row-right">
             <span class="panel-range-badge" id="badge-status">Day</span>
             <div class="mini-dropdown-wrap">
-              <button class="mini-filter-btn" onclick="togglePanelDropdown('status')" title="Filter this indicator">⋯</button>
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('status')" title="Filter this indicator" aria-label="Filter this indicator">⋯</button>
               <div class="dropdown-panel mini" id="panel-dd-status">
                 <button class="dropdown-option" data-range="day" onclick="setPanelRange('status','day')">Day</button>
                 <button class="dropdown-option" data-range="week" onclick="setPanelRange('status','week')">Week</button>
@@ -587,7 +620,7 @@
           <div class="panel-title-row-right">
             <span class="panel-range-badge" id="badge-product">Day</span>
             <div class="mini-dropdown-wrap">
-              <button class="mini-filter-btn" onclick="togglePanelDropdown('product')" title="Filter this indicator">⋯</button>
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('product')" title="Filter this indicator" aria-label="Filter this indicator">⋯</button>
               <div class="dropdown-panel mini" id="panel-dd-product">
                 <button class="dropdown-option" data-range="day" onclick="setPanelRange('product','day')">Day</button>
                 <button class="dropdown-option" data-range="week" onclick="setPanelRange('product','week')">Week</button>
@@ -605,7 +638,7 @@
           <div class="panel-title-row-right">
             <span class="panel-range-badge" id="badge-day">Last 7 days</span>
             <div class="mini-dropdown-wrap">
-              <button class="mini-filter-btn" onclick="togglePanelDropdown('day')" title="Filter this indicator">⋯</button>
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('day')" title="Filter this indicator" aria-label="Filter this indicator">⋯</button>
               <div class="dropdown-panel mini" id="panel-dd-day">
                 <button class="dropdown-option" data-range="day" onclick="setPanelRange('day','day')">Day</button>
                 <button class="dropdown-option" data-range="week" onclick="setPanelRange('day','week')">Week</button>
@@ -622,7 +655,7 @@
           <div class="panel-title-row-right">
             <span class="panel-range-badge" id="badge-complete">Day</span>
             <div class="mini-dropdown-wrap">
-              <button class="mini-filter-btn" onclick="togglePanelDropdown('complete')" title="Filter this indicator">⋯</button>
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('complete')" title="Filter this indicator" aria-label="Filter this indicator">⋯</button>
               <div class="dropdown-panel mini" id="panel-dd-complete">
                 <button class="dropdown-option" data-range="day" onclick="setPanelRange('complete','day')">Day</button>
                 <button class="dropdown-option" data-range="week" onclick="setPanelRange('complete','week')">Week</button>
@@ -639,7 +672,7 @@
           <div class="panel-title-row-right">
             <span class="panel-range-badge" id="badge-shipped">Day</span>
             <div class="mini-dropdown-wrap">
-              <button class="mini-filter-btn" onclick="togglePanelDropdown('shipped')" title="Filter this indicator">⋯</button>
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('shipped')" title="Filter this indicator" aria-label="Filter this indicator">⋯</button>
               <div class="dropdown-panel mini" id="panel-dd-shipped">
                 <button class="dropdown-option" data-range="day" onclick="setPanelRange('shipped','day')">Day</button>
                 <button class="dropdown-option" data-range="week" onclick="setPanelRange('shipped','week')">Week</button>
@@ -656,7 +689,7 @@
           <div class="panel-title-row-right">
             <span class="panel-range-badge" id="badge-person">Day</span>
             <div class="mini-dropdown-wrap">
-              <button class="mini-filter-btn" onclick="togglePanelDropdown('person')" title="Filter this indicator">⋯</button>
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('person')" title="Filter this indicator" aria-label="Filter this indicator">⋯</button>
               <div class="dropdown-panel mini" id="panel-dd-person">
                 <button class="dropdown-option" data-range="day" onclick="setPanelRange('person','day')">Day</button>
                 <button class="dropdown-option" data-range="week" onclick="setPanelRange('person','week')">Week</button>
@@ -673,7 +706,7 @@
           <div class="panel-title-row-right">
             <span class="panel-range-badge" id="badge-vendedor">Day</span>
             <div class="mini-dropdown-wrap">
-              <button class="mini-filter-btn" onclick="togglePanelDropdown('vendedor')" title="Filter this indicator">⋯</button>
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('vendedor')" title="Filter this indicator" aria-label="Filter this indicator">⋯</button>
               <div class="dropdown-panel mini" id="panel-dd-vendedor">
                 <button class="dropdown-option" data-range="day" onclick="setPanelRange('vendedor','day')">Day</button>
                 <button class="dropdown-option" data-range="week" onclick="setPanelRange('vendedor','week')">Week</button>
@@ -690,7 +723,7 @@
           <div class="panel-title-row-right">
             <span class="panel-range-badge" id="badge-bayUsage">Day</span>
             <div class="mini-dropdown-wrap">
-              <button class="mini-filter-btn" onclick="togglePanelDropdown('bayUsage')" title="Filter this indicator">⋯</button>
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('bayUsage')" title="Filter this indicator" aria-label="Filter this indicator">⋯</button>
               <div class="dropdown-panel mini" id="panel-dd-bayUsage">
                 <button class="dropdown-option" data-range="day" onclick="setPanelRange('bayUsage','day')">Day</button>
                 <button class="dropdown-option" data-range="week" onclick="setPanelRange('bayUsage','week')">Week</button>
@@ -707,7 +740,7 @@
           <div class="panel-title-row-right">
             <span class="panel-range-badge" id="badge-leftBehind">Last 7 days</span>
             <div class="mini-dropdown-wrap">
-              <button class="mini-filter-btn" onclick="togglePanelDropdown('leftBehind')" title="Filter this indicator">⋯</button>
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('leftBehind')" title="Filter this indicator" aria-label="Filter this indicator">⋯</button>
               <div class="dropdown-panel mini" id="panel-dd-leftBehind">
                 <button class="dropdown-option" data-range="day" onclick="setPanelRange('leftBehind','day')">Day</button>
                 <button class="dropdown-option" data-range="week" onclick="setPanelRange('leftBehind','week')">Week</button>
@@ -725,7 +758,7 @@
           <div class="panel-title-row-right">
             <span class="panel-range-badge" id="badge-overdue">Week</span>
             <div class="mini-dropdown-wrap">
-              <button class="mini-filter-btn" onclick="togglePanelDropdown('overdue')" title="Filter this indicator">⋯</button>
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('overdue')" title="Filter this indicator" aria-label="Filter this indicator">⋯</button>
               <div class="dropdown-panel mini" id="panel-dd-overdue">
                 <button class="dropdown-option" data-range="day" onclick="setPanelRange('overdue','day')">Day</button>
                 <button class="dropdown-option" data-range="week" onclick="setPanelRange('overdue','week')">Week</button>
@@ -886,7 +919,7 @@
       <p class="top-bar-title">Shipping Panel <span id="shippingUserLabel" style="font-weight:400;color:var(--text-muted);font-size:12px;"></span></p>
       <div style="display:flex;gap:8px;">
         <button class="btn-back" onclick="shippingBack()">← Back</button>
-        <button class="btn-back" onclick="loadOrdenes()" title="Refresh" style="padding:5px 9px;"><i class="ti ti-refresh"></i></button>
+        <button class="btn-back" onclick="loadOrdenes()" title="Refresh" aria-label="Refresh" style="padding:5px 9px;"><i class="ti ti-refresh"></i></button>
         <button class="btn-back" id="shippingUploadBtn" onclick="goPapayaUpload('screen-enc')">Upload</button>
         <button class="btn-back" onclick="goRol()">Sign out</button>
       </div>
@@ -896,23 +929,23 @@
       <div style="display:flex;flex:1;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);overflow:hidden;">
         <span style="padding:0 8px;height:42px;display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-faint);background:var(--border);white-space:nowrap;border-right:1px solid var(--border);">SP00</span>
         <input id="enc-search" type="text" placeholder="Order or customer" maxlength="40" style="flex:1;border:none;outline:none;padding:0 10px;height:42px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);background:var(--bg);min-width:0;" oninput="toggleSearchClearBtn()" />
-        <button id="enc-search-clear" onclick="clearEncSearch()" title="Clear" style="display:none;border:none;background:none;color:var(--text-faint);font-size:16px;width:32px;height:42px;cursor:pointer;flex-shrink:0;">✕</button>
+        <button id="enc-search-clear" onclick="clearEncSearch()" title="Clear" aria-label="Clear" style="display:none;border:none;background:none;color:var(--text-faint);font-size:16px;width:32px;height:42px;cursor:pointer;flex-shrink:0;">✕</button>
       </div>
       <button class="btn-search-sm" onclick="encBuscar()">Search</button>
     </div>
     <div class="controls-row">
       <div class="filter-chips" id="statusFilterChips"></div>
       <div class="controls-actions">
-        <button class="view-toggle-btn" id="viewToggleBtn" onclick="toggleGlobalView()" title="View all"><i class="ti ti-arrows-maximize"></i></button>
-        <button class="view-toggle-btn" id="dailySummaryBtn" onclick="goDailySummary()" title="Download today's summary"><i class="ti ti-file-spreadsheet"></i></button>
-        <button class="view-toggle-btn" id="cancelledViewBtn" onclick="toggleCancelledView()" title="View cancelled orders"><i class="ti ti-trash"></i></button>
+        <button class="view-toggle-btn" id="viewToggleBtn" onclick="toggleGlobalView()" title="View all" aria-label="View all"><i class="ti ti-arrows-maximize"></i></button>
+        <button class="view-toggle-btn" id="dailySummaryBtn" onclick="goDailySummary()" title="Download today's summary" aria-label="Download today's summary"><i class="ti ti-file-spreadsheet"></i></button>
+        <button class="view-toggle-btn" id="cancelledViewBtn" onclick="toggleCancelledView()" title="View cancelled orders" aria-label="View cancelled orders"><i class="ti ti-trash"></i></button>
       </div>
     </div>
     <div class="controls-row" style="justify-content:flex-start;margin-top:8px;">
       <div class="controls-actions">
-        <button class="view-toggle-btn" id="etaViewBtn" onclick="toggleEtaView()" title="View orders with Expected ready set"><i class="ti ti-clock"></i></button>
+        <button class="view-toggle-btn" id="etaViewBtn" onclick="toggleEtaView()" title="View orders with Expected ready set" aria-label="View orders with Expected ready set"><i class="ti ti-clock"></i></button>
         <div class="dropdown-wrap">
-          <button class="view-toggle-btn" id="productDropdownBtn" onclick="toggleDropdown('product')" title="Filter by product"><i class="ti ti-filter"></i></button>
+          <button class="view-toggle-btn" id="productDropdownBtn" onclick="toggleDropdown('product')" title="Filter by product" aria-label="Filter by product"><i class="ti ti-filter"></i></button>
           <div class="dropdown-panel" id="productDropdownPanel">
             <label class="dropdown-checkbox"><input type="checkbox" id="product-filter-all" checked onchange="toggleAllProductFilter(this)"> All</label>
             <label class="dropdown-checkbox"><input type="checkbox" class="product-filter-check" value="papaya" checked onchange="onProductFilterCheck()"> Papaya</label>
@@ -1098,12 +1131,26 @@ function categorizeProductDesc(desc) {
 }
 // El texto de cada línea trae la cantidad pegada al inicio ("144 Papaya 3/4...") —
 // se le quita antes de comparar, igual que hace parseProductosString() en el servidor.
+// Las categorías se guardan en el pedido mismo (memoización) — orderMatchesProductFilter()
+// se llama sobre TODOS los pedidos visibles en cada render (cada tap de estatus/producto,
+// cada refresh), y sin esto se volvía a parsear+regex el mismo texto una y otra vez aunque
+// "productos" nunca cambie después de creado el pedido. Se invalida sola si algún día sí
+// cambia (compara contra el texto con el que se calculó la última vez).
+function getOrderProductCategories(o) {
+  if (o._productCatsSrc === o.productos && o._productCats) return o._productCats;
+  const cats = new Set(parseProductos(o.productos).map(line => {
+    const m = line.match(/^(\d+)\s+(.*)$/);
+    return categorizeProductDesc(m ? m[2] : line);
+  }));
+  o._productCatsSrc = o.productos;
+  o._productCats = cats;
+  return cats;
+}
 function orderMatchesProductFilter(o) {
   if (!productFilter.size) return true;
-  return parseProductos(o.productos).some(line => {
-    const m = line.match(/^(\d+)\s+(.*)$/);
-    return productFilter.has(categorizeProductDesc(m ? m[2] : line));
-  });
+  const cats = getOrderProductCategories(o);
+  for (const c of productFilter) { if (cats.has(c)) return true; }
+  return false;
 }
 function toggleAllProductFilter(el) {
   document.querySelectorAll('.product-filter-check').forEach(c => c.checked = el.checked);
@@ -1941,8 +1988,8 @@ function renderStatusOrderConfig() {
     <div class="admin-user-row">
       <div style="display:flex;gap:10px;align-items:center;">
         <div style="display:flex;gap:4px;">
-          <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveStatusOrder(${i},-1)" title="Move up" ${i === 0 ? 'disabled' : ''}>▲</button>
-          <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveStatusOrder(${i},1)" title="Move down" ${i === statusOrderConfig.length - 1 ? 'disabled' : ''}>▼</button>
+          <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveStatusOrder(${i},-1)" title="Move up" aria-label="Move up" ${i === 0 ? 'disabled' : ''}>▲</button>
+          <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveStatusOrder(${i},1)" title="Move down" aria-label="Move down" ${i === statusOrderConfig.length - 1 ? 'disabled' : ''}>▼</button>
         </div>
         <span class="name">${c.label}</span>
       </div>
@@ -2068,8 +2115,8 @@ function renderAdminAnalyticsConfig() {
     <div class="admin-user-row" style="${c.visible ? '' : 'opacity:.5;'}">
       <div style="display:flex;gap:10px;align-items:center;">
         <div style="display:flex;gap:4px;width:64px;">
-          <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveAnalyticsPanel(${i},-1)" title="Move this panel up" ${i === 0 ? 'disabled' : ''}>▲</button>
-          <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveAnalyticsPanel(${i},1)" title="Move this panel down" ${i === analyticsChartConfig.length - 1 ? 'disabled' : ''}>▼</button>
+          <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveAnalyticsPanel(${i},-1)" title="Move this panel up" aria-label="Move this panel up" ${i === 0 ? 'disabled' : ''}>▲</button>
+          <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveAnalyticsPanel(${i},1)" title="Move this panel down" aria-label="Move this panel down" ${i === analyticsChartConfig.length - 1 ? 'disabled' : ''}>▼</button>
         </div>
         <input type="checkbox" style="width:20px;height:16px;flex-shrink:0;cursor:pointer;" onchange="toggleAnalyticsVisible('${c.key}', this.checked)" ${c.visible ? 'checked' : ''} title="${c.visible ? 'Shown in Data Analysis' : 'Hidden from Data Analysis'}">
         <span class="name">${ANALYTICS_PANEL_LABELS[c.key] || c.key}</span>
@@ -2162,7 +2209,9 @@ function updateThemeToggleIcon() {
   if (!btn) return;
   const isDark = currentTheme() === 'dark';
   btn.innerHTML = `<i class="ti ti-${isDark ? 'sun' : 'moon'}"></i>`;
-  btn.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+  const label = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+  btn.title = label;
+  btn.setAttribute('aria-label', label);
 }
 function toggleTheme() {
   const next = currentTheme() === 'dark' ? 'light' : 'dark';
@@ -2952,7 +3001,7 @@ const cancelFlowStep = {}; // orden -> 0 (escondido) | 1 (menú) | 2 (confirmand
 function cancelFlowHtml(o) {
   const step = cancelFlowStep[o.orden] || 0;
   if (step === 0) {
-    return `<div style="text-align:right;"><button class="btn-cancel-dots" onclick="event.stopPropagation();setCancelFlowStep('${o.orden}',1)" title="More options">⋯</button></div>`;
+    return `<div style="text-align:right;"><button class="btn-cancel-dots" onclick="event.stopPropagation();setCancelFlowStep('${o.orden}',1)" title="More options" aria-label="More options">⋯</button></div>`;
   }
   if (step === 1) {
     return `<div class="cancel-flow-row" onclick="event.stopPropagation();">
@@ -3074,16 +3123,16 @@ function buildCancelledCard(o) {
 function restoreFlowHtml(o) {
   const step = restoreFlowStep[o.orden] || 0;
   if (step === 0) {
-    return `<div style="text-align:right;"><button class="btn-cancel-dots" onclick="setRestoreFlowStep('${o.orden}',1)" title="More options">⋯</button></div>`;
+    return `<div style="text-align:right;"><button class="btn-cancel-dots" onclick="setRestoreFlowStep('${o.orden}',1)" title="More options" aria-label="More options">⋯</button></div>`;
   }
   if (step === 1) {
-    return `<div class="cancel-flow-row" style="background:#F0FDF4;">
-      <span class="cancel-flow-link" style="color:#15803D;" onclick="setRestoreFlowStep('${o.orden}',2)">↩ Restore this order</span>
+    return `<div class="cancel-flow-row success">
+      <span class="cancel-flow-link success" onclick="setRestoreFlowStep('${o.orden}',2)">↩ Restore this order</span>
       <span class="cancel-flow-back" onclick="setRestoreFlowStep('${o.orden}',0)">✕</span>
     </div>`;
   }
-  return `<div class="cancel-flow-confirm" style="background:#F0FDF4;border-color:#86EFAC;">
-    <p style="color:#14532D;">Restore order #${escapeHtml(o.orden)} — ${escapeHtml(o.cliente)}? It goes back to today's orders.</p>
+  return `<div class="cancel-flow-confirm success">
+    <p style="color:var(--success-text);">Restore order #${escapeHtml(o.orden)} — ${escapeHtml(o.cliente)}? It goes back to today's orders.</p>
     <div style="display:flex;gap:8px;">
       <button class="btn-cancel-final" style="background:#16A34A;" onclick="submitRestoreOrder('${o.orden}')">Yes, restore it</button>
       <button class="btn-cancel-back" onclick="setRestoreFlowStep('${o.orden}',0)">No, keep cancelled</button>
@@ -3160,7 +3209,7 @@ function renderStatusFilterChips() {
   const wrap = document.getElementById('statusFilterChips');
   wrap.innerHTML = LETTERS.map((letter, i) => {
     const idx = i + 1;
-    return `<button class="filter-chip${statusFilter.has(idx) ? ' active' : ''}" onclick="toggleStatusFilter(${idx})" title="${LABELS[i]}">${letter}</button>`;
+    return `<button class="filter-chip${statusFilter.has(idx) ? ' active' : ''}" onclick="toggleStatusFilter(${idx})" title="${LABELS[i]}" aria-label="${LABELS[i]}">${letter}</button>`;
   }).join('');
 }
 
