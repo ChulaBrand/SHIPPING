@@ -1256,6 +1256,11 @@ async function setExpectedReady(orden, value) {
   try {
     const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'setExpectedReady', orden, expectedReady: value }) });
     const result = await res.json();
+    if (isSessionExpiredError(result)) {
+      if (o) { o.expectedReady = previousValue; renderOrdenes(); }
+      handleSessionExpired();
+      return;
+    }
     if (result.error) throw new Error(result.error);
   } catch (e) {
     // Sin esto, si fallaba la conexión (o el servidor rechazaba el cambio) la tarjeta
@@ -1330,6 +1335,17 @@ function goPapayaBack() {
   // Si regresamos al Shipping Panel, recargar las órdenes automáticamente
   // (evita tener que hacer un refresh completo de la página, que saca del login)
   if (papayaReturnScreen === 'screen-enc' && currentUser) loadOrdenes();
+}
+// El token dura 10h — en un turno largo (o de madrugada) alguien se puede quedar
+// "deslogueado" a mitad de turno. Antes esto se veía igual que cualquier error de
+// conexión ("Connection error"/"Sync error"), así que la persona pensaba que era el
+// wifi y seguía reintentando en vano en vez de volver a iniciar sesión.
+function isSessionExpiredError(result) {
+  return !!(result && typeof result.error === 'string' && result.error.indexOf('Session expired') !== -1);
+}
+function handleSessionExpired() {
+  showToast('Tu sesión expiró — inicia sesión de nuevo');
+  goRol();
 }
 function goRol() {
   // Invalida la sesión en el servidor de inmediato (no solo la olvida aquí) — así un
@@ -2802,7 +2818,10 @@ async function loadOrdenes() {
   list.innerHTML='<div class="empty-state"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i>Loading...</div>';
   showRefreshSpinner();
   try {
-    const r=await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getAll' }) }); ordenes=await r.json();
+    const r=await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getAll' }) });
+    const result = await r.json();
+    if (isSessionExpiredError(result)) { handleSessionExpired(); return; }
+    ordenes = result;
     if (searchActive) {
       const raw = document.getElementById('enc-search').value.trim();
       if (raw) { renderSearchResults(raw); return; }
@@ -3202,6 +3221,17 @@ async function pushOrderStatus(orden, estatus, prevSnapshot) {
   try {
     const res = await fetch(API, { method: 'POST', body: JSON.stringify(body) });
     const result = await res.json();
+    if (isSessionExpiredError(result)) {
+      if (o && prevSnapshot) {
+        o.estatus = prevSnapshot.estatus;
+        o.hora = prevSnapshot.hora;
+        o.actualizado = prevSnapshot.actualizado;
+        if (prevSnapshot.productState) productState[orden] = prevSnapshot.productState;
+        renderOrdenes();
+      }
+      handleSessionExpired();
+      return;
+    }
     if (result.error) throw new Error(result.error);
   } catch (e) {
     if (o && prevSnapshot) {
@@ -3355,7 +3385,15 @@ function renderSearchResults(raw) {
   document.getElementById('departed-today-section').style.display='none';
   document.getElementById('departed-yesterday-section').style.display='none';
   document.getElementById('attentionCounts').innerHTML='';
-  const filtered = exact ? [exact] : ordenes.filter(o=>!isOlderThan48h(o.actualizado) && (String(o.orden).toLowerCase().includes(val.toLowerCase())||o.cliente.toLowerCase().includes(val.toLowerCase())));
+  // Antes la búsqueda ignoraba por completo los chips de estatus y el filtro de
+  // producto — se quedaban viéndose "prendidos" (morados) mientras se mostraban
+  // resultados de búsqueda, dando a entender que sí estaban aplicados cuando no.
+  // "exact" (coincidencia exacta de número de orden) sigue sin filtrarse — si buscas
+  // un número exacto, quieres verlo aunque no calce con el filtro puesto.
+  const filtered = exact ? [exact] : ordenes
+    .filter(o=>!isOlderThan48h(o.actualizado) && (String(o.orden).toLowerCase().includes(val.toLowerCase())||o.cliente.toLowerCase().includes(val.toLowerCase())))
+    .filter(o => !statusFilter.size || statusFilter.has(parseInt(o.estatus) || 1))
+    .filter(orderMatchesProductFilter);
   if(!filtered.length){ list.innerHTML='<div class="empty-state"><i class="ti ti-search-off"></i>No match found</div>'; return; }
   filtered.forEach(o=>{list.innerHTML+=buildClerkCard(o);});
 }
