@@ -222,7 +222,7 @@
   .kpi-value { font-size:22px; font-weight:700; line-height:1.1; color:var(--kpi-color, var(--text)); font-variant-numeric:tabular-nums; }
   .kpi-label { font-size:10.5px; color:var(--text-muted); margin-top:4px; text-transform:uppercase; letter-spacing:.04em; }
   .kpi-sub { font-size:10.5px; color:var(--text-faint); margin-top:1px; }
-  .kpi-delta { display:block; font-size:10.5px; font-weight:600; margin-top:4px; }
+  .kpi-delta { display:block; font-size:10.5px; font-weight:600; margin-top:5px; padding-top:5px; border-top:1px dashed var(--border); }
   .kpi-delta.good { color:var(--success-text); }
   .kpi-delta.bad { color:var(--danger-text); }
   .kpi-delta.neutral { color:var(--text-faint); font-weight:500; }
@@ -534,7 +534,17 @@
       <div style="display:flex;gap:8px;">
         <button class="btn-back" onclick="analyticsBack()">← Back</button>
         <button class="btn-back" id="analyticsRefreshBtn" onclick="refreshAllPanels()" title="Refresh" aria-label="Refresh"><i class="ti ti-refresh" id="analyticsRefreshIcon"></i></button>
-        <button class="btn-back" onclick="exportAnalyticsCSV()" title="Export to CSV" aria-label="Export to CSV"><i class="ti ti-download"></i> Export</button>
+        <div class="dropdown-wrap">
+          <button class="btn-back" id="exportDropdownBtn" onclick="openExportPanel()" title="Export to CSV" aria-label="Export to CSV"><i class="ti ti-download"></i> Export</button>
+          <div class="dropdown-panel" id="exportDropdownPanel" style="right:0;left:auto;min-width:230px;">
+            <p style="font-size:11px;color:var(--text-faint);margin:2px 4px 8px;">Choose the dates to export (independent of what each panel shows on screen):</p>
+            <div style="display:flex;gap:6px;margin-bottom:8px;">
+              <input type="date" id="exportStart" style="flex:1;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 6px;font-family:'Inter',sans-serif;font-size:12.5px;">
+              <input type="date" id="exportEnd" style="flex:1;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 6px;font-family:'Inter',sans-serif;font-size:12.5px;">
+            </div>
+            <button class="btn-primary" style="width:100%;height:36px;" onclick="downloadAnalyticsCSV()"><i class="ti ti-download"></i> Download CSV</button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="filter-row">
@@ -2420,7 +2430,11 @@ function setAnalyticsRange(range) {
     : (customRangeValue ? `${formatShortDate(customRangeValue.start)} – ${formatShortDate(customRangeValue.end)}` : 'Custom');
   document.getElementById('rangeDropdownBtn').innerHTML = `${label} <i class="ti ti-chevron-down"></i>`;
   updateAllPanelBadges();
-  if (range !== 'custom') { toggleDropdown('range'); refreshAllPanels(); }
+  // closeAllDropdowns() en vez de toggleDropdown('range') — toggleDropdown() ASUME que
+  // ya estaba abierto (lo cerraba después de escoger una opción), pero initAnalyticsScreen()
+  // también llama setAnalyticsRange('default') al entrar a la pantalla SIN que el usuario
+  // haya abierto nada, y ahí "toggle" lo abría en vez de dejarlo cerrado.
+  if (range !== 'custom') { closeAllDropdowns(); refreshAllPanels(); }
 }
 function applyCustomRange() {
   const s = document.getElementById('analyticsStart').value;
@@ -2496,12 +2510,17 @@ async function refreshPanel(panelKey, force) {
     // Para los paneles con KPIs comparables, se pide también el período anterior
     // (misma duración, inmediatamente antes) — mismo fetchRange/rangeCache, así que
     // si ya se pidió ese rango para otro panel no se repite la llamada al servidor.
-    if (COMPARISON_PANELS.includes(panelKey)) {
+    // "Day" (un solo día, HOY) se excluye a propósito: hoy todavía está a medias, así
+    // que compararlo contra un día anterior YA CERRADO siempre se ve como una caída
+    // enorme aunque no signifique nada — esa comparación no sirve, mejor no mostrarla.
+    if (COMPARISON_PANELS.includes(panelKey) && r.start !== r.end) {
       try {
         const prevRange = shiftRangeToPrevious(r.start, r.end);
         const prevData = await fetchRange(prevRange, force);
         if (!prevData.error) prevPanelData[panelKey] = prevData;
       } catch (e) { /* sin comparación si falla, el panel se ve igual sin el delta */ }
+    } else {
+      delete prevPanelData[panelKey];
     }
     RENDER_FNS[panelKey](data);
   } catch (e) { /* silencioso: no tumba los demás paneles */ }
@@ -2527,123 +2546,126 @@ async function refreshAllPanels() {
 }
 
 // ── Export a CSV ──
-// Usa panelData (lo último que ya se pidió por panel, respetando el rango/filtro de
-// cada uno) — no vuelve a pedirle nada al servidor, solo arma el archivo con lo que
-// ya está en pantalla ahorita mismo.
+// Antes armaba el archivo con panelData (lo último que cada panel tenía cargado), pero
+// cada panel puede tener su propio rango activo (Day en uno, Week en otro) — el Excel
+// salía con fechas mezcladas sin que se notara. Ahora el botón Export pide su PROPIO
+// rango de fechas (independiente de lo que esté viendo cada panel en pantalla) y arma
+// TODO el archivo con esa única llamada a getAnalytics, así todas las secciones
+// siempre hablan del mismo período.
 function csvEscape(val) {
   const s = String(val === undefined || val === null ? '' : val);
   return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 }
 function csvRow(cells) { return cells.map(csvEscape).join(','); }
-// Rango de fechas que de verdad tiene puesto ESE panel ahorita (puede ser distinto
-// panel a panel) — se imprime como su propio renglón dentro de cada sección, así
-// el Excel dice exactamente qué fechas cubre cada bloque sin tener que adivinar.
-function rangeLabelFor(panelKey) {
-  const r = effectiveRangeFor(panelKey);
-  if (!r) return '';
-  return r.start === r.end ? formatShortDate(r.start) : `${formatShortDate(r.start)} to ${formatShortDate(r.end)}`;
+function openExportPanel() {
+  const r = effectiveRangeFor('core') || computeRangeDates('week');
+  if (!document.getElementById('exportStart').value) document.getElementById('exportStart').value = r.start;
+  if (!document.getElementById('exportEnd').value) document.getElementById('exportEnd').value = r.end;
+  toggleDropdown('export');
 }
-// Cada sección: un renglón de "Range", sus métricas, y un renglón en blanco al final
-// para que se note dónde empieza la siguiente al abrirlo en Excel/Sheets.
-function pushSection(rows, label, panelKey, buildFn) {
+// Cada sección: un renglón en blanco antes (menos la primera), para que se note dónde
+// empieza cada bloque nuevo al abrirlo en Excel/Sheets.
+function pushSection(rows, buildFn) {
   const before = rows.length;
   buildFn();
-  if (rows.length === before) return;
-  rows.splice(before, 0, csvRow([label, 'Range', rangeLabelFor(panelKey)]));
-  rows.push('');
+  if (rows.length > before) rows.push('');
 }
-function exportAnalyticsCSV() {
-  const selected = getSelectedFruits();
-  const rows = [csvRow(['Panel', 'Metric', 'Value']), ''];
+async function downloadAnalyticsCSV() {
+  const start = document.getElementById('exportStart').value;
+  const end = document.getElementById('exportEnd').value;
+  if (!start || !end) { showToast('Choose both dates first'); return; }
+  if (end < start) { showToast('End date is before start date'); return; }
+  const btn = document.querySelector('#exportDropdownPanel .btn-primary');
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Loading...';
+  try {
+    const d = await fetchRange({ start, end }, false);
+    if (d.error) { showToast(d.error); return; }
+    const selected = getSelectedFruits();
+    const rangeStr = start === end ? formatShortDate(start) : `${formatShortDate(start)} to ${formatShortDate(end)}`;
+    const rows = [csvRow(['Chula Brand — Data Analysis Export']), csvRow(['Range', rangeStr]), '', csvRow(['Panel', 'Metric', 'Value']), ''];
 
-  pushSection(rows, 'Summary', 'core', () => {
-    const core = panelData.core; if (!core) return;
-    const v = filteredOrderCounts(core, selected);
-    rows.push(csvRow(['Summary', 'Total Orders', v.total]), csvRow(['Summary', 'Departed', v.departed]),
-      csvRow(['Summary', 'Pending', v.pending]), csvRow(['Summary', 'Incomplete', v.incomplete]));
-  });
-  pushSection(rows, 'Boxes', 'boxes', () => {
-    const boxes = panelData.boxes; if (!boxes) return;
-    const sumSelected = (obj) => Object.keys(obj).reduce((sum, k) => sum + (selected.includes(k) ? obj[k] : 0), 0);
-    rows.push(csvRow(['Boxes', 'Boxes Ordered', sumSelected(boxes.boxesByCategory)]),
-      csvRow(['Boxes', 'Boxes Shipped', sumSelected(boxes.boxesByCategoryShipped)]));
-  });
-  pushSection(rows, 'Orders by Status', 'status', () => {
-    const status = panelData.status; if (!status) return;
-    LABELS.forEach((l, i) => rows.push(csvRow(['Orders by Status', l, status.statusCounts[i] || 0])));
-  });
-  pushSection(rows, 'Boxes by Product', 'product', () => {
-    const product = panelData.product; if (!product) return;
-    Object.keys(product.boxesByCategory).filter(k => selected.includes(k))
-      .sort((a, b) => product.boxesByCategory[b] - product.boxesByCategory[a])
-      .forEach(k => rows.push(csvRow(['Boxes by Product', PRODUCT_LABELS[k] || k, product.boxesByCategory[k]])));
-  });
-  pushSection(rows, 'Departed per Day', 'day', () => {
-    const day = panelData.day; if (!day) return;
-    Object.entries(day.byDay || {}).sort((a, b) => a[0].localeCompare(b[0]))
-      .forEach(([dt, v]) => rows.push(csvRow(['Departed per Day', dt, v])));
-  });
-  pushSection(rows, 'Complete vs Incomplete', 'complete', () => {
-    const complete = panelData.complete; if (!complete) return;
-    const v = filteredOrderCounts(complete, selected);
-    rows.push(csvRow(['Complete vs Incomplete', 'Complete', v.departed - v.incomplete]),
-      csvRow(['Complete vs Incomplete', 'Incomplete', v.incomplete]));
-  });
-  pushSection(rows, 'Shipped vs Not Shipped', 'shipped', () => {
-    const shipped = panelData.shipped; if (!shipped) return;
-    const v = filteredOrderCounts(shipped, selected);
-    rows.push(csvRow(['Shipped vs Not Shipped', 'Shipped', v.departed]), csvRow(['Shipped vs Not Shipped', 'Not Shipped', v.pending]));
-  });
-  pushSection(rows, 'Activity by Person', 'person', () => {
-    const person = panelData.person; if (!person) return;
-    Object.entries(person.changesByUser || {}).sort((a, b) => b[1] - a[1])
-      .forEach(([n, v]) => rows.push(csvRow(['Activity by Person', n, v])));
-  });
-  pushSection(rows, 'Boxes by Salesperson', 'vendedor', () => {
-    const vendedor = panelData.vendedor; if (!vendedor) return;
-    Object.entries(vendedor.boxesByVendedor || {}).sort((a, b) => b[1] - a[1])
-      .forEach(([n, v]) => rows.push(csvRow(['Boxes by Salesperson', n, v])));
-  });
-  pushSection(rows, 'Bay Usage', 'bayUsage', () => {
-    const bayUsage = panelData.bayUsage; if (!bayUsage) return;
-    Object.entries(bayUsage.bayUsage || {}).sort((a, b) => b[1] - a[1])
-      .forEach(([n, v]) => rows.push(csvRow(['Bay Usage', n, v])));
-  });
-  pushSection(rows, 'Left Behind per Day', 'leftBehind', () => {
-    const leftBehind = panelData.leftBehind; if (!leftBehind) return;
-    Object.entries(leftBehind.leftBehindByDay || {}).sort((a, b) => a[0].localeCompare(b[0]))
-      .forEach(([dt, v]) => rows.push(csvRow(['Left Behind per Day', dt, v])));
-  });
-  pushSection(rows, 'Unloading Trucks', 'unloading', () => {
-    const unloading = panelData.unloading; if (!unloading) return;
-    Object.entries(unloading.unloadingByDay || {}).sort((a, b) => a[0].localeCompare(b[0]))
-      .forEach(([dt, v]) => rows.push(csvRow(['Unloading Trucks', dt, v])));
-  });
-  pushSection(rows, 'Overdue', 'overdue', () => {
-    const overdue = panelData.overdue; if (!overdue) return;
-    const all = Array.isArray(overdue.overdueList) ? overdue.overdueList : [];
-    const filtered = selected.length === ALL_FRUIT_KEYS.length ? all : all.filter(o => (o.categories || []).some(c => selected.includes(c)));
-    const avg = filtered.length ? filtered.reduce((s, o) => s + o.hours, 0) / filtered.length : 0;
-    rows.push(csvRow(['Overdue', 'Avg Overdue', formatHoursMin(avg)]), csvRow(['Overdue', 'Orders Overdue', filtered.length]));
-    const byProduct = {};
-    filtered.forEach(o => (o.categories || []).forEach(c => {
-      if (!byProduct[c]) byProduct[c] = { sum: 0, count: 0 };
-      byProduct[c].sum += o.hours; byProduct[c].count++;
-    }));
-    Object.keys(byProduct).sort((a, b) => (byProduct[b].sum / byProduct[b].count) - (byProduct[a].sum / byProduct[a].count))
-      .forEach(k => rows.push(csvRow(['Overdue by Product', PRODUCT_LABELS[k] || k, formatHoursMin(byProduct[k].sum / byProduct[k].count)])));
-    filtered.slice().sort((a, b) => b.hours - a.hours).slice(0, 5)
-      .forEach(o => rows.push(csvRow(['Overdue Top 5', '#' + o.orden + ' — ' + o.cliente, formatHoursMin(o.hours)])));
-  });
+    pushSection(rows, () => {
+      const v = filteredOrderCounts(d, selected);
+      rows.push(csvRow(['Summary', 'Total Orders', v.total]), csvRow(['Summary', 'Departed', v.departed]),
+        csvRow(['Summary', 'Pending', v.pending]), csvRow(['Summary', 'Incomplete', v.incomplete]));
+    });
+    pushSection(rows, () => {
+      const sumSelected = (obj) => Object.keys(obj).reduce((sum, k) => sum + (selected.includes(k) ? obj[k] : 0), 0);
+      rows.push(csvRow(['Boxes', 'Boxes Ordered', sumSelected(d.boxesByCategory)]),
+        csvRow(['Boxes', 'Boxes Shipped', sumSelected(d.boxesByCategoryShipped)]));
+    });
+    pushSection(rows, () => {
+      LABELS.forEach((l, i) => rows.push(csvRow(['Orders by Status', l, d.statusCounts[i] || 0])));
+    });
+    pushSection(rows, () => {
+      Object.keys(d.boxesByCategory).filter(k => selected.includes(k))
+        .sort((a, b) => d.boxesByCategory[b] - d.boxesByCategory[a])
+        .forEach(k => rows.push(csvRow(['Boxes by Product', PRODUCT_LABELS[k] || k, d.boxesByCategory[k]])));
+    });
+    pushSection(rows, () => {
+      Object.entries(d.byDay || {}).sort((a, b) => a[0].localeCompare(b[0]))
+        .forEach(([dt, v]) => rows.push(csvRow(['Departed per Day', dt, v])));
+    });
+    pushSection(rows, () => {
+      const v = filteredOrderCounts(d, selected);
+      rows.push(csvRow(['Complete vs Incomplete', 'Complete', v.departed - v.incomplete]),
+        csvRow(['Complete vs Incomplete', 'Incomplete', v.incomplete]));
+    });
+    pushSection(rows, () => {
+      const v = filteredOrderCounts(d, selected);
+      rows.push(csvRow(['Shipped vs Not Shipped', 'Shipped', v.departed]), csvRow(['Shipped vs Not Shipped', 'Not Shipped', v.pending]));
+    });
+    pushSection(rows, () => {
+      Object.entries(d.changesByUser || {}).sort((a, b) => b[1] - a[1])
+        .forEach(([n, v]) => rows.push(csvRow(['Activity by Person', n, v])));
+    });
+    pushSection(rows, () => {
+      Object.entries(d.boxesByVendedor || {}).sort((a, b) => b[1] - a[1])
+        .forEach(([n, v]) => rows.push(csvRow(['Boxes by Salesperson', n, v])));
+    });
+    pushSection(rows, () => {
+      Object.entries(d.bayUsage || {}).sort((a, b) => b[1] - a[1])
+        .forEach(([n, v]) => rows.push(csvRow(['Bay Usage', n, v])));
+    });
+    pushSection(rows, () => {
+      Object.entries(d.leftBehindByDay || {}).sort((a, b) => a[0].localeCompare(b[0]))
+        .forEach(([dt, v]) => rows.push(csvRow(['Left Behind per Day', dt, v])));
+    });
+    pushSection(rows, () => {
+      Object.entries(d.unloadingByDay || {}).sort((a, b) => a[0].localeCompare(b[0]))
+        .forEach(([dt, v]) => rows.push(csvRow(['Unloading Trucks', dt, v])));
+    });
+    pushSection(rows, () => {
+      const all = Array.isArray(d.overdueList) ? d.overdueList : [];
+      const filtered = selected.length === ALL_FRUIT_KEYS.length ? all : all.filter(o => (o.categories || []).some(c => selected.includes(c)));
+      const avg = filtered.length ? filtered.reduce((s, o) => s + o.hours, 0) / filtered.length : 0;
+      rows.push(csvRow(['Overdue', 'Avg Overdue', formatHoursMin(avg)]), csvRow(['Overdue', 'Orders Overdue', filtered.length]));
+      const byProduct = {};
+      filtered.forEach(o => (o.categories || []).forEach(c => {
+        if (!byProduct[c]) byProduct[c] = { sum: 0, count: 0 };
+        byProduct[c].sum += o.hours; byProduct[c].count++;
+      }));
+      Object.keys(byProduct).sort((a, b) => (byProduct[b].sum / byProduct[b].count) - (byProduct[a].sum / byProduct[a].count))
+        .forEach(k => rows.push(csvRow(['Overdue by Product', PRODUCT_LABELS[k] || k, formatHoursMin(byProduct[k].sum / byProduct[k].count)])));
+      filtered.slice().sort((a, b) => b.hours - a.hours).slice(0, 5)
+        .forEach(o => rows.push(csvRow(['Overdue Top 5', '#' + o.orden + ' — ' + o.cliente, formatHoursMin(o.hours)])));
+    });
 
-  if (rows.length <= 2) { showToast('Nothing to export yet'); return; }
-  const csv = rows.join('\r\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'chula-data-analysis-' + new Date().toISOString().slice(0, 10) + '.csv';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+    if (rows.length <= 5) { showToast('Nothing to export in that range'); return; }
+    const csv = rows.join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'chula-data-analysis-' + start + '_to_' + end + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    closeAllDropdowns();
+  } catch (e) {
+    showToast('Export failed — try again');
+  } finally {
+    btn.disabled = false; btn.innerHTML = originalHtml;
+  }
 }
 
 // ── Render por panel ──
@@ -2653,8 +2675,8 @@ function renderCoreKpis(d) {
   const prev = prevPanelData.core ? filteredOrderCounts(prevPanelData.core, selectedFruits) : null;
   const kpis = [
     { label: 'Total Orders', value: v.total, sub: '', color: '#5B21B6', delta: prev ? formatDelta(v.total, prev.total, 'neutral') : '' },
-    { label: 'Departed', value: v.departed, sub: pct(v.departed, v.total) + '%', color: '#16A34A', delta: prev ? formatDelta(v.departed, prev.departed, 'good-up') : '' },
-    { label: 'Pending', value: v.pending, sub: pct(v.pending, v.total) + '%', color: '#CA8A04', delta: prev ? formatDelta(v.pending, prev.pending, 'neutral') : '' },
+    { label: 'Departed', value: v.departed, sub: pct(v.departed, v.total) + '% of total', color: '#16A34A', delta: prev ? formatDelta(v.departed, prev.departed, 'good-up') : '' },
+    { label: 'Pending', value: v.pending, sub: pct(v.pending, v.total) + '% of total', color: '#CA8A04', delta: prev ? formatDelta(v.pending, prev.pending, 'neutral') : '' },
     { label: 'Incomplete', value: v.incomplete, sub: v.departed ? pct(v.incomplete, v.departed) + '% of departed' : '—', color: '#DC2626', delta: prev ? formatDelta(v.incomplete, prev.incomplete, 'bad-up') : '' }
   ];
   document.getElementById('kpis-core').innerHTML = kpiCardsHtml(kpis);
