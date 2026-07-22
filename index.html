@@ -904,7 +904,12 @@
     </div>
 
     <div class="admin-tab-panel" id="admin-tab-settings" style="display:none;">
-      <p class="section-label">Umbrales</p>
+      <p class="section-label">Pantalla de Order Coordinator</p>
+      <div class="settings-group">
+        <div class="settings-row"><label>Refrescar cada (segundos)</label><input type="number" id="setting-shipRefreshSeconds" min="20"></div>
+        <p class="settings-caption">Cada cuánto se actualiza sola la lista de pedidos mientras el Order Coordinator la tiene abierta (mínimo 20s para no saturar el servidor).</p>
+      </div>
+      <p class="section-label" style="margin-top:1.5rem;">Umbrales</p>
       <div class="settings-group"><div class="settings-row"><label>Horas para marcar "Stalled"</label><input type="number" id="setting-stalledHours"></div></div>
       <div class="settings-group"><div class="settings-row"><label>Horas para marcar "Soon"</label><input type="number" id="setting-soonHours"></div></div>
       <div class="settings-group"><div class="settings-row"><label>Horas para bloquear edición</label><input type="number" id="setting-lockHours"></div></div>
@@ -1107,7 +1112,7 @@ function escapeHtml(str) {
 
 // Valores editables desde Admin → Settings. Estos son el "de fábrica" mientras se
 // cargan de verdad (justo después del login); ver loadAppSettings()/loadClientsConfig().
-let APP_SETTINGS = { standardDivisor: 48, hebDivisor: 60, stalledHours: 6, soonHours: 1, lockHours: 48, chofRefreshSeconds: 30, chofShowClientName: 1, chofShowProducts: 1, statusRank1: 1, statusRank2: 2, statusRank3: 3, statusRank4: 4, statusRank5: 5 };
+let APP_SETTINGS = { standardDivisor: 48, hebDivisor: 60, stalledHours: 6, soonHours: 1, lockHours: 48, chofRefreshSeconds: 30, chofShowClientName: 1, chofShowProducts: 1, shipRefreshSeconds: 120, statusRank1: 1, statusRank2: 2, statusRank3: 3, statusRank4: 4, statusRank5: 5 };
 let CLIENTS_CONFIG = []; // [{ nombrePatron, nombreCorto, cajasPorTarima, activo }], desde Admin → Clients
 let clientsConfigLoaded = false;
 async function loadAppSettings() {
@@ -1975,7 +1980,7 @@ async function adminToggleClientDisplay(nombrePatron, field, value) {
 }
 
 // ── SETTINGS (Admin) ──
-const GENERAL_SETTINGS_LABELS = { stalledHours: 'Horas "Stalled"', soonHours: 'Horas "Soon"', lockHours: 'Horas para bloquear edición' };
+const GENERAL_SETTINGS_LABELS = { shipRefreshSeconds: 'Refrescar Order Coordinator (seg.)', stalledHours: 'Horas "Stalled"', soonHours: 'Horas "Soon"', lockHours: 'Horas para bloquear edición' };
 let loadedGeneralSettings = {};
 // Las 5 secciones de "Today's orders" (Departed/estatus 6 nunca entra aquí, siempre va aparte).
 const STATUS_ORDER_CODES = [1, 2, 3, 4, 5];
@@ -1984,10 +1989,11 @@ async function loadAdminSettings() {
   try {
     const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'getSettings' }) });
     const s = await res.json();
+    document.getElementById('setting-shipRefreshSeconds').value = s.shipRefreshSeconds;
     document.getElementById('setting-stalledHours').value = s.stalledHours;
     document.getElementById('setting-soonHours').value = s.soonHours;
     document.getElementById('setting-lockHours').value = s.lockHours;
-    loadedGeneralSettings = { stalledHours: s.stalledHours, soonHours: s.soonHours, lockHours: s.lockHours };
+    loadedGeneralSettings = { shipRefreshSeconds: s.shipRefreshSeconds, stalledHours: s.stalledHours, soonHours: s.soonHours, lockHours: s.lockHours };
     statusOrderConfig = STATUS_ORDER_CODES
       .map(est => ({ est, label: LABELS[est - 1], rank: s['statusRank' + est] || est }))
       .sort((a, b) => a.rank - b.rank)
@@ -1998,6 +2004,7 @@ async function loadAdminSettings() {
 async function saveAdminSettings() {
   const statusEl = document.getElementById('admin-settings-status');
   const payload = {
+    shipRefreshSeconds: Math.max(20, parseInt(document.getElementById('setting-shipRefreshSeconds').value, 10) || 120),
     stalledHours: parseInt(document.getElementById('setting-stalledHours').value, 10) || 6,
     soonHours: parseInt(document.getElementById('setting-soonHours').value, 10) || 1,
     lockHours: parseInt(document.getElementById('setting-lockHours').value, 10) || 48
@@ -4559,11 +4566,18 @@ if (location.hash === '#admin') {
   goAdminUserSelect();
 }
 
-// Auto-refresh de la lista de órdenes cada 2 min, solo mientras el Shipping Panel está activo
-setInterval(() => {
-  const encScreen = document.getElementById('screen-enc');
-  if (encScreen && encScreen.classList.contains('active') && currentUser) loadOrdenes();
-}, 120000);
+// Auto-refresh de la lista de órdenes, solo mientras el Shipping Panel está activo — el
+// intervalo es configurable desde Admin → Order Coordinator (APP_SETTINGS.shipRefreshSeconds,
+// default 120s/2min), así que se reprograma solo en cada vuelta en vez de un setInterval
+// de duración fija (mismo patrón que ya usa scheduleChoferRefresh() más abajo).
+function scheduleShippingRefresh() {
+  setTimeout(() => {
+    const encScreen = document.getElementById('screen-enc');
+    if (encScreen && encScreen.classList.contains('active') && currentUser) loadOrdenes();
+    scheduleShippingRefresh();
+  }, Math.max(20, APP_SETTINGS.shipRefreshSeconds || 120) * 1000);
+}
+scheduleShippingRefresh();
 
 // Auto-refresh de la pantalla Driver/Client — para que "Driver Arrived" salga solo,
 // sin que el chofer/cliente tenga que volver a buscar manualmente. El intervalo es
