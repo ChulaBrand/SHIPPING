@@ -1013,7 +1013,7 @@
         <div class="orders-list" id="departed-today-list"></div>
       </div>
       <div id="departed-yesterday-section" style="display:none;">
-        <p class="section-label" style="margin-top:1.25rem;">📦 Departed yesterday</p>
+        <p class="section-label" style="margin-top:1.25rem;">📦 Departed — Past Days</p>
         <div class="orders-list" id="departed-yesterday-list"></div>
       </div>
     </div>
@@ -3594,7 +3594,10 @@ function renderOrdenes() {
   else list.innerHTML = groupByStatusHtml(todayOrders);
 
   const departedToday = departed.filter(o => o.fecha === today);
-  const departedYesterday = departed.filter(o => o.fecha !== today);
+  // No solo "ayer" — cualquier departed dentro de la ventana de 48h que no sea de hoy
+  // (podía incluir antier también). Se ordena más reciente primero, si no salían en
+  // el orden en que llegaron del Sheet, mezclando fechas sin ningún criterio.
+  const departedYesterday = departed.filter(o => o.fecha !== today).sort((a, b) => b.fecha.localeCompare(a.fecha));
 
   const departedTodaySection = document.getElementById('departed-today-section');
   const departedTodayList = document.getElementById('departed-today-list');
