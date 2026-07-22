@@ -4547,6 +4547,15 @@ papayaSendDraftBtn.addEventListener("click", sendAndSyncDraft);
 
 prefetchUsers(); // arranca desde que carga la página, para que "Clerk" abra instantáneo
 
+// Deep link a /admin (el archivo admin/index.html redirige aquí con esta marca en el
+// URL) — salta directo a "elegir cuenta de Admin" en vez del menú inicial, para poder
+// abrir Admin en una pestaña nueva sin tener que buscar el botón oculto (el que se
+// revela tocando "Embarques" en el logo). No salta el login: solo ahorra ese paso.
+if (location.hash === '#admin') {
+  history.replaceState(null, '', location.pathname + location.search); // limpia el #admin de la URL
+  goAdminUserSelect();
+}
+
 // Auto-refresh de la lista de órdenes cada 2 min, solo mientras el Shipping Panel está activo
 setInterval(() => {
   const encScreen = document.getElementById('screen-enc');
