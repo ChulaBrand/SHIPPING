@@ -1714,25 +1714,31 @@ async function loadAdminUsers() {
       const perms = String(u.permissions || 'clerk').split(',').map(s => s.trim()).filter(Boolean);
       const safeName = u.name.replace(/'/g, "\\'");
       return `
-      <div class="admin-user-row" style="flex-direction:column;align-items:stretch;gap:8px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div class="admin-user-row" style="flex-direction:column;align-items:stretch;gap:0;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
           <span class="name${u.active?'':' inactive'}">${escapeHtml(u.name)}</span>
-          <span class="admin-toggle-btn ${u.active?'is-active':'is-inactive'}" onclick="adminToggleUser('${safeName}', ${!u.active})">${u.active?'Active':'Inactive'}</span>
+          <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+            <span class="admin-toggle-btn ${u.active?'is-active':'is-inactive'}" onclick="adminToggleUser('${safeName}', ${!u.active})">${u.active?'Active':'Inactive'}</span>
+            <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);width:30px;height:30px;" onclick="toggleUserEditPanel(this)" title="Edit" aria-label="Edit"><i class="ti ti-pencil"></i></button>
+          </div>
         </div>
-        <div style="display:flex;gap:14px;align-items:center;font-size:12.5px;color:var(--text-muted);flex-wrap:wrap;">
-          <label style="display:flex;align-items:center;gap:6px;">Shipping:
-            <select data-perm-shipping onchange="adminEditPermissions('${safeName}', this)" style="height:30px;border:1px solid var(--border);border-radius:6px;padding:0 6px;font-family:'Inter',sans-serif;font-size:12.5px;">
-              <option value="clerk" ${perms.includes('clerk')?'selected':''}>Full edit</option>
-              <option value="shipping_view" ${perms.includes('shipping_view')?'selected':''}>View only</option>
-              <option value="" ${!perms.includes('clerk') && !perms.includes('shipping_view')?'selected':''}>No access</option>
-            </select>
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="analytics" ${perms.includes('analytics')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"> Data Analysis</label>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="admin" ${perms.includes('admin')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"> Admin</label>
-        </div>
-        <div>
-          <span class="admin-toggle-btn" onclick="toggleResetPinPanel(this)">Reset PIN</span>
-          <form class="reset-pin-panel" style="display:none;gap:8px;align-items:center;margin-top:8px;" onsubmit="event.preventDefault(); submitResetUserPin('${safeName}', this);">
+        <div class="user-edit-panel" style="display:none;flex-direction:column;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+          <div style="display:flex;gap:14px;align-items:center;font-size:12.5px;color:var(--text-muted);flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:6px;">Shipping:
+              <select data-perm-shipping onchange="adminEditPermissions('${safeName}', this)" style="height:30px;border:1px solid var(--border);border-radius:6px;padding:0 6px;font-family:'Inter',sans-serif;font-size:12.5px;">
+                <option value="clerk" ${perms.includes('clerk')?'selected':''}>Full edit</option>
+                <option value="shipping_view" ${perms.includes('shipping_view')?'selected':''}>View only</option>
+                <option value="" ${!perms.includes('clerk') && !perms.includes('shipping_view')?'selected':''}>No access</option>
+              </select>
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="analytics" ${perms.includes('analytics')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"> Data Analysis</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="admin" ${perms.includes('admin')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"> Admin</label>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <span class="admin-toggle-btn" onclick="toggleResetPinPanel(this)">Reset PIN</span>
+            <span class="admin-toggle-btn is-inactive" onclick="confirmDeleteUser('${safeName}')">Delete user</span>
+          </div>
+          <form class="reset-pin-panel" style="display:none;gap:8px;align-items:center;" onsubmit="event.preventDefault(); submitResetUserPin('${safeName}', this);">
             <input type="password" class="reset-pw-input" enterkeyhint="go" autocomplete="off" placeholder="${perms.includes('admin') ? 'New password (min. 6 chars)' : 'New 4-digit PIN'}" style="flex:1;height:34px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;">
             <button type="submit" class="btn-primary" style="height:34px;padding:0 14px;font-size:12.5px;white-space:nowrap;">Confirm</button>
             <span class="admin-toggle-btn" style="white-space:nowrap;" onclick="toggleResetPinPanel(this)">Cancel</span>
@@ -1760,6 +1766,21 @@ async function adminEditPermissions(name, el) {
   } catch(e) { showToast('Connection error.'); }
 }
 
+function toggleUserEditPanel(btnEl) {
+  const row = btnEl.closest('.admin-user-row');
+  const panel = row.querySelector('.user-edit-panel');
+  panel.style.display = (panel.style.display === 'flex') ? 'none' : 'flex';
+}
+async function confirmDeleteUser(name) {
+  if (!confirm(`Delete "${name}"? This can't be undone — they lose access right away.\n\nIf you just want to block them without losing the account, use "Inactive" instead.`)) return;
+  try {
+    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminDeleteUser', name }) });
+    const result = await res.json();
+    if (result.error) { showToast(result.error); return; }
+    showToast('User deleted');
+    loadAdminUsers();
+  } catch(e) { showToast('Connection error.'); }
+}
 function toggleResetPinPanel(btnEl) {
   const row = btnEl.closest('.admin-user-row');
   const panel = row.querySelector('.reset-pin-panel');
