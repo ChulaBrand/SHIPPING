@@ -138,11 +138,6 @@
   .logo-text { font-size:13px; font-weight:600; letter-spacing:.10em; text-transform:uppercase; color:var(--text-muted); }
   .logo-text span { color:var(--text); }
   .screen { display:none; } .screen.active { display:block; }
-  /* Las pantallas del flujo de login (poco contenido, se ven "pegadas arriba" con
-     mucho vacío abajo en celulares altos) se centran verticalmente — el resto de las
-     pantallas (Shipping/Analytics/Admin, con mucho contenido) se queda con el flujo
-     normal de arriba hacia abajo, por eso esto NO es una regla genérica de .screen. */
-  #screen-rol.active, #screen-pin.active, #screen-user-select.active { display:flex; flex-direction:column; justify-content:center; min-height:calc(100vh - 6rem); }
   .page-title { font-size:24px; font-weight:500; margin-bottom:4px; }
   .page-sub { font-size:15px; color:var(--text-muted); margin-bottom:2rem; }
   .role-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; }
@@ -589,7 +584,6 @@
         </div>
       </div>
     </div>
-    <div id="analyticsQuickNav" style="display:flex;gap:6px;overflow-x:auto;padding:2px 2px 4px;margin-bottom:12px;"></div>
     <div class="kpi-panels-row" id="kpi-panels-row">
       <div class="kpi-panel" id="analytics-panel-core">
         <div class="panel-title-row">
@@ -989,8 +983,8 @@
       <div style="display:flex;gap:8px;">
         <button class="btn-back" onclick="shippingBack()">← Back</button>
         <button class="btn-back" onclick="loadOrdenes()" title="Refresh" aria-label="Refresh" style="padding:5px 9px;"><i class="ti ti-refresh"></i></button>
-        <button class="btn-back" id="shippingUploadBtn" onclick="goPapayaUpload('screen-enc')" title="Upload" aria-label="Upload" style="padding:5px 9px;"><i class="ti ti-upload"></i></button>
-        <button class="btn-back" onclick="goRol()" title="Sign out" aria-label="Sign out" style="padding:5px 9px;"><i class="ti ti-logout"></i></button>
+        <button class="btn-back" id="shippingUploadBtn" onclick="goPapayaUpload('screen-enc')">Upload</button>
+        <button class="btn-back" onclick="goRol()">Sign out</button>
       </div>
     </div>
     <p class="section-label">Find order</p>
@@ -2536,23 +2530,6 @@ async function initAnalyticsScreen() {
   panelOverride = {};
   if (!analyticsLayoutLoaded) { await loadAnalyticsLayoutConfig(); analyticsLayoutLoaded = true; }
   setAnalyticsRange('default');
-  renderAnalyticsQuickNav();
-}
-// Con 12 paneles apilados en una sola columna en celular, llegar hasta "Overdue" o
-// "Bay Usage" era pura pulgada de scroll — esta fila de chips brinca directo a la
-// sección, sin tener que bajar todo a mano. Se salta un panel que esté escondido
-// (Admin → Analytics Layout) usando offsetParent, que da null en cualquier elemento
-// con display:none (el suyo o el de un ancestro).
-function renderAnalyticsQuickNav() {
-  const nav = document.getElementById('analyticsQuickNav');
-  if (!nav) return;
-  nav.innerHTML = ALL_PANEL_KEYS.map(key =>
-    `<span class="admin-toggle-btn" style="white-space:nowrap;flex-shrink:0;" onclick="scrollToAnalyticsPanel('${key}')">${ANALYTICS_PANEL_LABELS[key] || key}</span>`
-  ).join('');
-}
-function scrollToAnalyticsPanel(key) {
-  const el = document.getElementById('analytics-panel-' + key);
-  if (el && el.offsetParent !== null) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ── Filtro de frutas (100% client-side sobre los datos ya cargados de cada panel) ──
