@@ -152,14 +152,19 @@
   .btn-back { background:none; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px; color:var(--text-muted); cursor:pointer; padding:5px 12px; font-family:'Inter',sans-serif; }
   .btn-back:disabled { opacity:.5; cursor:default; }
   .spin-icon { display:inline-block; animation:spin .8s linear infinite; }
-  .admin-tabs { display:flex; gap:6px; margin-bottom:1.25rem; border-bottom:1px solid var(--border); overflow-x:auto; }
-  .admin-tab-btn { background:none; border:none; border-bottom:2px solid transparent; font-size:13px; font-weight:500; color:var(--text-muted); cursor:pointer; padding:8px 4px; font-family:'Inter',sans-serif; white-space:nowrap; }
-  .admin-tab-btn.active { color:var(--green-dark); border-bottom-color:var(--green-dark); }
-  .settings-group { padding:10px 0; border-bottom:1px solid var(--border); }
-  .settings-group:last-of-type { border-bottom:none; }
+  .admin-tabs { display:flex; gap:4px; margin-bottom:1.5rem; padding:5px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); overflow-x:auto; }
+  .admin-tab-btn { display:flex; align-items:center; gap:6px; background:none; border:none; border-radius:var(--radius-sm); font-size:12.5px; font-weight:600; color:var(--text-muted); cursor:pointer; padding:9px 13px; font-family:'Inter',sans-serif; white-space:nowrap; transition:background .15s,color .15s; }
+  .admin-tab-btn:hover { color:var(--text); }
+  .admin-tab-btn i { font-size:15px; }
+  .admin-tab-btn.active { color:var(--purple); background:var(--white); box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .admin-section-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius-sm); padding:16px 18px; margin-bottom:16px; }
+  .settings-group { padding:12px 0; border-bottom:1px solid var(--border); }
+  .settings-group:first-of-type { padding-top:2px; }
+  .settings-group:last-of-type { border-bottom:none; padding-bottom:2px; }
   .settings-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
-  .settings-row label { font-size:13px; color:var(--text); }
-  .settings-row input[type=number] { width:80px; height:36px; border:1px solid var(--border); border-radius:var(--radius-sm); padding:0 10px; font-family:'IBM Plex Mono',monospace; font-size:13px; text-align:right; }
+  .settings-row label { font-size:13px; color:var(--text); font-weight:500; }
+  .settings-row input[type=number] { width:80px; height:36px; border:1px solid var(--border); border-radius:var(--radius-sm); padding:0 10px; font-family:'IBM Plex Mono',monospace; font-size:13px; text-align:right; background:var(--bg); }
+  .settings-row input[type=number]:focus { outline:2px solid var(--purple); outline-offset:-1px; }
   .settings-caption { font-size:11.5px; color:var(--text-faint); margin-top:6px; }
   .toggle-switch { position:relative; display:inline-block; width:42px; height:24px; flex-shrink:0; }
   .toggle-switch input { opacity:0; width:0; height:0; position:absolute; }
@@ -353,7 +358,9 @@
   .user-select-btn:hover { border-color:var(--purple); box-shadow:0 6px 16px rgba(91,42,134,.10); }
   .user-select-btn:active { transform:scale(.97); }
   .user-select-btn i { font-size:26px; color:var(--purple); }
-  .admin-user-row { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--white); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:8px; }
+  .admin-user-row { display:flex; align-items:center; justify-content:space-between; padding:11px 14px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:8px; transition:border-color .15s,box-shadow .15s; }
+  .admin-user-row:hover { border-color:var(--border-strong); box-shadow:0 2px 8px rgba(0,0,0,.05); }
+  .admin-user-row:last-child { margin-bottom:0; }
   .admin-user-row .name { font-weight:600; font-size:14px; }
   .admin-user-row .inactive { color:var(--text-faint); text-decoration:line-through; }
   .admin-toggle-btn { font-size:11.5px; font-weight:600; padding:6px 12px; border-radius:99px; cursor:pointer; border:1px solid var(--border-strong); background:var(--white); }
@@ -819,11 +826,11 @@
       <button class="btn-back" onclick="goRol()">← Back</button>
     </div>
     <div class="admin-tabs">
-      <button class="admin-tab-btn active" data-tab="users" onclick="showAdminTab('users')">Users</button>
-      <button class="admin-tab-btn" data-tab="clients" onclick="showAdminTab('clients')">Clients</button>
-      <button class="admin-tab-btn" data-tab="driver" onclick="showAdminTab('driver')">Driver/Client Screen</button>
-      <button class="admin-tab-btn" data-tab="settings" onclick="showAdminTab('settings')">Order Coordinator</button>
-      <button class="admin-tab-btn" data-tab="analytics" onclick="showAdminTab('analytics')">Analytics Layout</button>
+      <button class="admin-tab-btn active" data-tab="users" onclick="showAdminTab('users')"><i class="ti ti-users"></i>Users</button>
+      <button class="admin-tab-btn" data-tab="clients" onclick="showAdminTab('clients')"><i class="ti ti-building-store"></i>Clients</button>
+      <button class="admin-tab-btn" data-tab="driver" onclick="showAdminTab('driver')"><i class="ti ti-truck"></i>Driver/Client Screen</button>
+      <button class="admin-tab-btn" data-tab="settings" onclick="showAdminTab('settings')"><i class="ti ti-clipboard-list"></i>Order Coordinator</button>
+      <button class="admin-tab-btn" data-tab="analytics" onclick="showAdminTab('analytics')"><i class="ti ti-chart-bar"></i>Analytics Layout</button>
     </div>
 
     <div class="admin-tab-panel" id="admin-tab-users">
@@ -849,29 +856,33 @@
         </form>
         <p class="upload-status show" id="admin-add-status" style="display:none;"></p>
       </div>
-      <p class="section-label">Users</p>
-      <div id="admin-user-list"></div>
+      <div class="admin-section-card">
+        <p class="section-label">Users</p>
+        <div id="admin-user-list"></div>
+      </div>
     </div>
 
     <div class="admin-tab-panel" id="admin-tab-clients" style="display:none;">
-      <p class="section-label">Cajas por tarima</p>
-      <p style="font-size:11.5px;color:var(--text-faint);margin:-2px 0 8px;">El estándar aplica cuando ningún cliente/tienda de abajo tiene su propio valor. HEB se detecta por el producto, no por cliente.</p>
-      <div class="settings-group"><div class="settings-row"><label>Estándar</label><input type="number" id="setting-standardDivisor"></div></div>
-      <div class="settings-group"><div class="settings-row"><label>HEB</label><input type="number" id="setting-hebDivisor"></div></div>
-      <div class="settings-group">
-        <div class="settings-row">
-          <label>SAM'S</label>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <input type="number" id="setting-samsDivisorTop" placeholder="no creado" style="width:90px;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;text-align:right;">
-            <span class="admin-toggle-btn" onclick="submitClientCajas(&quot;SAM'S&quot;, this)">Save</span>
+      <div class="admin-section-card">
+        <p class="section-label">Cajas por tarima</p>
+        <p style="font-size:11.5px;color:var(--text-faint);margin:-2px 0 8px;">El estándar aplica cuando ningún cliente/tienda de abajo tiene su propio valor. HEB se detecta por el producto, no por cliente.</p>
+        <div class="settings-group"><div class="settings-row"><label>Estándar</label><input type="number" id="setting-standardDivisor"></div></div>
+        <div class="settings-group"><div class="settings-row"><label>HEB</label><input type="number" id="setting-hebDivisor"></div></div>
+        <div class="settings-group">
+          <div class="settings-row">
+            <label>SAM'S</label>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input type="number" id="setting-samsDivisorTop" placeholder="no creado" style="width:90px;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;text-align:right;">
+              <span class="admin-toggle-btn" onclick="submitClientCajas(&quot;SAM'S&quot;, this)">Save</span>
+            </div>
           </div>
+          <p class="settings-caption">Aplica a las 10 tiendas de SAM'S automáticamente (a menos que alguna tenga su propio valor puesto en la lista de Clients de abajo). Necesitas tener un cliente llamado exactamente "SAM'S" creado primero. Este campo se guarda con su propio botón "Save" — el de "Save changes" de aquí abajo es solo para Estándar y HEB.</p>
         </div>
-        <p class="settings-caption">Aplica a las 10 tiendas de SAM'S automáticamente (a menos que alguna tenga su propio valor puesto en la lista de Clients de abajo). Necesitas tener un cliente llamado exactamente "SAM'S" creado primero. Este campo se guarda con su propio botón "Save" — el de "Save changes" de aquí abajo es solo para Estándar y HEB.</p>
+        <button class="btn-primary" style="margin-top:10px;" onclick="saveCajasSettings()">Save changes</button>
+        <p class="upload-status show" id="admin-cajas-status" style="display:none;"></p>
       </div>
-      <button class="btn-primary" style="margin-top:10px;" onclick="saveCajasSettings()">Save changes</button>
-      <p class="upload-status show" id="admin-cajas-status" style="display:none;"></p>
 
-      <div class="checklist" style="margin:20px 0 16px;">
+      <div class="checklist" style="margin:0 0 16px;">
         <p class="checklist-title">Add client</p>
         <p style="font-size:11px;color:var(--text-faint);margin:-4px 0 4px;">Un cliente "sombrilla" (ej. SAM'S) agrupa tiendas — o, si no tiene tiendas, funciona igual que antes: un cliente normal.</p>
         <form style="display:flex;flex-direction:column;gap:8px;" onsubmit="event.preventDefault(); adminAddClient();">
@@ -882,59 +893,69 @@
         </form>
         <p class="upload-status show" id="admin-add-client-status" style="display:none;"></p>
       </div>
-      <p class="section-label">Clients</p>
-      <div id="admin-client-list"></div>
+      <div class="admin-section-card">
+        <p class="section-label">Clients</p>
+        <div id="admin-client-list"></div>
+      </div>
     </div>
 
     <div class="admin-tab-panel" id="admin-tab-driver" style="display:none;">
-      <p class="section-label">Pantalla de Driver/Client</p>
-      <div class="settings-group">
-        <div class="settings-row"><label>Refrescar cada (segundos)</label><input type="number" id="setting-chofRefreshSeconds" min="10"></div>
-        <p class="settings-caption">Cada cuánto se actualiza sola la pantalla de tracking del chofer/cliente (mínimo 10s para no saturar el servidor).</p>
+      <div class="admin-section-card">
+        <p class="section-label">Pantalla de Driver/Client</p>
+        <div class="settings-group">
+          <div class="settings-row"><label>Refrescar cada (segundos)</label><input type="number" id="setting-chofRefreshSeconds" min="10"></div>
+          <p class="settings-caption">Cada cuánto se actualiza sola la pantalla de tracking del chofer/cliente (mínimo 10s para no saturar el servidor).</p>
+        </div>
+        <div class="settings-group">
+          <div class="settings-row"><label>Mostrar nombre del cliente</label><label class="toggle-switch"><input type="checkbox" id="setting-chofShowClientName"><span class="toggle-slider"></span></label></div>
+        </div>
+        <div class="settings-group">
+          <div class="settings-row"><label>Mostrar productos</label><label class="toggle-switch"><input type="checkbox" id="setting-chofShowProducts"><span class="toggle-slider"></span></label></div>
+          <p class="settings-caption">Apagador general para toda la pantalla del chofer/cliente. Si quieres la excepción de un solo cliente en vez de todos, usa las casillas en la pestaña Clients.</p>
+        </div>
+        <button class="btn-primary" style="margin-top:14px;" onclick="saveDriverScreenSettings()">Save changes</button>
+        <p class="upload-status show" id="admin-driver-status" style="display:none;"></p>
       </div>
-      <div class="settings-group">
-        <div class="settings-row"><label>Mostrar nombre del cliente</label><label class="toggle-switch"><input type="checkbox" id="setting-chofShowClientName"><span class="toggle-slider"></span></label></div>
-      </div>
-      <div class="settings-group">
-        <div class="settings-row"><label>Mostrar productos</label><label class="toggle-switch"><input type="checkbox" id="setting-chofShowProducts"><span class="toggle-slider"></span></label></div>
-        <p class="settings-caption">Apagador general para toda la pantalla del chofer/cliente. Si quieres la excepción de un solo cliente en vez de todos, usa las casillas en la pestaña Clients.</p>
-      </div>
-      <button class="btn-primary" style="margin-top:14px;" onclick="saveDriverScreenSettings()">Save changes</button>
-      <p class="upload-status show" id="admin-driver-status" style="display:none;"></p>
     </div>
 
     <div class="admin-tab-panel" id="admin-tab-settings" style="display:none;">
-      <p class="section-label">Pantalla de Order Coordinator</p>
-      <div class="settings-group">
-        <div class="settings-row"><label>Refrescar cada (segundos)</label><input type="number" id="setting-shipRefreshSeconds" min="20"></div>
-        <p class="settings-caption">Cada cuánto se actualiza sola la lista de pedidos mientras el Order Coordinator la tiene abierta (mínimo 20s para no saturar el servidor).</p>
+      <div class="admin-section-card">
+        <p class="section-label">Pantalla de Order Coordinator</p>
+        <div class="settings-group">
+          <div class="settings-row"><label>Refrescar cada (segundos)</label><input type="number" id="setting-shipRefreshSeconds" min="20"></div>
+          <p class="settings-caption">Cada cuánto se actualiza sola la lista de pedidos mientras el Order Coordinator la tiene abierta (mínimo 20s para no saturar el servidor).</p>
+        </div>
+        <p class="section-label" style="margin-top:1.25rem;">Umbrales</p>
+        <div class="settings-group"><div class="settings-row"><label>Horas para marcar "Stalled"</label><input type="number" id="setting-stalledHours"></div></div>
+        <div class="settings-group"><div class="settings-row"><label>Horas para marcar "Soon"</label><input type="number" id="setting-soonHours"></div></div>
+        <div class="settings-group"><div class="settings-row"><label>Horas para bloquear edición</label><input type="number" id="setting-lockHours"></div></div>
+        <button class="btn-primary" style="margin-top:14px;" onclick="saveAdminSettings()">Save changes</button>
+        <p class="upload-status show" id="admin-settings-status" style="display:none;"></p>
       </div>
-      <p class="section-label" style="margin-top:1.5rem;">Umbrales</p>
-      <div class="settings-group"><div class="settings-row"><label>Horas para marcar "Stalled"</label><input type="number" id="setting-stalledHours"></div></div>
-      <div class="settings-group"><div class="settings-row"><label>Horas para marcar "Soon"</label><input type="number" id="setting-soonHours"></div></div>
-      <div class="settings-group"><div class="settings-row"><label>Horas para bloquear edición</label><input type="number" id="setting-lockHours"></div></div>
-      <button class="btn-primary" style="margin-top:14px;" onclick="saveAdminSettings()">Save changes</button>
-      <p class="upload-status show" id="admin-settings-status" style="display:none;"></p>
 
-      <p class="section-label" style="margin-top:1.5rem;">Orden de estatus (Today's orders)</p>
-      <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:8px;">Define en qué orden se acomodan los pedidos dentro de "Today's orders" (Departed y Needs Attention siempre van aparte, esto no los afecta).</p>
-      <div id="admin-status-order-list"></div>
-      <button class="btn-primary" style="margin-top:10px;" onclick="saveStatusOrder()">Save order</button>
-      <p class="upload-status show" id="admin-status-order-status" style="display:none;"></p>
+      <div class="admin-section-card">
+        <p class="section-label">Orden de estatus (Today's orders)</p>
+        <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:8px;">Define en qué orden se acomodan los pedidos dentro de "Today's orders" (Departed y Needs Attention siempre van aparte, esto no los afecta).</p>
+        <div id="admin-status-order-list"></div>
+        <button class="btn-primary" style="margin-top:10px;" onclick="saveStatusOrder()">Save order</button>
+        <p class="upload-status show" id="admin-status-order-status" style="display:none;"></p>
+      </div>
     </div>
 
     <div class="admin-tab-panel" id="admin-tab-analytics" style="display:none;">
-      <p class="section-label">Data Analysis layout</p>
-      <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:8px;">"Order" mueve el panel arriba/abajo. La casilla prende o apaga el panel completo. El menú define con qué rango de fechas abre por default.</p>
-      <div style="display:flex;gap:10px;align-items:center;padding:0 4px 4px;font-size:10.5px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:.02em;">
-        <span style="width:64px;">Order</span>
-        <span style="width:20px;text-align:center;">Show</span>
-        <span style="flex:1;">Panel</span>
-        <span>Default range</span>
+      <div class="admin-section-card">
+        <p class="section-label">Data Analysis layout</p>
+        <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:8px;">"Order" mueve el panel arriba/abajo. La casilla prende o apaga el panel completo. El menú define con qué rango de fechas abre por default.</p>
+        <div style="display:flex;gap:10px;align-items:center;padding:0 4px 4px;font-size:10.5px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:.02em;">
+          <span style="width:64px;">Order</span>
+          <span style="width:20px;text-align:center;">Show</span>
+          <span style="flex:1;">Panel</span>
+          <span>Default range</span>
+        </div>
+        <div id="admin-analytics-list"></div>
+        <button class="btn-primary" style="margin-top:10px;" onclick="saveAdminAnalyticsConfig()">Save layout</button>
+        <p class="upload-status show" id="admin-analytics-status" style="display:none;"></p>
       </div>
-      <div id="admin-analytics-list"></div>
-      <button class="btn-primary" style="margin-top:10px;" onclick="saveAdminAnalyticsConfig()">Save layout</button>
-      <p class="upload-status show" id="admin-analytics-status" style="display:none;"></p>
     </div>
   </div>
 
