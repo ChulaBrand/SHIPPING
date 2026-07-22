@@ -2475,7 +2475,7 @@ function filteredOrderCounts(d, selectedFruits) {
   if (selectedFruits.length === ALL_FRUIT_KEYS.length || !Array.isArray(d.orderSummaries)) {
     return { total: d.total, departed: d.departed, pending: d.pending, incomplete: d.incomplete };
   }
-  const matching = d.orderSummaries.filter(o => o.categories.some(c => selectedFruits.includes(c)));
+  const matching = d.orderSummaries.filter(o => Object.keys(o.boxesByCat || {}).some(c => selectedFruits.includes(c)));
   const dep = matching.filter(o => o.estatus === 6).length;
   return { total: matching.length, departed: dep, pending: matching.length - dep, incomplete: matching.filter(o => o.incomplete).length };
 }
@@ -2517,8 +2517,13 @@ async function refreshPanel(panelKey, force) {
       try {
         const prevRange = shiftRangeToPrevious(r.start, r.end);
         const prevData = await fetchRange(prevRange, force);
+        // Si falla, se borra lo que hubiera antes en vez de dejarlo — si no, un rango
+        // nuevo podía terminar comparándose contra datos de OTRO rango anterior sin
+        // ningún aviso (ej. cambias de Week a Month, falla el fetch del "mes anterior",
+        // y el delta se queda mostrando la comparación vieja de Week como si aplicara).
         if (!prevData.error) prevPanelData[panelKey] = prevData;
-      } catch (e) { /* sin comparación si falla, el panel se ve igual sin el delta */ }
+        else delete prevPanelData[panelKey];
+      } catch (e) { delete prevPanelData[panelKey]; /* sin comparación si falla, el panel se ve igual sin el delta */ }
     } else {
       delete prevPanelData[panelKey];
     }
@@ -2553,7 +2558,11 @@ async function refreshAllPanels() {
 // TODO el archivo con esa única llamada a getAnalytics, así todas las secciones
 // siempre hablan del mismo período.
 function csvEscape(val) {
-  const s = String(val === undefined || val === null ? '' : val);
+  let s = String(val === undefined || val === null ? '' : val);
+  // Nombres de cliente/vendedor/bahía vienen de texto libre (PDF, altas de Admin) — si
+  // alguno empezara con =, +, - o @, Excel/Sheets lo interpretaría como fórmula al abrir
+  // el archivo (CSV/formula injection). Con un ' al inicio, Excel lo trata como texto.
+  if (/^[=+\-@]/.test(s)) s = "'" + s;
   return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 }
 function csvRow(cells) { return cells.map(csvEscape).join(','); }
@@ -2608,7 +2617,7 @@ async function downloadAnalyticsCSV() {
       orderSummaries.forEach(o => {
         const bucket = daily[o.fecha];
         if (!bucket) return; // fuera del rango pedido
-        if (fruitFilterActive && !(o.categories || []).some(c => selected.includes(c))) return;
+        if (fruitFilterActive && !Object.keys(o.boxesByCat || {}).some(c => selected.includes(c))) return;
         bucket.total++;
         if (o.estatus === 6) { bucket.departed++; if (o.incomplete) bucket.incomplete++; } else bucket.pending++;
         Object.entries(o.boxesByCat || {}).forEach(([cat, qty]) => {
