@@ -1049,7 +1049,12 @@
     </div>
     <div id="eta-section" style="display:none;">
       <p class="section-label" style="color:var(--warn-text);">🕒 Expected Ready Set</p>
-      <div class="orders-list" id="eta-list"></div>
+      <p class="section-label" style="margin-top:.5rem;">Today's orders</p>
+      <div class="orders-list" id="eta-today-list"></div>
+      <div id="eta-past-section" style="display:none;">
+        <p class="section-label" style="margin-top:1.25rem;">Past Days</p>
+        <div class="orders-list" id="eta-past-list"></div>
+      </div>
     </div>
   </div>
 
@@ -3370,14 +3375,30 @@ function toggleEtaView() {
   else renderOrdenes(); // normal-orders-wrap no se actualizó mientras estaba escondido
 }
 function renderEtaView() {
-  const list = document.getElementById('eta-list');
-  if (!list) return;
+  const todayList = document.getElementById('eta-today-list');
+  if (!todayList) return;
+  const pastSection = document.getElementById('eta-past-section');
+  const pastList = document.getElementById('eta-past-list');
+  const today = todayStr();
   const withEta = ordenes
     .filter(o => o.expectedReady && !isOlderThan48h(o.actualizado))
-    .filter(orderMatchesProductFilter)
+    .filter(orderMatchesProductFilter);
+
+  const todayEta = withEta.filter(o => o.fecha === today)
     .sort((a, b) => String(a.expectedReady).localeCompare(String(b.expectedReady)));
-  if (!withEta.length) { list.innerHTML = '<div class="empty-state"><i class="ti ti-clock"></i>No orders with Expected ready set</div>'; return; }
-  list.innerHTML = withEta.map(buildClerkCard).join('');
+  todayList.innerHTML = todayEta.length ? todayEta.map(buildClerkCard).join('')
+    : '<div class="empty-state"><i class="ti ti-clock"></i>No orders with Expected ready set</div>';
+
+  // Más reciente primero, y dentro del mismo día por hora esperada — mismo criterio
+  // que "Departed — Past Days" en vez de dejarlas en el orden en que llegaron.
+  const pastEta = withEta.filter(o => o.fecha !== today)
+    .sort((a, b) => b.fecha.localeCompare(a.fecha) || String(a.expectedReady).localeCompare(String(b.expectedReady)));
+  if (pastEta.length) {
+    pastSection.style.display = 'block';
+    pastList.innerHTML = pastEta.map(buildClerkCard).join('');
+  } else {
+    pastSection.style.display = 'none';
+  }
 }
 
 async function loadCancelledOrders() {
