@@ -1904,37 +1904,59 @@ function confirmSettingsDiff(oldVals, newVals, labels) {
 // La tienda es la que hace match contra el pedido real; si no trae su propio "cajas
 // por tarima", hereda el del cliente — eso se resuelve en divisorFor() más abajo.
 // Un cliente sin tiendas se comporta exactamente igual que el sistema plano de antes.
+// .client-row-block envuelve el header (nombre+active+lápiz) y su .client-edit-panel
+// como hermanos directos — hace falta ese wrapper propio porque una store también usa
+// esta misma función, ANIDADA dentro de la card .admin-user-row de su cliente padre;
+// sin este límite, toggleClientEditPanel() de una store encontraría por error el panel
+// del cliente padre en vez del suyo propio (closest() seguiría subiendo de más).
 function renderClientRowControls(c) {
   const safePattern = c.nombrePatron.replace(/'/g, "\\'");
   return `
-    <div style="display:flex;justify-content:space-between;align-items:center;">
+  <div class="client-row-block">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
       <span class="name${c.activo?'':' inactive'}">${escapeHtml(c.nombrePatron)}${c.nombreCorto ? ' → ' + escapeHtml(c.nombreCorto) : ''}</span>
-      <span class="admin-toggle-btn ${c.activo?'is-active':'is-inactive'}" onclick="adminToggleClient('${safePattern}', ${!c.activo})">${c.activo?'Active':'Inactive'}</span>
+      <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+        <span class="admin-toggle-btn ${c.activo?'is-active':'is-inactive'}" onclick="adminToggleClient('${safePattern}', ${!c.activo})">${c.activo?'Active':'Inactive'}</span>
+        <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);width:30px;height:30px;" onclick="toggleClientEditPanel(this)" title="Edit" aria-label="Edit"><i class="ti ti-pencil"></i></button>
+      </div>
     </div>
-    <div style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--text-muted);">
-      <span>Cajas por tarima:</span>
-      <input type="number" class="cajas-input" value="${c.cajasPorTarima || ''}" placeholder="${c.parent ? 'hereda de ' + escapeHtml(c.parent) : 'estándar'}" style="width:100px;height:28px;border:1px solid var(--border);border-radius:6px;padding:0 6px;font-family:'IBM Plex Mono',monospace;font-size:12px;">
-      <span class="admin-toggle-btn" style="padding:4px 10px;" onclick="submitClientCajas('${safePattern}', this)">Save</span>
+    <div class="client-edit-panel" style="display:none;flex-direction:column;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+      <div style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--text-muted);">
+        <span>Cajas por tarima:</span>
+        <input type="number" class="cajas-input" value="${c.cajasPorTarima || ''}" placeholder="${c.parent ? 'hereda de ' + escapeHtml(c.parent) : 'estándar'}" style="width:100px;height:28px;border:1px solid var(--border);border-radius:6px;padding:0 6px;font-family:'IBM Plex Mono',monospace;font-size:12px;">
+        <span class="admin-toggle-btn" style="padding:4px 10px;" onclick="submitClientCajas('${safePattern}', this)">Save</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-faint);">Lo que ve el chofer/cliente en su pantalla de tracking:</div>
+      <div style="display:flex;gap:8px;">
+        <span class="admin-toggle-btn ${c.mostrarProductos?'is-active':'is-inactive'}" onclick="adminToggleClientDisplay('${safePattern}','mostrarProductos',${!c.mostrarProductos})">${c.mostrarProductos?'Products: shown':'Products: hidden'}</span>
+        <span class="admin-toggle-btn ${c.mostrarCliente?'is-active':'is-inactive'}" onclick="adminToggleClientDisplay('${safePattern}','mostrarCliente',${!c.mostrarCliente})">${c.mostrarCliente?'Name: shown':'Name: hidden'}</span>
+      </div>
     </div>
-    <div style="font-size:11px;color:var(--text-faint);">Lo que ve el chofer/cliente en su pantalla de tracking:</div>
-    <div style="display:flex;gap:8px;">
-      <span class="admin-toggle-btn ${c.mostrarProductos?'is-active':'is-inactive'}" onclick="adminToggleClientDisplay('${safePattern}','mostrarProductos',${!c.mostrarProductos})">${c.mostrarProductos?'Products: shown':'Products: hidden'}</span>
-      <span class="admin-toggle-btn ${c.mostrarCliente?'is-active':'is-inactive'}" onclick="adminToggleClientDisplay('${safePattern}','mostrarCliente',${!c.mostrarCliente})">${c.mostrarCliente?'Name: shown':'Name: hidden'}</span>
-    </div>`;
+  </div>`;
+}
+function toggleClientEditPanel(btnEl) {
+  const panel = btnEl.closest('.client-row-block').querySelector(':scope > .client-edit-panel');
+  panel.style.display = (panel.style.display === 'flex') ? 'none' : 'flex';
+}
+function toggleClientStores(btnEl) {
+  const wrap = btnEl.nextElementSibling;
+  wrap.style.display = (wrap.style.display === 'flex') ? 'none' : 'flex';
 }
 function renderClientCard(c, allClients) {
   const stores = allClients.filter(s => s.parent && s.parent.toLowerCase() === c.nombrePatron.toLowerCase());
   const safePattern = c.nombrePatron.replace(/'/g, "\\'");
   return `
-  <div class="admin-user-row" style="flex-direction:column;align-items:stretch;gap:6px;">
+  <div class="admin-user-row" style="flex-direction:column;align-items:stretch;gap:0;">
     ${renderClientRowControls(c)}
-    <div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px;">Stores${stores.length ? ' (' + stores.length + ')' : ''}</div>
-      ${stores.map(s => `<div style="padding:8px;margin-bottom:6px;background:var(--bg);border-radius:8px;display:flex;flex-direction:column;gap:6px;">${renderClientRowControls(s)}</div>`).join('')}
-      <div style="display:flex;gap:6px;margin-top:4px;">
-        <input type="text" class="add-store-name" placeholder="Store name" style="flex:1;height:34px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-size:12.5px;">
-        <input type="number" class="add-store-cajas" placeholder="cajas" style="width:70px;height:34px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;">
-        <span class="admin-toggle-btn" onclick="submitAddStore('${safePattern}', this)">Add store</span>
+    <div style="margin-top:10px;">
+      <span class="admin-toggle-btn" onclick="toggleClientStores(this)">Stores (${stores.length})</span>
+      <div class="client-stores-wrap" style="display:none;flex-direction:column;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);">
+        ${stores.map(s => `<div style="padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;">${renderClientRowControls(s)}</div>`).join('')}
+        <div style="display:flex;gap:6px;">
+          <input type="text" class="add-store-name" placeholder="Store name" style="flex:1;height:34px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-size:12.5px;">
+          <input type="number" class="add-store-cajas" placeholder="cajas" style="width:70px;height:34px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;">
+          <span class="admin-toggle-btn" onclick="submitAddStore('${safePattern}', this)">Add store</span>
+        </div>
       </div>
     </div>
   </div>`;
@@ -2071,13 +2093,13 @@ async function saveAdminSettings() {
 function renderStatusOrderConfig() {
   const list = document.getElementById('admin-status-order-list');
   list.innerHTML = statusOrderConfig.map((c, i) => `
-    <div class="admin-user-row">
+    <div class="admin-user-row" style="padding:7px 12px;">
       <div style="display:flex;gap:10px;align-items:center;">
         <div style="display:flex;gap:4px;">
           <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveStatusOrder(${i},-1)" title="Move up" aria-label="Move up" ${i === 0 ? 'disabled' : ''}>▲</button>
           <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveStatusOrder(${i},1)" title="Move down" aria-label="Move down" ${i === statusOrderConfig.length - 1 ? 'disabled' : ''}>▼</button>
         </div>
-        <span class="name">${c.label}</span>
+        <span class="name" style="font-size:13px;">${c.label}</span>
       </div>
     </div>`).join('');
 }
@@ -2192,7 +2214,10 @@ function renderAdminAnalyticsConfig() {
           <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveAnalyticsPanel(${i},-1)" title="Move this panel up" aria-label="Move this panel up" ${i === 0 ? 'disabled' : ''}>▲</button>
           <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);" onclick="moveAnalyticsPanel(${i},1)" title="Move this panel down" aria-label="Move this panel down" ${i === analyticsChartConfig.length - 1 ? 'disabled' : ''}>▼</button>
         </div>
-        <input type="checkbox" style="width:20px;height:16px;flex-shrink:0;cursor:pointer;" onchange="toggleAnalyticsVisible('${c.key}', this.checked)" ${c.visible ? 'checked' : ''} title="${c.visible ? 'Shown in Data Analysis' : 'Hidden from Data Analysis'}">
+        <label class="toggle-switch" title="${c.visible ? 'Shown in Data Analysis' : 'Hidden from Data Analysis'}">
+          <input type="checkbox" onchange="toggleAnalyticsVisible('${c.key}', this.checked)" ${c.visible ? 'checked' : ''}>
+          <span class="toggle-slider"></span>
+        </label>
         <span class="name">${ANALYTICS_PANEL_LABELS[c.key] || c.key}</span>
       </div>
       <select onchange="setAdminAnalyticsDefault('${c.key}', this.value)" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12.5px;font-family:'Inter',sans-serif;" title="Rango de fechas con el que abre este panel por default">
