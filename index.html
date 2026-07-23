@@ -1277,7 +1277,11 @@ function formatLastUpdated(hora, fecha) {
 }
 function isOlderThan48h(fecha) {
   if(!fecha) return false;
-  return (new Date() - new Date(fecha)) / 3600000 > APP_SETTINGS.lockHours;
+  // "T00:00:00" fuerza a que se interprete en hora local en vez de UTC (mismo truco
+  // que ya usa getLastChangeDate() un poco más abajo) — sin esto, new Date("2026-07-20")
+  // se lee como medianoche UTC, corriendo el candado de 48h (y la visibilidad en la
+  // pantalla de chofer/cliente) ~5-6h antes de lo que de verdad configuró el Admin.
+  return (new Date() - new Date(fecha + 'T00:00:00')) / 3600000 > APP_SETTINGS.lockHours;
 }
 
 // "Expected ready" — lo pone el Shipping Clerk manualmente; si queda vacío, no se
@@ -1511,7 +1515,10 @@ function showAccessChooser() {
 function chooseAccess(key) {
   if (key === 'clerk') {
     show('screen-enc');
-    if (cachedLoginOrders) { ordenes = cachedLoginOrders; renderOrdenes(); }
+    // Solo se usa la primera vez (justo después del login) — si alguien con 2+
+    // permisos entra a Shipping, se va a Analytics, y regresa, cachedLoginOrders ya
+    // no existe y esto pide datos frescos en vez de repintar la foto vieja del login.
+    if (cachedLoginOrders) { ordenes = cachedLoginOrders; cachedLoginOrders = null; renderOrdenes(); }
     else { loadOrdenes(); }
   } else {
     show('screen-analytics'); initAnalyticsScreen();
@@ -1645,7 +1652,7 @@ async function completeLogin(result) {
     show('screen-analytics'); initAnalyticsScreen();
   } else {
     show('screen-enc');
-    if (cachedLoginOrders) { ordenes = cachedLoginOrders; renderOrdenes(); }
+    if (cachedLoginOrders) { ordenes = cachedLoginOrders; cachedLoginOrders = null; renderOrdenes(); }
     else { loadOrdenes(); }
   }
 }
@@ -4573,7 +4580,9 @@ function renderPapayaResults(rows, flags) {
   papayaTbody.innerHTML = "";
   rows.forEach((r, i) => {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${i + 1}</td><td>${r.pallets}</td><td>${r.cliente_corto}</td><td>${r.codigo}</td>`;
+    // escapeHtml en cliente_corto/codigo — vienen del TEXTO del PDF subido, no de algo
+    // que este código generó, así que no se puede confiar en que no traigan HTML.
+    tr.innerHTML = `<td>${i + 1}</td><td>${r.pallets}</td><td>${escapeHtml(r.cliente_corto)}</td><td>${escapeHtml(r.codigo)}</td>`;
     papayaTbody.appendChild(tr);
   });
 
