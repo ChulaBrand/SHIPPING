@@ -1754,12 +1754,25 @@ document.addEventListener('keydown', e => {
 });
 
 // ── ADMIN PANEL ──────────────────────────────────
+// Antes cada acción de Admin hacía su propio fetch+json a mano — a diferencia de
+// Shipping/tracking (que sí usan isSessionExpiredError/handleSessionExpired), ninguna
+// revisaba si el token de Admin ya había expirado: cada acción simplemente fallaba en
+// silencio o mostraba el error crudo del servidor en vez de mandar de regreso a login.
+// Regresa null si la sesión expiró (ya se encargó de mandar a login — quien llama debe
+// cortar ahí mismo); si no, regresa el JSON del servidor tal cual para que quien llama
+// revise result.error.
+async function adminApiCall(action, extra) {
+  const res = await fetch(API, { method: 'POST', body: JSON.stringify(Object.assign({ sessionToken: ADMIN_SESSION_TOKEN, action }, extra || {})) });
+  const result = await res.json();
+  if (isSessionExpiredError(result)) { handleSessionExpired(); return null; }
+  return result;
+}
 async function loadAdminUsers() {
   const list = document.getElementById('admin-user-list');
   list.innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i>Loading...</div>';
   try {
-    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminGetUsers' }) });
-    const users = await res.json();
+    const users = await adminApiCall('adminGetUsers');
+    if (!users) return;
     if (users.error) { list.innerHTML = `<div class="empty-state"><i class="ti ti-alert-circle"></i>${users.error}</div>`; return; }
     if (!users.length) { list.innerHTML = '<div class="empty-state"><i class="ti ti-users"></i>No users yet.</div>'; return; }
     list.innerHTML = users.map(u => {
@@ -1821,7 +1834,11 @@ async function adminEditPermissions(name, el) {
     return;
   }
   try {
-    await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminSetPermissions', name, permissions: finalPerms }) });
+    const result = await adminApiCall('adminSetPermissions', { name, permissions: finalPerms });
+    if (!result) return;
+    // Antes esto no revisaba result.error — si el servidor rechazaba el cambio, el
+    // admin igual veía "Permissions updated" aunque nada hubiera cambiado.
+    if (result.error) { showToast(result.error); loadAdminUsers(); return; }
     showToast('Permissions updated ✓');
   } catch(e) { showToast('Connection error.'); }
 }
@@ -1834,8 +1851,8 @@ function toggleUserEditPanel(btnEl) {
 async function confirmDeleteUser(name) {
   if (!confirm(`Delete "${name}"? This can't be undone — they lose access right away.\n\nIf you just want to block them without losing the account, use "Inactive" instead.`)) return;
   try {
-    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminDeleteUser', name }) });
-    const result = await res.json();
+    const result = await adminApiCall('adminDeleteUser', { name });
+    if (!result) return;
     if (result.error) { showToast(result.error); return; }
     showToast('User deleted');
     loadAdminUsers();
@@ -1864,8 +1881,8 @@ async function submitResetUserPin(name, formEl) {
   }
   if (!confirm(`Confirm PIN change for "${name}"?\n\nThey will need to use the new PIN/password next time they log in.`)) return;
   try {
-    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminResetUserPin', name, newPin }) });
-    const result = await res.json();
+    const result = await adminApiCall('adminResetUserPin', { name, newPin });
+    if (!result) return;
     if (result.error) { showToast(result.error); return; }
     panel.style.display = 'none';
     showToast('PIN reset ✓');
@@ -1910,8 +1927,8 @@ async function adminAddUser() {
   btn.disabled = true;
   statusEl.textContent = 'Adding...'; statusEl.className = 'upload-status show loading';
   try {
-    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminAddUser', name, userPin, permissions: perms }) });
-    const result = await res.json();
+    const result = await adminApiCall('adminAddUser', { name, userPin, permissions: perms });
+    if (!result) return;
     if (result.error) { statusEl.textContent = result.error; statusEl.className = 'upload-status show err'; return; }
     nameEl.value = ''; pinEl.value = '';
     document.getElementById('admin-new-perm-shipping').value = 'clerk';
@@ -1929,7 +1946,11 @@ document.getElementById('admin-new-name').addEventListener('keydown', e => { if 
 async function adminToggleUser(name, active) {
   if (!confirm(`Confirm this change?\n\n"${name}": ${active ? 'Inactive' : 'Active'} → ${active ? 'Active' : 'Inactive'}`)) return;
   try {
-    await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminToggleUser', name, active }) });
+    const result = await adminApiCall('adminToggleUser', { name, active });
+    if (!result) return;
+    // Antes esto no revisaba result.error — si el servidor rechazaba el cambio, la
+    // lista se recargaba igual y se veía como si hubiera funcionado.
+    if (result.error) showToast(result.error);
     loadAdminUsers();
   } catch(e) { showToast('Connection error.'); }
 }
@@ -2025,8 +2046,8 @@ async function loadAdminClients() {
   const list = document.getElementById('admin-client-list');
   list.innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i>Loading...</div>';
   try {
-    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'getClients' }) });
-    const clients = await res.json();
+    const clients = await adminApiCall('getClients');
+    if (!clients) return;
     if (clients.error) { list.innerHTML = `<div class="empty-state"><i class="ti ti-alert-circle"></i>${clients.error}</div>`; return; }
     const samsClient = Array.isArray(clients) ? clients.find(c => c.nombrePatron.toLowerCase() === "sam's") : null;
     const samsField = document.getElementById('setting-samsDivisorTop');
@@ -2048,8 +2069,8 @@ async function adminAddClient() {
   if (!nombrePatron) { statusEl.textContent = 'Enter the client pattern name.'; statusEl.className = 'upload-status show err'; return; }
   statusEl.textContent = 'Adding...'; statusEl.className = 'upload-status show loading';
   try {
-    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminAddClient', nombrePatron, nombreCorto, cajasPorTarima: cajasPorTarima ? parseInt(cajasPorTarima, 10) : null }) });
-    const result = await res.json();
+    const result = await adminApiCall('adminAddClient', { nombrePatron, nombreCorto, cajasPorTarima: cajasPorTarima ? parseInt(cajasPorTarima, 10) : null });
+    if (!result) return;
     if (result.error) { statusEl.textContent = result.error; statusEl.className = 'upload-status show err'; return; }
     patternEl.value = ''; shortEl.value = ''; boxesEl.value = '';
     statusEl.textContent = '✓ Client added.'; statusEl.className = 'upload-status show ok';
@@ -2065,8 +2086,8 @@ async function submitAddStore(parentName, btnEl) {
   const cajasPorTarima = cajasInput.value.trim();
   if (!nombrePatron) { showToast('Enter the store name.'); return; }
   try {
-    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminAddClient', nombrePatron, nombreCorto: '', cajasPorTarima: cajasPorTarima ? parseInt(cajasPorTarima, 10) : null, parent: parentName }) });
-    const result = await res.json();
+    const result = await adminApiCall('adminAddClient', { nombrePatron, nombreCorto: '', cajasPorTarima: cajasPorTarima ? parseInt(cajasPorTarima, 10) : null, parent: parentName });
+    if (!result) return;
     if (result.error) { showToast(result.error); return; }
     showToast('Store added ✓');
     loadAdminClients();
@@ -2078,8 +2099,8 @@ async function submitClientCajas(nombrePatron, btnEl) {
   const cajasPorTarima = input.value.trim();
   if (!confirm(`Confirm this change?\n\nBoxes per pallet for "${nombrePatron}": ${cajasPorTarima || '(inherit / standard)'}`)) return;
   try {
-    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminSetClientCajas', nombrePatron, cajasPorTarima: cajasPorTarima || 0 }) });
-    const result = await res.json();
+    const result = await adminApiCall('adminSetClientCajas', { nombrePatron, cajasPorTarima: cajasPorTarima || 0 });
+    if (!result) return;
     if (result.error) { showToast(`"${nombrePatron}" — ${result.error}. Create it first with Add client.`); return; }
     showToast('Boxes per pallet updated ✓');
     loadAdminClients();
@@ -2089,7 +2110,11 @@ async function submitClientCajas(nombrePatron, btnEl) {
 async function adminToggleClient(nombrePatron, active) {
   if (!confirm(`Confirm this change?\n\n"${nombrePatron}": ${active ? 'Inactive' : 'Active'} → ${active ? 'Active' : 'Inactive'}`)) return;
   try {
-    await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminToggleClient', nombrePatron, active }) });
+    const result = await adminApiCall('adminToggleClient', { nombrePatron, active });
+    if (!result) return;
+    // Antes esto no revisaba result.error — si el servidor rechazaba el cambio, la
+    // lista se recargaba igual y se veía como si hubiera funcionado.
+    if (result.error) showToast(result.error);
     loadAdminClients();
     clientsConfigLoaded = false;
   } catch(e) { showToast('Connection error.'); }
@@ -2098,7 +2123,9 @@ async function adminToggleClientDisplay(nombrePatron, field, value) {
   const fieldLabel = field === 'mostrarCliente' ? 'Name' : 'Products';
   if (!confirm(`Confirm this change?\n\n"${nombrePatron}" — ${fieldLabel}: ${value ? 'Hidden' : 'Shown'} → ${value ? 'Shown' : 'Hidden'}`)) return;
   try {
-    await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminSetClientDisplay', nombrePatron, field, value }) });
+    const result = await adminApiCall('adminSetClientDisplay', { nombrePatron, field, value });
+    if (!result) return;
+    if (result.error) showToast(result.error);
     loadAdminClients();
   } catch(e) { showToast('Connection error.'); }
 }
@@ -2111,8 +2138,8 @@ const STATUS_ORDER_CODES = [1, 2, 3, 4, 5];
 let statusOrderConfig = []; // [{ est, label }], en el orden que el Admin haya guardado
 async function loadAdminSettings() {
   try {
-    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'getSettings' }) });
-    const s = await res.json();
+    const s = await adminApiCall('getSettings');
+    if (!s) return;
     document.getElementById('setting-shipRefreshSeconds').value = s.shipRefreshSeconds;
     document.getElementById('setting-stalledHours').value = s.stalledHours;
     document.getElementById('setting-soonHours').value = s.soonHours;
@@ -2139,8 +2166,8 @@ async function saveAdminSettings() {
   if (!check) { statusEl.style.display = 'none'; return; }
   statusEl.textContent = 'Saving...'; statusEl.className = 'upload-status show loading';
   try {
-    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminSetSettings', settings: payload }) });
-    const result = await res.json();
+    const result = await adminApiCall('adminSetSettings', { settings: payload });
+    if (!result) return;
     if (result.error) { statusEl.textContent = result.error; statusEl.className = 'upload-status show err'; return; }
     statusEl.textContent = '✓ Settings saved.'; statusEl.className = 'upload-status show ok';
     Object.assign(APP_SETTINGS, payload); // aplica de inmediato en esta misma sesión también
@@ -2175,8 +2202,8 @@ async function saveStatusOrder() {
   statusOrderConfig.forEach((c, i) => { payload['statusRank' + c.est] = i + 1; });
   statusEl.style.display = 'block'; statusEl.textContent = 'Saving...'; statusEl.className = 'upload-status show loading';
   try {
-    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminSetSettings', settings: payload }) });
-    const result = await res.json();
+    const result = await adminApiCall('adminSetSettings', { settings: payload });
+    if (!result) return;
     if (result.error) { statusEl.textContent = result.error; statusEl.className = 'upload-status show err'; return; }
     statusEl.textContent = '✓ Order saved.'; statusEl.className = 'upload-status show ok';
     Object.assign(APP_SETTINGS, payload);
@@ -2191,8 +2218,8 @@ async function saveStatusOrder() {
 // fields: [{ key, elId, type: 'number'|'checkbox', min, default, label, format(raw) }]
 async function loadSettingsFields(fields, storeRef) {
   try {
-    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'getSettings' }) });
-    const s = await res.json();
+    const s = await adminApiCall('getSettings');
+    if (!s) return;
     fields.forEach(f => {
       const el = document.getElementById(f.elId);
       if (f.type === 'checkbox') el.checked = s[f.key] !== 0;
@@ -2219,8 +2246,8 @@ async function saveSettingsFields(fields, storeRef, statusElId) {
   if (!check) { statusEl.style.display = 'none'; return; }
   statusEl.textContent = 'Saving...'; statusEl.className = 'upload-status show loading';
   try {
-    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminSetSettings', settings: payload }) });
-    const result = await res.json();
+    const result = await adminApiCall('adminSetSettings', { settings: payload });
+    if (!result) return;
     if (result.error) { statusEl.textContent = result.error; statusEl.className = 'upload-status show err'; return; }
     statusEl.textContent = '✓ Settings saved.'; statusEl.className = 'upload-status show ok';
     Object.assign(APP_SETTINGS, payload);
@@ -2258,8 +2285,8 @@ async function loadAdminAnalyticsConfig() {
   const list = document.getElementById('admin-analytics-list');
   list.innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i>Loading...</div>';
   try {
-    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'getAnalyticsConfig' }) });
-    const config = await res.json();
+    const config = await adminApiCall('getAnalyticsConfig');
+    if (!config) return;
     const all = (Array.isArray(config) ? config : []).slice().sort((a, b) => a.order - b.order);
     analyticsChartConfig = all.filter(c => !ANALYTICS_TOP_KEYS.includes(c.key)).map(c => ({ ...c, visible: c.visible !== false }));
     renderAdminAnalyticsConfig();
@@ -2307,8 +2334,8 @@ async function saveAdminAnalyticsConfig() {
   statusEl.style.display = 'block'; statusEl.textContent = 'Saving...'; statusEl.className = 'upload-status show loading';
   const payload = analyticsChartConfig.map((c, i) => ({ key: c.key, order: i + 1, defaultRange: c.defaultRange, visible: c.visible !== false }));
   try {
-    const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminSetAnalyticsConfig', config: payload }) });
-    const result = await res.json();
+    const result = await adminApiCall('adminSetAnalyticsConfig', { config: payload });
+    if (!result) return;
     if (result.error) { statusEl.textContent = result.error; statusEl.className = 'upload-status show err'; return; }
     statusEl.textContent = '✓ Layout saved.'; statusEl.className = 'upload-status show ok';
     analyticsLayoutLoaded = false; // para que Data Analysis lo vuelva a jalar la próxima vez que se abra
@@ -4579,6 +4606,10 @@ const papayaResetBtn = document.getElementById("papayaResetBtn");
 
 const papayaSendDraftBtn = document.getElementById("papayaSendDraftBtn");
 let papayaLastRows = [], papayaLastFlags = [], papayaLastFileName = "reporte", papayaLastDraftRows = [];
+// Sin esto, soltar un segundo PDF mientras el primero seguía leyéndose (o mientras su
+// sendAndSyncDraft() automático seguía en vuelo) podía pisar papayaLastDraftRows a
+// medio uso y disparar un writeDraft/syncDraft encimado con datos mezclados de los 2 PDFs.
+let papayaProcessing = false;
 
 papayaDropzone.addEventListener("click", () => papayaFileInput.click());
 // tabindex+role="button" en el HTML lo hace enfocable, pero eso solo no responde a
@@ -4603,6 +4634,7 @@ papayaResetBtn.addEventListener("click", () => {
 });
 
 async function handlePapayaFile(file) {
+  if (papayaProcessing) { showToast('Still processing the previous PDF — wait a moment.'); return; }
   if (file.type !== "application/pdf") {
     papayaStatusEl.textContent = "That file isn't a PDF.";
     return;
@@ -4611,6 +4643,7 @@ async function handlePapayaFile(file) {
     papayaStatusEl.textContent = "Couldn't load the PDF-reading library (check your internet connection and reload the page).";
     return;
   }
+  papayaProcessing = true;
   papayaLastFileName = file.name.replace(/\.pdf$/i, "");
   papayaStatusEl.textContent = "Reading PDF...";
   papayaResultsCard.style.display = "none";
@@ -4642,10 +4675,14 @@ async function handlePapayaFile(file) {
     papayaLastRows = rows; papayaLastFlags = flags;
     renderPapayaResults(rows, flags);
     papayaStatusEl.textContent = rows.length ? "Done." : "Done — this PDF has no papaya, but you can still send the orders to Draft.";
-    sendAndSyncDraft(); // se manda solo, no depende de que alguien se acuerde de picarle
+    // Se espera a que termine (ya no es fire-and-forget) para que el guard de arriba
+    // también cubra el envío al Draft, no solo la lectura del PDF.
+    await sendAndSyncDraft();
   } catch (err) {
     console.error(err);
     papayaStatusEl.textContent = "Error processing the PDF: " + err.message;
+  } finally {
+    papayaProcessing = false;
   }
 }
 
