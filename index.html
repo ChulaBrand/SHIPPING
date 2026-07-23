@@ -76,6 +76,18 @@
       --success-bg:rgba(74,222,128,.15); --success-border:#4ADE80; --success-text:#86EFAC;
       --warn-bg:rgba(250,204,21,.15); --warn-border:#FACC15; --warn-text:#FDE68A;
       --accent-tint-bg:rgba(145,99,232,.18);
+      #screen-papaya-upload.pp-tool {
+        --pp-purple: #9163E8; --pp-purple-dark: #6B46C1; --pp-papaya: #FF9D5C;
+        --pp-bg: #16171A; --pp-card: #232428; --pp-border: rgba(255,255,255,0.11);
+        --pp-text: #F2F1ED; --pp-muted: #A6A5A0; --pp-red: #FCA5A5;
+      }
+      #screen-papaya-upload .pp-dropzone { background: #1D1E24; }
+      #screen-papaya-upload .pp-dropzone.drag { background: #262838; }
+      #screen-papaya-upload .pp-btn:disabled { background: #3A3A40; color: #77766F; }
+      #screen-papaya-upload .pp-btn.pp-outline { background: transparent; }
+      #screen-papaya-upload .pp-btn.pp-outline:hover { background: #1D1E24; }
+      #screen-papaya-upload .pp-sheets-text { background: #1D1E24; }
+      #screen-papaya-upload .pp-table tr:nth-child(even) td { background: #26272C; }
     }
   }
   :root[data-theme="dark"] {
@@ -96,6 +108,18 @@
     --warn-bg:rgba(250,204,21,.15); --warn-border:#FACC15; --warn-text:#FDE68A;
     --accent-tint-bg:rgba(145,99,232,.18);
   }
+  :root[data-theme="dark"] #screen-papaya-upload.pp-tool {
+    --pp-purple: #9163E8; --pp-purple-dark: #6B46C1; --pp-papaya: #FF9D5C;
+    --pp-bg: #16171A; --pp-card: #232428; --pp-border: rgba(255,255,255,0.11);
+    --pp-text: #F2F1ED; --pp-muted: #A6A5A0; --pp-red: #FCA5A5;
+  }
+  :root[data-theme="dark"] #screen-papaya-upload .pp-dropzone { background: #1D1E24; }
+  :root[data-theme="dark"] #screen-papaya-upload .pp-dropzone.drag { background: #262838; }
+  :root[data-theme="dark"] #screen-papaya-upload .pp-btn:disabled { background: #3A3A40; color: #77766F; }
+  :root[data-theme="dark"] #screen-papaya-upload .pp-btn.pp-outline { background: transparent; }
+  :root[data-theme="dark"] #screen-papaya-upload .pp-btn.pp-outline:hover { background: #1D1E24; }
+  :root[data-theme="dark"] #screen-papaya-upload .pp-sheets-text { background: #1D1E24; }
+  :root[data-theme="dark"] #screen-papaya-upload .pp-table tr:nth-child(even) td { background: #26272C; }
   html, body { overscroll-behavior-y: contain; }
   body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:2rem 1rem 4rem; }
   .container { width:100%; max-width:420px; }
@@ -363,7 +387,7 @@
   .admin-user-row:last-child { margin-bottom:0; }
   .admin-user-row .name { font-weight:600; font-size:14px; }
   .admin-user-row .inactive { color:var(--text-faint); text-decoration:line-through; }
-  .admin-toggle-btn { font-size:11.5px; font-weight:600; padding:6px 12px; border-radius:99px; cursor:pointer; border:1px solid var(--border-strong); background:var(--white); }
+  .admin-toggle-btn { font-size:11.5px; font-weight:600; padding:6px 12px; border-radius:99px; cursor:pointer; border:1px solid var(--border-strong); background:var(--white); color:var(--text); font-family:'Inter',sans-serif; }
   .admin-toggle-btn.is-active { color:var(--green-dark); border-color:var(--green-dark); }
   .admin-toggle-btn.is-inactive { color:var(--danger-text); border-color:var(--danger-border); background:var(--danger-bg); }
   .client-header { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; margin-bottom:10px; display:flex; align-items:center; gap:10px; }
@@ -873,7 +897,7 @@
             <label>SAM'S</label>
             <div style="display:flex;gap:8px;align-items:center;">
               <input type="number" id="setting-samsDivisorTop" placeholder="no creado" style="width:90px;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;text-align:right;">
-              <span class="admin-toggle-btn" onclick="submitClientCajas(&quot;SAM'S&quot;, this)">Save</span>
+              <button type="button" class="admin-toggle-btn" onclick="submitClientCajas(&quot;SAM'S&quot;, this)">Save</button>
             </div>
           </div>
           <p class="settings-caption">Aplica a las 10 tiendas de SAM'S automáticamente (a menos que alguna tenga su propio valor puesto en la lista de Clients de abajo). Necesitas tener un cliente llamado exactamente "SAM'S" creado primero. Este campo se guarda con su propio botón "Save" — el de "Save changes" de aquí abajo es solo para Estándar y HEB.</p>
@@ -968,7 +992,7 @@
     <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
       <div style="display:flex;flex:1;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--white);overflow:hidden;">
         <span style="padding:0 10px;height:48px;display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--text-faint);background:var(--bg);border-right:1px solid var(--border);white-space:nowrap;">SP00</span>
-        <input id="orden-input" type="text" placeholder="Order #" maxlength="16" style="flex:1;border:none;outline:none;padding:0 12px;height:48px;font-family:'IBM Plex Mono',monospace;font-size:16px;color:var(--text);background:var(--white);" />
+        <input id="orden-input" type="text" inputmode="numeric" placeholder="Order #" maxlength="16" style="flex:1;border:none;outline:none;padding:0 12px;height:48px;font-family:'IBM Plex Mono',monospace;font-size:16px;color:var(--text);background:var(--white);" />
       </div>
       <button class="btn-primary" id="btn-buscar" onclick="buscar()" style="width:auto;padding:0 18px;white-space:nowrap;">Search</button>
     </div>
@@ -1084,7 +1108,7 @@
     </div>
 
     <div class="pp-card">
-      <div class="pp-dropzone" id="papayaDropzone">
+      <div class="pp-dropzone" id="papayaDropzone" tabindex="0" role="button" aria-label="Upload PDF">
         <div class="pp-icon">📄</div>
         <strong>Haz clic aquí o arrastra el PDF</strong>
         <p>Ejemplo: SALES ORDERS NOT SHIPPED FOR 07/06/26.pdf</p>
@@ -1110,7 +1134,7 @@
     <p class="pp-footer">Chula Brand · Reporte de Papaya · procesamiento 100% local en tu navegador</p>
   </div>
 </div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 const API = "https://script.google.com/macros/s/AKfycbwJ8viClBTNp-fOnZ4mYlwDobAWSdKX1rD05E3OIN-y9yIXXBLVeeRbuMo5hYJssI_cuQ/exec";
@@ -1134,6 +1158,19 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+// Para meter un nombre (usuario/cliente) adentro de un onclick="fn('...')" con seguridad.
+// Antes solo se escapaba la comilla simple (para no romper el string de JS), pero la
+// comilla doble no se tocaba — y esa sí puede romper el atributo onclick="..." mismo si
+// un nombre llegara a traer una (solo Admin puede crear nombres, pero mejor no confiar
+// en eso). Orden importa: primero backslash y comilla simple (para el string de JS),
+// luego comilla doble como entidad HTML (para el atributo, que va entre comillas dobles).
+function escapeForJsAttr(str) {
+  return String(str == null ? '' : str)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '&quot;')
+    .replace(/\n/g, '\\n');
 }
 
 // Valores editables desde Admin → Settings. Estos son el "de fábrica" mientras se
@@ -1554,7 +1591,7 @@ async function goUserSelect() {
     if (!usersPromise) prefetchUsers(); // por si el prefetch inicial no alcanzó a correr
     const names = await usersPromise;
     if (!Array.isArray(names) || !names.length) { list.innerHTML = '<div class="empty-state"><i class="ti ti-user-off"></i>No active users. Ask an admin to add you.</div>'; return; }
-    list.innerHTML = names.map(n => `<div class="user-select-btn" onclick="selectUser('${n.replace(/'/g,"\\'")}')"><i class="ti ti-user"></i> ${escapeHtml(n)}</div>`).join('');
+    list.innerHTML = names.map(n => `<div class="user-select-btn" onclick="selectUser('${escapeForJsAttr(n)}')"><i class="ti ti-user"></i> ${escapeHtml(n)}</div>`).join('');
   } catch (e) { list.innerHTML = '<div class="empty-state"><i class="ti ti-alert-circle"></i>Connection error.</div>'; }
 }
 
@@ -1570,7 +1607,7 @@ async function goAdminUserSelect() {
     const res = await fetch(`${API}?action=getAdminUsers`);
     const names = await res.json();
     if (!Array.isArray(names) || !names.length) { list.innerHTML = '<div class="empty-state"><i class="ti ti-user-off"></i>No admin accounts yet.</div>'; return; }
-    list.innerHTML = names.map(n => `<div class="user-select-btn" onclick="selectUser('${n.replace(/'/g,"\\'")}')"><i class="ti ti-user"></i> ${escapeHtml(n)}</div>`).join('');
+    list.innerHTML = names.map(n => `<div class="user-select-btn" onclick="selectUser('${escapeForJsAttr(n)}')"><i class="ti ti-user"></i> ${escapeHtml(n)}</div>`).join('');
   } catch (e) { list.innerHTML = '<div class="empty-state"><i class="ti ti-alert-circle"></i>Connection error.</div>'; }
 }
 
@@ -1724,13 +1761,13 @@ async function loadAdminUsers() {
     if (!users.length) { list.innerHTML = '<div class="empty-state"><i class="ti ti-users"></i>No users yet.</div>'; return; }
     list.innerHTML = users.map(u => {
       const perms = String(u.permissions || 'clerk').split(',').map(s => s.trim()).filter(Boolean);
-      const safeName = u.name.replace(/'/g, "\\'");
+      const safeName = escapeForJsAttr(u.name);
       return `
       <div class="admin-user-row" style="flex-direction:column;align-items:stretch;gap:0;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
           <span class="name${u.active?'':' inactive'}">${escapeHtml(u.name)}</span>
           <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
-            <span class="admin-toggle-btn ${u.active?'is-active':'is-inactive'}" onclick="adminToggleUser('${safeName}', ${!u.active})">${u.active?'Active':'Inactive'}</span>
+            <button type="button" class="admin-toggle-btn ${u.active?'is-active':'is-inactive'}" onclick="adminToggleUser('${safeName}', ${!u.active})">${u.active?'Active':'Inactive'}</button>
             <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);width:30px;height:30px;" onclick="toggleUserEditPanel(this)" title="Edit" aria-label="Edit"><i class="ti ti-pencil"></i></button>
           </div>
         </div>
@@ -1747,13 +1784,13 @@ async function loadAdminUsers() {
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="admin" ${perms.includes('admin')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"> Admin</label>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <span class="admin-toggle-btn" onclick="toggleResetPinPanel(this)">Reset PIN</span>
-            <span class="admin-toggle-btn is-inactive" onclick="confirmDeleteUser('${safeName}')">Delete user</span>
+            <button type="button" class="admin-toggle-btn" onclick="toggleResetPinPanel(this)">Reset PIN</button>
+            <button type="button" class="admin-toggle-btn is-inactive" onclick="confirmDeleteUser('${safeName}')">Delete user</button>
           </div>
           <form class="reset-pin-panel" style="display:none;gap:8px;align-items:center;" onsubmit="event.preventDefault(); submitResetUserPin('${safeName}', this);">
             <input type="password" class="reset-pw-input" enterkeyhint="go" autocomplete="off" placeholder="${perms.includes('admin') ? 'New password (min. 6 chars)' : 'New 4-digit PIN'}" style="flex:1;height:34px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;">
             <button type="submit" class="btn-primary" style="height:34px;padding:0 14px;font-size:12.5px;white-space:nowrap;">Confirm</button>
-            <span class="admin-toggle-btn" style="white-space:nowrap;" onclick="toggleResetPinPanel(this)">Cancel</span>
+            <button type="button" class="admin-toggle-btn" style="white-space:nowrap;" onclick="toggleResetPinPanel(this)">Cancel</button>
           </form>
         </div>
       </div>`;
@@ -1770,6 +1807,14 @@ async function adminEditPermissions(name, el) {
   if (!finalPerms.length) {
     showToast('Debe tener al menos un acceso');
     if (el.tagName === 'SELECT') el.value = 'clerk'; else el.checked = true;
+    return;
+  }
+  // A diferencia de Active/Inactive y Reset PIN (que sí piden confirmar), esto aplicaba
+  // al toque sin avisar — y quitarle "Admin" o el acceso a Shipping a alguien es más
+  // serio que esos otros dos. Si cancela, se recarga la lista para deshacer el cambio ya
+  // pintado en pantalla (más simple y confiable que adivinar el valor exacto de antes).
+  if (!confirm(`Confirm permission change for "${name}"?\n\nNew access: ${finalPerms.join(', ')}`)) {
+    loadAdminUsers();
     return;
   }
   try {
@@ -1922,13 +1967,13 @@ function confirmSettingsDiff(oldVals, newVals, labels) {
 // sin este límite, toggleClientEditPanel() de una store encontraría por error el panel
 // del cliente padre en vez del suyo propio (closest() seguiría subiendo de más).
 function renderClientRowControls(c) {
-  const safePattern = c.nombrePatron.replace(/'/g, "\\'");
+  const safePattern = escapeForJsAttr(c.nombrePatron);
   return `
   <div class="client-row-block">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
       <span class="name${c.activo?'':' inactive'}">${escapeHtml(c.nombrePatron)}${c.nombreCorto ? ' → ' + escapeHtml(c.nombreCorto) : ''}</span>
       <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
-        <span class="admin-toggle-btn ${c.activo?'is-active':'is-inactive'}" onclick="adminToggleClient('${safePattern}', ${!c.activo})">${c.activo?'Active':'Inactive'}</span>
+        <button type="button" class="admin-toggle-btn ${c.activo?'is-active':'is-inactive'}" onclick="adminToggleClient('${safePattern}', ${!c.activo})">${c.activo?'Active':'Inactive'}</button>
         <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);width:30px;height:30px;" onclick="toggleClientEditPanel(this)" title="Edit" aria-label="Edit"><i class="ti ti-pencil"></i></button>
       </div>
     </div>
@@ -1936,12 +1981,12 @@ function renderClientRowControls(c) {
       <div style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--text-muted);">
         <span>Cajas por tarima:</span>
         <input type="number" class="cajas-input" value="${c.cajasPorTarima || ''}" placeholder="${c.parent ? 'hereda de ' + escapeHtml(c.parent) : 'estándar'}" style="width:100px;height:28px;border:1px solid var(--border);border-radius:6px;padding:0 6px;font-family:'IBM Plex Mono',monospace;font-size:12px;">
-        <span class="admin-toggle-btn" style="padding:4px 10px;" onclick="submitClientCajas('${safePattern}', this)">Save</span>
+        <button type="button" class="admin-toggle-btn" style="padding:4px 10px;" onclick="submitClientCajas('${safePattern}', this)">Save</button>
       </div>
       <div style="font-size:11px;color:var(--text-faint);">Lo que ve el chofer/cliente en su pantalla de tracking:</div>
       <div style="display:flex;gap:8px;">
-        <span class="admin-toggle-btn ${c.mostrarProductos?'is-active':'is-inactive'}" onclick="adminToggleClientDisplay('${safePattern}','mostrarProductos',${!c.mostrarProductos})">${c.mostrarProductos?'Products: shown':'Products: hidden'}</span>
-        <span class="admin-toggle-btn ${c.mostrarCliente?'is-active':'is-inactive'}" onclick="adminToggleClientDisplay('${safePattern}','mostrarCliente',${!c.mostrarCliente})">${c.mostrarCliente?'Name: shown':'Name: hidden'}</span>
+        <button type="button" class="admin-toggle-btn ${c.mostrarProductos?'is-active':'is-inactive'}" onclick="adminToggleClientDisplay('${safePattern}','mostrarProductos',${!c.mostrarProductos})">${c.mostrarProductos?'Products: shown':'Products: hidden'}</button>
+        <button type="button" class="admin-toggle-btn ${c.mostrarCliente?'is-active':'is-inactive'}" onclick="adminToggleClientDisplay('${safePattern}','mostrarCliente',${!c.mostrarCliente})">${c.mostrarCliente?'Name: shown':'Name: hidden'}</button>
       </div>
     </div>
   </div>`;
@@ -1956,18 +2001,18 @@ function toggleClientStores(btnEl) {
 }
 function renderClientCard(c, allClients) {
   const stores = allClients.filter(s => s.parent && s.parent.toLowerCase() === c.nombrePatron.toLowerCase());
-  const safePattern = c.nombrePatron.replace(/'/g, "\\'");
+  const safePattern = escapeForJsAttr(c.nombrePatron);
   return `
   <div class="admin-user-row" style="flex-direction:column;align-items:stretch;gap:0;">
     ${renderClientRowControls(c)}
     <div style="margin-top:10px;">
-      <span class="admin-toggle-btn" onclick="toggleClientStores(this)">Stores (${stores.length})</span>
+      <button type="button" class="admin-toggle-btn" onclick="toggleClientStores(this)">Stores (${stores.length})</button>
       <div class="client-stores-wrap" style="display:none;flex-direction:column;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);">
         ${stores.map(s => `<div style="padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;">${renderClientRowControls(s)}</div>`).join('')}
         <div style="display:flex;gap:6px;">
           <input type="text" class="add-store-name" placeholder="Store name" style="flex:1;height:34px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-size:12.5px;">
           <input type="number" class="add-store-cajas" placeholder="cajas" style="width:70px;height:34px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;">
-          <span class="admin-toggle-btn" onclick="submitAddStore('${safePattern}', this)">Add store</span>
+          <button type="button" class="admin-toggle-btn" onclick="submitAddStore('${safePattern}', this)">Add store</button>
         </div>
       </div>
     </div>
@@ -3135,7 +3180,7 @@ async function buscar(overrideVal) {
   try {
     const res=await fetch(`${API}?action=getOrder&orden=${encodeURIComponent(val)}`);
     const found=await res.json();
-    if(found.error || isOlderThan48h(found.actualizado)){ btn.innerHTML='Search'; btn.disabled=false; errEl.style.display='block'; return; }
+    if(found.error || isOlderThan48h(found.actualizado)){ btn.innerHTML='Search'; btn.disabled=false; errEl.innerHTML='<i class="ti ti-alert-circle"></i> Order not found.'; errEl.style.display='block'; return; }
     const clientOrders = await loadClientOrders(val);
     btn.innerHTML='Search'; btn.disabled=false;
     const toShow=clientOrders.length>0?clientOrders:[found];
@@ -3489,7 +3534,14 @@ function toggleCardExpand(orden) {
     if (raw) { renderSearchResults(raw); return; }
     searchActive = false;
   }
-  renderOrdenes();
+  // Expandir/colapsar UNA tarjeta nunca cambia a qué sección pertenece (Today/Departed/
+  // Attention/Past) — antes esto reconstruía TODA la lista (podían ser 50-100+ tarjetas
+  // repartidas en 5 secciones) nomás para abrir una. Mismo patrón ya usado por
+  // setCancelFlowStep/setRestoreFlowStep: reconstruir solo esa tarjeta.
+  const o = ordenes.find(x => String(x.orden) === key);
+  const card = document.getElementById('card-' + key);
+  if (card && o) { card.outerHTML = buildClerkCard(o); return; }
+  renderOrdenes(); // no se encontró la tarjeta suelta (no debería pasar) -> full render de respaldo
 }
 
 // Tocar/clickear fuera de una tarjeta abierta la cierra (no aplica en "View all",
@@ -4505,6 +4557,10 @@ const papayaSendDraftBtn = document.getElementById("papayaSendDraftBtn");
 let papayaLastRows = [], papayaLastFlags = [], papayaLastFileName = "reporte", papayaLastDraftRows = [];
 
 papayaDropzone.addEventListener("click", () => papayaFileInput.click());
+// tabindex+role="button" en el HTML lo hace enfocable, pero eso solo no responde a
+// Enter/Espacio como un <button> de verdad — antes no había NINGUNA forma de abrir el
+// selector de archivo solo con teclado.
+papayaDropzone.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); papayaFileInput.click(); } });
 papayaDropzone.addEventListener("dragover", e => { e.preventDefault(); papayaDropzone.classList.add("drag"); });
 papayaDropzone.addEventListener("dragleave", () => papayaDropzone.classList.remove("drag"));
 papayaDropzone.addEventListener("drop", e => {
