@@ -3887,9 +3887,13 @@ function renderSearchResults(raw) {
 }
 document.getElementById('enc-search').addEventListener('keydown',e=>{if(e.key==='Enter')encBuscar();});
 
+let toastTimeoutId = null;
 function showToast(msg) {
   const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2500);
+  // Sin clearTimeout, 2 toasts seguidos en menos de 2.5s se pisaban: el timer del
+  // primero escondía el toast antes de tiempo, cortando el mensaje del segundo.
+  if (toastTimeoutId) clearTimeout(toastTimeoutId);
+  toastTimeoutId = setTimeout(()=>t.classList.remove('show'),2500);
 }
 
 // ── Pull to refresh (Shipping Panel y Data Analysis) ──
