@@ -3883,7 +3883,7 @@ function renderSearchResults(raw) {
     .filter(o => !statusFilter.size || statusFilter.has(parseInt(o.estatus) || 1))
     .filter(orderMatchesProductFilter);
   if(!filtered.length){ list.innerHTML='<div class="empty-state"><i class="ti ti-search-off"></i>No match found</div>'; return; }
-  filtered.forEach(o=>{list.innerHTML+=buildClerkCard(o);});
+  list.innerHTML = filtered.map(o => buildClerkCard(o)).join('');
 }
 document.getElementById('enc-search').addEventListener('keydown',e=>{if(e.key==='Enter')encBuscar();});
 
