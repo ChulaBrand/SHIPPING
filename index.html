@@ -550,7 +550,7 @@
         <input type="password" id="pw-input" placeholder="Password" autocomplete="off" enterkeyhint="go" style="height:48px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 14px;font-family:'IBM Plex Mono',monospace;font-size:15px;text-align:center;">
         <button type="submit" class="btn-primary">Enter</button>
       </form>
-      <p class="pin-error" id="pin-error">Incorrect PIN. Try again.</p>
+      <p class="pin-error" id="pin-error" role="alert">Incorrect PIN. Try again.</p>
     </div>
   </div>
 
@@ -881,7 +881,7 @@
           <p style="font-size:11px;color:var(--text-faint);margin:-2px 0 0;">Admin uses a password (min. 6 characters) instead of a 4-digit PIN.</p>
           <button type="submit" class="btn-primary" id="admin-add-user-btn">Add user</button>
         </form>
-        <p class="upload-status show" id="admin-add-status" style="display:none;"></p>
+        <p class="upload-status show" id="admin-add-status" role="status" aria-live="polite" style="display:none;"></p>
       </div>
       <div class="admin-section-card">
         <p class="section-label">Users</p>
@@ -906,7 +906,7 @@
           <p class="settings-caption">Applies to all 10 SAM'S stores automatically (unless one has its own value set in the Clients list below). You need a client named exactly "SAM'S" created first. This field saves with its own "Save" button — the "Save changes" below only covers Standard and HEB.</p>
         </div>
         <button class="btn-primary" style="margin-top:10px;" onclick="saveCajasSettings()">Save changes</button>
-        <p class="upload-status show" id="admin-cajas-status" style="display:none;"></p>
+        <p class="upload-status show" id="admin-cajas-status" role="status" aria-live="polite" style="display:none;"></p>
       </div>
 
       <div class="checklist" style="margin:0 0 16px;">
@@ -918,7 +918,7 @@
           <input id="admin-new-client-boxes" type="number" placeholder="Boxes per pallet (leave blank to use the standard)" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;">
           <button type="submit" class="btn-primary">Add client</button>
         </form>
-        <p class="upload-status show" id="admin-add-client-status" style="display:none;"></p>
+        <p class="upload-status show" id="admin-add-client-status" role="status" aria-live="polite" style="display:none;"></p>
       </div>
       <div class="admin-section-card">
         <p class="section-label">Clients</p>
@@ -941,7 +941,7 @@
           <p class="settings-caption">Master switch for the entire driver/client screen. If you want to make an exception for a single client instead of all of them, use the checkboxes on the Clients tab.</p>
         </div>
         <button class="btn-primary" style="margin-top:14px;" onclick="saveDriverScreenSettings()">Save changes</button>
-        <p class="upload-status show" id="admin-driver-status" style="display:none;"></p>
+        <p class="upload-status show" id="admin-driver-status" role="status" aria-live="polite" style="display:none;"></p>
       </div>
     </div>
 
@@ -957,7 +957,7 @@
         <div class="settings-group"><div class="settings-row"><label>Hours to mark "Soon"</label><input type="number" id="setting-soonHours"></div></div>
         <div class="settings-group"><div class="settings-row"><label>Hours before locking edits</label><input type="number" id="setting-lockHours"></div></div>
         <button class="btn-primary" style="margin-top:14px;" onclick="saveAdminSettings()">Save changes</button>
-        <p class="upload-status show" id="admin-settings-status" style="display:none;"></p>
+        <p class="upload-status show" id="admin-settings-status" role="status" aria-live="polite" style="display:none;"></p>
       </div>
 
       <div class="admin-section-card">
@@ -965,7 +965,7 @@
         <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:8px;">Sets the order statuses are arranged in within "Today's orders" (Departed and Needs Attention always go separately, this doesn't affect them).</p>
         <div id="admin-status-order-list"></div>
         <button class="btn-primary" style="margin-top:10px;" onclick="saveStatusOrder()">Save order</button>
-        <p class="upload-status show" id="admin-status-order-status" style="display:none;"></p>
+        <p class="upload-status show" id="admin-status-order-status" role="status" aria-live="polite" style="display:none;"></p>
       </div>
     </div>
 
@@ -981,7 +981,7 @@
         </div>
         <div id="admin-analytics-list"></div>
         <button class="btn-primary" style="margin-top:10px;" onclick="saveAdminAnalyticsConfig()">Save layout</button>
-        <p class="upload-status show" id="admin-analytics-status" style="display:none;"></p>
+        <p class="upload-status show" id="admin-analytics-status" role="status" aria-live="polite" style="display:none;"></p>
       </div>
     </div>
   </div>
@@ -999,7 +999,7 @@
       </div>
       <button class="btn-primary" id="btn-buscar" onclick="buscar()" style="width:auto;padding:0 18px;white-space:nowrap;">Search</button>
     </div>
-    <p class="error-msg" id="error-msg"><i class="ti ti-alert-circle"></i> Order not found.</p>
+    <p class="error-msg" id="error-msg" role="alert"><i class="ti ti-alert-circle"></i> Order not found.</p>
     <div class="results-list" id="results-list"></div>
   </div>
 
@@ -1117,7 +1117,7 @@
         <p>Example: SALES ORDERS NOT SHIPPED FOR 07/06/26.pdf</p>
         <input type="file" id="papayaFileInput" accept="application/pdf" style="display:none;">
       </div>
-      <div class="pp-status" id="papayaStatus"></div>
+      <div class="pp-status" id="papayaStatus" role="status" aria-live="polite"></div>
     </div>
 
     <div class="pp-card" id="papayaResultsCard" style="display:none;">
@@ -1808,7 +1808,7 @@ async function adminEditPermissions(name, el) {
   if (shippingSel && shippingSel.value) finalPerms.push(shippingSel.value);
   row.querySelectorAll('input[data-perm]').forEach(b => { if (b.checked) finalPerms.push(b.dataset.perm); });
   if (!finalPerms.length) {
-    showToast('Debe tener al menos un acceso');
+    showToast('Must have at least one access');
     if (el.tagName === 'SELECT') el.value = 'clerk'; else el.checked = true;
     return;
   }
@@ -2240,9 +2240,9 @@ async function saveCajasSettings() { await saveSettingsFields(CAJAS_FIELDS, load
 
 // ── DRIVER/CLIENT SCREEN (Admin) ──
 const DRIVER_FIELDS = [
-  { key: 'chofRefreshSeconds', elId: 'setting-chofRefreshSeconds', type: 'number', default: 30, min: 10, label: 'Refrescar cada (segundos)' },
-  { key: 'chofShowClientName', elId: 'setting-chofShowClientName', type: 'checkbox', label: 'Mostrar nombre del cliente', format: v => (v !== 0 ? 'On' : 'Off') },
-  { key: 'chofShowProducts', elId: 'setting-chofShowProducts', type: 'checkbox', label: 'Mostrar productos', format: v => (v !== 0 ? 'On' : 'Off') }
+  { key: 'chofRefreshSeconds', elId: 'setting-chofRefreshSeconds', type: 'number', default: 30, min: 10, label: 'Refresh every (seconds)' },
+  { key: 'chofShowClientName', elId: 'setting-chofShowClientName', type: 'checkbox', label: 'Show client name', format: v => (v !== 0 ? 'On' : 'Off') },
+  { key: 'chofShowProducts', elId: 'setting-chofShowProducts', type: 'checkbox', label: 'Show products', format: v => (v !== 0 ? 'On' : 'Off') }
 ];
 let loadedDriverSettings = {};
 async function loadDriverScreenSettings() { await loadSettingsFields(DRIVER_FIELDS, loadedDriverSettings); }
@@ -2280,7 +2280,7 @@ function renderAdminAnalyticsConfig() {
         </label>
         <span class="name">${ANALYTICS_PANEL_LABELS[c.key] || c.key}</span>
       </div>
-      <select onchange="setAdminAnalyticsDefault('${c.key}', this.value)" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12.5px;font-family:'Inter',sans-serif;" title="Rango de fechas con el que abre este panel por default">
+      <select onchange="setAdminAnalyticsDefault('${c.key}', this.value)" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12.5px;font-family:'Inter',sans-serif;" title="Date range this panel opens with by default">
         <option value="day" ${c.defaultRange === 'day' ? 'selected' : ''}>Day</option>
         <option value="week" ${c.defaultRange === 'week' ? 'selected' : ''}>Week</option>
         <option value="month" ${c.defaultRange === 'month' ? 'selected' : ''}>Month</option>
@@ -3172,7 +3172,13 @@ function renderDriverCard(o, highlighted) {
 // input ahorita — si no, el refresh automático (cada 30s) podía agarrar texto a medio
 // teclear (alguien empezando a escribir un número nuevo sin haberle dado Search) y
 // tapar el tracking válido que se estaba viendo con un "Order not found".
+// scheduleChoferRefresh() re-dispara buscar() sola cada pocos segundos mientras la
+// pantalla de tracking está abierta — si el usuario también busca a mano justo cuando
+// el timer ya tenía una petición en vuelo, la que responda más tarde (aunque sea la
+// más vieja) no debe pisar los resultados de la más reciente.
+let buscarSeq = 0;
 async function buscar(overrideVal) {
+  const seq = ++buscarSeq;
   const raw = overrideVal !== undefined ? overrideVal : document.getElementById('orden-input').value.trim();
   if(!raw) return;
   lastChoferSearch = raw;
@@ -3183,8 +3189,10 @@ async function buscar(overrideVal) {
   try {
     const res=await fetch(`${API}?action=getOrder&orden=${encodeURIComponent(val)}`);
     const found=await res.json();
+    if (seq !== buscarSeq) return; // una búsqueda más nueva ya está en vuelo o ya aplicó su resultado
     if(found.error || isOlderThan48h(found.actualizado)){ btn.innerHTML='Search'; btn.disabled=false; errEl.innerHTML='<i class="ti ti-alert-circle"></i> Order not found.'; errEl.style.display='block'; return; }
     const clientOrders = await loadClientOrders(val);
+    if (seq !== buscarSeq) return;
     btn.innerHTML='Search'; btn.disabled=false;
     const toShow=clientOrders.length>0?clientOrders:[found];
     let html='';
@@ -3192,7 +3200,7 @@ async function buscar(overrideVal) {
     html+=renderDriverCard(found,true);
     toShow.filter(o=>String(o.orden)!==String(found.orden)).forEach(o=>{html+=renderDriverCard(o,false);});
     list.innerHTML=html;
-  } catch(e){ btn.innerHTML='Search'; btn.disabled=false; errEl.textContent='Connection error.'; errEl.style.display='block'; }
+  } catch(e){ if (seq === buscarSeq) { btn.innerHTML='Search'; btn.disabled=false; errEl.textContent='Connection error.'; errEl.style.display='block'; } }
 }
 document.getElementById('orden-input').addEventListener('keydown',e=>{if(e.key==='Enter')buscar();});
 
@@ -3210,13 +3218,20 @@ function hideRefreshSpinner() {
   refreshIndicatorEl.classList.remove('pulling', 'spinning');
   refreshIndicatorEl.style.transform = '';
 }
+// El botón manual, el pull-to-refresh y el timer de scheduleShippingRefresh pueden
+// disparar loadOrdenes() casi al mismo tiempo — sin esto, una respuesta más vieja que
+// llega DESPUÉS de una más nueva podía pisar los datos recién pintados con datos ya
+// obsoletos. Solo la petición más reciente tiene permiso de aplicar su resultado.
+let loadOrdenesSeq = 0;
 async function loadOrdenes() {
+  const seq = ++loadOrdenesSeq;
   const list=document.getElementById('orders-list');
   list.innerHTML='<div class="empty-state"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i>Loading...</div>';
   showRefreshSpinner();
   try {
     const r=await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getAll' }) });
     const result = await r.json();
+    if (seq !== loadOrdenesSeq) return; // una petición más nueva ya está en vuelo o ya aplicó su resultado
     if (isSessionExpiredError(result)) { handleSessionExpired(); return; }
     // Sin esto, un error genérico del servidor (ej. "El sistema está ocupado" del
     // candado de concurrencia) dejaba "ordenes" apuntando a {error:...} en vez de un
@@ -3231,8 +3246,8 @@ async function loadOrdenes() {
       searchActive = false;
     }
     renderOrdenes();
-  } catch(e){ list.innerHTML='<div class="empty-state">Connection error</div>'; }
-  finally { hideRefreshSpinner(); }
+  } catch(e){ if (seq === loadOrdenesSeq) list.innerHTML='<div class="empty-state">Connection error</div>'; }
+  finally { if (seq === loadOrdenesSeq) hideRefreshSpinner(); }
 }
 
 // Cuando buscas, los resultados no filtran por fecha (a propósito, para poder
@@ -3768,16 +3783,14 @@ function renderOrdenes() {
   const departedTodayList = document.getElementById('departed-today-list');
   if (departedToday.length > 0) {
     departedTodaySection.style.display = 'block';
-    departedTodayList.innerHTML = '';
-    departedToday.forEach(o => { departedTodayList.innerHTML += buildClerkCard(o); });
+    departedTodayList.innerHTML = departedToday.map(o => buildClerkCard(o)).join('');
   } else { departedTodaySection.style.display = 'none'; }
 
   const departedYesterdaySection = document.getElementById('departed-yesterday-section');
   const departedYesterdayList = document.getElementById('departed-yesterday-list');
   if (departedYesterday.length > 0) {
     departedYesterdaySection.style.display = 'block';
-    departedYesterdayList.innerHTML = '';
-    departedYesterday.forEach(o => { departedYesterdayList.innerHTML += buildClerkCard(o); });
+    departedYesterdayList.innerHTML = departedYesterday.map(o => buildClerkCard(o)).join('');
   } else { departedYesterdaySection.style.display = 'none'; }
 
   const pastSection = document.getElementById('past-section');
