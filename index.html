@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Chula Brand — Embarques</title>
+<title>Chula Brand — Shipping</title>
 <script>
   // Corre ANTES de que se pinte cualquier cosa, para que no haya un parpadeo de claro
   // antes de aplicar oscuro. Sin preferencia guardada, sigue lo que diga el sistema
@@ -37,6 +37,7 @@
   :root {
     color-scheme: light;
     --green-dark: #1B3A2D; --green-mid: #7EC845; --purple: #5B21B6;
+    --pink: #E5127C; --pink-tint-bg: #FDE7F1;
     --bg: #F7F5F0; --white: #fff; --text: #1a1a1a;
     --text-muted: #6b7280; --text-faint: #9ca3af;
     --border: rgba(0,0,0,0.10); --border-strong: rgba(0,0,0,0.18);
@@ -62,6 +63,7 @@
     :root:not([data-theme="light"]) {
       color-scheme: dark;
       --green-dark: #2F6B4F; --green-mid: #8FDD52; --purple: #9163E8;
+      --pink: #F0509F; --pink-tint-bg: rgba(240,80,159,.18);
       --bg: #16171A; --white: #232428; --text: #F2F1ED;
       --text-muted: #A6A5A0; --text-faint: #77766F;
       --border: rgba(255,255,255,0.11); --border-strong: rgba(255,255,255,0.2);
@@ -93,6 +95,7 @@
   :root[data-theme="dark"] {
     color-scheme: dark;
     --green-dark: #2F6B4F; --green-mid: #8FDD52; --purple: #9163E8;
+    --pink: #F0509F; --pink-tint-bg: rgba(240,80,159,.18);
     --bg: #16171A; --white: #232428; --text: #F2F1ED;
     --text-muted: #A6A5A0; --text-faint: #77766F;
     --border: rgba(255,255,255,0.11); --border-strong: rgba(255,255,255,0.2);
@@ -160,15 +163,15 @@
   .logo-mark { width:52px; height:52px; border-radius:11px; display:flex; align-items:center; justify-content:center; overflow:hidden; }
   .logo-mark svg { width:52px; height:52px; }
   .logo-text { font-size:13px; font-weight:600; letter-spacing:.10em; text-transform:uppercase; color:var(--text-muted); }
-  .logo-text span { color:var(--text); }
+  .logo-text span { color:var(--pink); }
   .screen { display:none; } .screen.active { display:block; }
   .page-title { font-size:24px; font-weight:500; margin-bottom:4px; }
   .page-sub { font-size:15px; color:var(--text-muted); margin-bottom:2rem; }
   .role-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; }
   .role-btn { background:var(--white); border:1.5px solid var(--border); border-radius:16px; padding:2rem 1rem 1.75rem; cursor:pointer; text-align:center; transition:border-color .15s,transform .1s,box-shadow .15s; }
   .role-btn:hover { border-color:var(--purple); box-shadow:0 6px 16px rgba(91,42,134,.10); } .role-btn:active { transform:scale(.97); }
-  .role-icon-wrap { width:56px; height:56px; border-radius:50%; background:var(--accent-tint-bg); display:flex; align-items:center; justify-content:center; margin:0 auto 12px; }
-  .role-icon { font-size:26px; color:var(--purple); margin-bottom:0; display:block; }
+  .role-icon-wrap { width:56px; height:56px; border-radius:50%; background:var(--pink-tint-bg); display:flex; align-items:center; justify-content:center; margin:0 auto 12px; }
+  .role-icon { font-size:26px; color:var(--pink); margin-bottom:0; display:block; }
   .role-title { font-size:15px; font-weight:700; margin-bottom:4px; }
   .role-desc { font-size:12.5px; color:var(--text-faint); line-height:1.4; }
   .top-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; }
@@ -180,7 +183,7 @@
   .admin-tab-btn { display:flex; align-items:center; gap:6px; background:none; border:none; border-radius:var(--radius-sm); font-size:12.5px; font-weight:600; color:var(--text-muted); cursor:pointer; padding:9px 13px; font-family:'Inter',sans-serif; white-space:nowrap; transition:background .15s,color .15s; }
   .admin-tab-btn:hover { color:var(--text); }
   .admin-tab-btn i { font-size:15px; }
-  .admin-tab-btn.active { color:var(--purple); background:var(--white); box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .admin-tab-btn.active { color:var(--pink); background:var(--white); box-shadow:0 1px 3px rgba(0,0,0,.08); }
   .admin-section-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius-sm); padding:16px 18px; margin-bottom:16px; }
   .settings-group { padding:12px 0; border-bottom:1px solid var(--border); }
   .settings-group:first-of-type { padding-top:2px; }
@@ -201,19 +204,19 @@
   .pin-sub { font-size:13px; color:var(--text-muted); margin-bottom:1.75rem; }
   .pin-dots { display:flex; justify-content:center; gap:14px; margin-bottom:1.75rem; }
   .pin-dot { width:15px; height:15px; border-radius:50%; border:2px solid var(--border-strong); background:var(--bg); transition:all .15s; }
-  .pin-dot.filled { background:var(--green-dark); border-color:var(--green-dark); }
+  .pin-dot.filled { background:var(--pink); border-color:var(--pink); }
   .pin-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px; }
   .pkey { height:54px; font-size:20px; font-weight:500; background:var(--white); border:1px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; color:var(--text); font-family:'Inter',sans-serif; }
   .pkey:active { background:var(--bg); transform:scale(.95); }
   .pkey.del { font-size:16px; color:var(--text-muted); }
   .pin-error { font-size:13px; color:var(--danger-text); min-height:20px; margin-bottom:10px; }
   .inp { font-family:'IBM Plex Mono',monospace; font-size:16px; width:100%; padding:0 14px; height:48px; background:var(--white); color:var(--text); border:1px solid var(--border); border-radius:var(--radius-sm); outline:none; margin-bottom:10px; }
-  .inp:focus { border-color:var(--green-dark); }
+  .inp:focus { border-color:var(--pink); }
   .inp-sm { font-family:'IBM Plex Mono',monospace; font-size:13px; flex:1; padding:0 11px; height:42px; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:var(--radius-sm); outline:none; min-width:0; }
   .inp-sm.txt { font-family:'Inter',sans-serif; }
-  .btn-primary { width:100%; height:48px; font-size:15px; font-weight:600; background:var(--green-dark); color:#fff; border:none; border-radius:var(--radius-sm); cursor:pointer; font-family:'Inter',sans-serif; }
+  .btn-primary { width:100%; height:48px; font-size:15px; font-weight:600; background:var(--pink); color:#fff; border:none; border-radius:var(--radius-sm); cursor:pointer; font-family:'Inter',sans-serif; }
   .btn-primary:active { transform:scale(.98); }
-  .btn-search-sm { height:42px; padding:0 16px; font-size:13px; font-weight:600; background:var(--green-dark); color:#fff; border:none; border-radius:var(--radius-sm); cursor:pointer; white-space:nowrap; font-family:'Inter',sans-serif; }
+  .btn-search-sm { height:42px; padding:0 16px; font-size:13px; font-weight:600; background:var(--pink); color:#fff; border:none; border-radius:var(--radius-sm); cursor:pointer; white-space:nowrap; font-family:'Inter',sans-serif; }
   .section-label { font-size:11px; font-weight:600; color:var(--text-faint); text-transform:uppercase; letter-spacing:.09em; margin-bottom:10px; }
   .search-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:1rem; margin-bottom:1.5rem; display:flex; gap:8px; }
   .orders-list { display:flex; flex-direction:column; gap:10px; }
@@ -492,7 +495,7 @@
     <div class="logo-mark">
       <img src="icons/icon-192.png" alt="Chula Brand" style="width:100%;height:100%;object-fit:contain;" />
     </div>
-    <span class="logo-text">Chula Brand — <span onclick="toggleAdminBtn()" style="cursor:pointer;">Embarques</span></span>
+    <span class="logo-text">Chula Brand — <span onclick="toggleAdminBtn()" style="cursor:pointer;">Shipping</span></span>
   </div>
 
   <!-- ROL -->
@@ -799,7 +802,7 @@
             </div>
           </div>
         </div>
-        <p style="font-size:11px;color:var(--text-faint);margin-bottom:6px;">Pedidos que no llegaron a Departed cuando cerró su día (corte 5am) — número fijo, no cambia aunque salgan después.</p>
+        <p style="font-size:11px;color:var(--text-faint);margin-bottom:6px;">Orders that hadn't reached Departed when their business day closed (5am cutoff) — a fixed number, doesn't change even if they ship later.</p>
         <canvas id="chartLeftBehind"></canvas>
       </div>
       <div class="analytics-panel" id="analytics-panel-overdue">
@@ -875,7 +878,7 @@
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-analytics" onchange="updateNewUserPinField()"> Data Analysis</label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-admin" onchange="updateNewUserPinField()"> Admin</label>
           </div>
-          <p style="font-size:11px;color:var(--text-faint);margin:-2px 0 0;">Admin usa contraseña (mínimo 6 caracteres) en vez de PIN de 4 dígitos.</p>
+          <p style="font-size:11px;color:var(--text-faint);margin:-2px 0 0;">Admin uses a password (min. 6 characters) instead of a 4-digit PIN.</p>
           <button type="submit" class="btn-primary" id="admin-add-user-btn">Add user</button>
         </form>
         <p class="upload-status show" id="admin-add-status" style="display:none;"></p>
@@ -888,19 +891,19 @@
 
     <div class="admin-tab-panel" id="admin-tab-clients" style="display:none;">
       <div class="admin-section-card">
-        <p class="section-label">Cajas por tarima</p>
-        <p style="font-size:11.5px;color:var(--text-faint);margin:-2px 0 8px;">El estándar aplica cuando ningún cliente/tienda de abajo tiene su propio valor. HEB se detecta por el producto, no por cliente.</p>
-        <div class="settings-group"><div class="settings-row"><label>Estándar</label><input type="number" id="setting-standardDivisor"></div></div>
+        <p class="section-label">Boxes per pallet</p>
+        <p style="font-size:11.5px;color:var(--text-faint);margin:-2px 0 8px;">The standard applies when no client/store below has its own value set. HEB is detected by product, not by client.</p>
+        <div class="settings-group"><div class="settings-row"><label>Standard</label><input type="number" id="setting-standardDivisor"></div></div>
         <div class="settings-group"><div class="settings-row"><label>HEB</label><input type="number" id="setting-hebDivisor"></div></div>
         <div class="settings-group">
           <div class="settings-row">
             <label>SAM'S</label>
             <div style="display:flex;gap:8px;align-items:center;">
-              <input type="number" id="setting-samsDivisorTop" placeholder="no creado" style="width:90px;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;text-align:right;">
+              <input type="number" id="setting-samsDivisorTop" placeholder="not created" style="width:90px;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;text-align:right;">
               <button type="button" class="admin-toggle-btn" onclick="submitClientCajas(&quot;SAM'S&quot;, this)">Save</button>
             </div>
           </div>
-          <p class="settings-caption">Aplica a las 10 tiendas de SAM'S automáticamente (a menos que alguna tenga su propio valor puesto en la lista de Clients de abajo). Necesitas tener un cliente llamado exactamente "SAM'S" creado primero. Este campo se guarda con su propio botón "Save" — el de "Save changes" de aquí abajo es solo para Estándar y HEB.</p>
+          <p class="settings-caption">Applies to all 10 SAM'S stores automatically (unless one has its own value set in the Clients list below). You need a client named exactly "SAM'S" created first. This field saves with its own "Save" button — the "Save changes" below only covers Standard and HEB.</p>
         </div>
         <button class="btn-primary" style="margin-top:10px;" onclick="saveCajasSettings()">Save changes</button>
         <p class="upload-status show" id="admin-cajas-status" style="display:none;"></p>
@@ -908,11 +911,11 @@
 
       <div class="checklist" style="margin:0 0 16px;">
         <p class="checklist-title">Add client</p>
-        <p style="font-size:11px;color:var(--text-faint);margin:-4px 0 4px;">Un cliente "sombrilla" (ej. SAM'S) agrupa tiendas — o, si no tiene tiendas, funciona igual que antes: un cliente normal.</p>
+        <p style="font-size:11px;color:var(--text-faint);margin:-4px 0 4px;">An "umbrella" client (e.g. SAM'S) groups stores — or, if it has no stores, works just like before: a regular client.</p>
         <form style="display:flex;flex-direction:column;gap:8px;" onsubmit="event.preventDefault(); adminAddClient();">
-          <input id="admin-new-client-pattern" type="text" placeholder="Nombre patrón (como aparece en el PDF)" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'Inter',sans-serif;font-size:14px;">
-          <input id="admin-new-client-short" type="text" placeholder="Nombre corto (cómo se muestra)" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'Inter',sans-serif;font-size:14px;">
-          <input id="admin-new-client-boxes" type="number" placeholder="Cajas por tarima (déjalo vacío para usar el estándar)" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;">
+          <input id="admin-new-client-pattern" type="text" placeholder="Pattern name (as it appears on the PDF)" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'Inter',sans-serif;font-size:14px;">
+          <input id="admin-new-client-short" type="text" placeholder="Short name (how it's displayed)" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'Inter',sans-serif;font-size:14px;">
+          <input id="admin-new-client-boxes" type="number" placeholder="Boxes per pallet (leave blank to use the standard)" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;">
           <button type="submit" class="btn-primary">Add client</button>
         </form>
         <p class="upload-status show" id="admin-add-client-status" style="display:none;"></p>
@@ -925,17 +928,17 @@
 
     <div class="admin-tab-panel" id="admin-tab-driver" style="display:none;">
       <div class="admin-section-card">
-        <p class="section-label">Pantalla de Driver/Client</p>
+        <p class="section-label">Driver/Client Screen</p>
         <div class="settings-group">
-          <div class="settings-row"><label>Refrescar cada (segundos)</label><input type="number" id="setting-chofRefreshSeconds" min="10"></div>
-          <p class="settings-caption">Cada cuánto se actualiza sola la pantalla de tracking del chofer/cliente (mínimo 10s para no saturar el servidor).</p>
+          <div class="settings-row"><label>Refresh every (seconds)</label><input type="number" id="setting-chofRefreshSeconds" min="10"></div>
+          <p class="settings-caption">How often the driver/client tracking screen refreshes itself (minimum 10s so it doesn't overload the server).</p>
         </div>
         <div class="settings-group">
-          <div class="settings-row"><label>Mostrar nombre del cliente</label><label class="toggle-switch"><input type="checkbox" id="setting-chofShowClientName"><span class="toggle-slider"></span></label></div>
+          <div class="settings-row"><label>Show client name</label><label class="toggle-switch"><input type="checkbox" id="setting-chofShowClientName"><span class="toggle-slider"></span></label></div>
         </div>
         <div class="settings-group">
-          <div class="settings-row"><label>Mostrar productos</label><label class="toggle-switch"><input type="checkbox" id="setting-chofShowProducts"><span class="toggle-slider"></span></label></div>
-          <p class="settings-caption">Apagador general para toda la pantalla del chofer/cliente. Si quieres la excepción de un solo cliente en vez de todos, usa las casillas en la pestaña Clients.</p>
+          <div class="settings-row"><label>Show products</label><label class="toggle-switch"><input type="checkbox" id="setting-chofShowProducts"><span class="toggle-slider"></span></label></div>
+          <p class="settings-caption">Master switch for the entire driver/client screen. If you want to make an exception for a single client instead of all of them, use the checkboxes on the Clients tab.</p>
         </div>
         <button class="btn-primary" style="margin-top:14px;" onclick="saveDriverScreenSettings()">Save changes</button>
         <p class="upload-status show" id="admin-driver-status" style="display:none;"></p>
@@ -944,22 +947,22 @@
 
     <div class="admin-tab-panel" id="admin-tab-settings" style="display:none;">
       <div class="admin-section-card">
-        <p class="section-label">Pantalla de Order Coordinator</p>
+        <p class="section-label">Order Coordinator Screen</p>
         <div class="settings-group">
-          <div class="settings-row"><label>Refrescar cada (segundos)</label><input type="number" id="setting-shipRefreshSeconds" min="20"></div>
-          <p class="settings-caption">Cada cuánto se actualiza sola la lista de pedidos mientras el Order Coordinator la tiene abierta (mínimo 20s para no saturar el servidor).</p>
+          <div class="settings-row"><label>Refresh every (seconds)</label><input type="number" id="setting-shipRefreshSeconds" min="20"></div>
+          <p class="settings-caption">How often the order list refreshes itself while the Order Coordinator has it open (minimum 20s so it doesn't overload the server).</p>
         </div>
-        <p class="section-label" style="margin-top:1.25rem;">Umbrales</p>
-        <div class="settings-group"><div class="settings-row"><label>Horas para marcar "Stalled"</label><input type="number" id="setting-stalledHours"></div></div>
-        <div class="settings-group"><div class="settings-row"><label>Horas para marcar "Soon"</label><input type="number" id="setting-soonHours"></div></div>
-        <div class="settings-group"><div class="settings-row"><label>Horas para bloquear edición</label><input type="number" id="setting-lockHours"></div></div>
+        <p class="section-label" style="margin-top:1.25rem;">Thresholds</p>
+        <div class="settings-group"><div class="settings-row"><label>Hours to mark "Stalled"</label><input type="number" id="setting-stalledHours"></div></div>
+        <div class="settings-group"><div class="settings-row"><label>Hours to mark "Soon"</label><input type="number" id="setting-soonHours"></div></div>
+        <div class="settings-group"><div class="settings-row"><label>Hours before locking edits</label><input type="number" id="setting-lockHours"></div></div>
         <button class="btn-primary" style="margin-top:14px;" onclick="saveAdminSettings()">Save changes</button>
         <p class="upload-status show" id="admin-settings-status" style="display:none;"></p>
       </div>
 
       <div class="admin-section-card">
-        <p class="section-label">Orden de estatus (Today's orders)</p>
-        <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:8px;">Define en qué orden se acomodan los pedidos dentro de "Today's orders" (Departed y Needs Attention siempre van aparte, esto no los afecta).</p>
+        <p class="section-label">Status order (Today's orders)</p>
+        <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:8px;">Sets the order statuses are arranged in within "Today's orders" (Departed and Needs Attention always go separately, this doesn't affect them).</p>
         <div id="admin-status-order-list"></div>
         <button class="btn-primary" style="margin-top:10px;" onclick="saveStatusOrder()">Save order</button>
         <p class="upload-status show" id="admin-status-order-status" style="display:none;"></p>
@@ -969,7 +972,7 @@
     <div class="admin-tab-panel" id="admin-tab-analytics" style="display:none;">
       <div class="admin-section-card">
         <p class="section-label">Data Analysis layout</p>
-        <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:8px;">"Order" mueve el panel arriba/abajo. La casilla prende o apaga el panel completo. El menú define con qué rango de fechas abre por default.</p>
+        <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:8px;">"Order" moves the panel up/down. The checkbox turns the whole panel on or off. The menu sets which date range it opens with by default.</p>
         <div style="display:flex;gap:10px;align-items:center;padding:0 4px 4px;font-size:10.5px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:.02em;">
           <span style="width:64px;">Order</span>
           <span style="width:20px;text-align:center;">Show</span>
@@ -1090,7 +1093,7 @@
     </div>
     <p class="section-label" id="dailySummaryCount"></p>
     <table class="summary-table" id="dailySummaryTable">
-      <thead><tr><th>Orden</th><th>Cliente</th><th>Productos</th><th>Estatus</th><th>Hora</th><th>Por</th></tr></thead>
+      <thead><tr><th>Order</th><th>Client</th><th>Products</th><th>Status</th><th>Time</th><th>By</th></tr></thead>
       <tbody></tbody>
     </table>
     <button class="btn-primary" id="downloadSummaryBtn"><i class="ti ti-download"></i> Download Excel</button>
@@ -1103,15 +1106,15 @@
       <button class="btn-back" onclick="goPapayaBack()">← Back</button>
     </div>
     <div class="pp-header">
-      <h1>🥭 Chula Brand — Reporte de Papaya</h1>
-      <p>Sube el PDF de "Sales Orders Not Shipped". Todo corre en tu navegador, no se sube nada a ningún servidor.</p>
+      <h1>🥭 Chula Brand — Papaya Report</h1>
+      <p>Upload the "Sales Orders Not Shipped" PDF. Everything runs in your browser — nothing gets uploaded to any server.</p>
     </div>
 
     <div class="pp-card">
       <div class="pp-dropzone" id="papayaDropzone" tabindex="0" role="button" aria-label="Upload PDF">
         <div class="pp-icon">📄</div>
-        <strong>Haz clic aquí o arrastra el PDF</strong>
-        <p>Ejemplo: SALES ORDERS NOT SHIPPED FOR 07/06/26.pdf</p>
+        <strong>Click here or drag the PDF</strong>
+        <p>Example: SALES ORDERS NOT SHIPPED FOR 07/06/26.pdf</p>
         <input type="file" id="papayaFileInput" accept="application/pdf" style="display:none;">
       </div>
       <div class="pp-status" id="papayaStatus"></div>
@@ -1123,15 +1126,15 @@
         <button class="pp-btn" id="papayaSendDraftBtn">📤 Send + Sync to Draft</button>
         <button class="pp-btn pp-secondary" id="papayaDownloadExcelBtn">⬇ Excel</button>
         <button class="pp-btn pp-secondary" id="papayaDownloadWordBtn">⬇ Word</button>
-        <button class="pp-btn pp-outline" id="papayaResetBtn">Procesar otro PDF</button>
+        <button class="pp-btn pp-outline" id="papayaResetBtn">Process another PDF</button>
       </div>
       <div id="papayaFlags" class="pp-flags"></div>
       <table class="pp-table" id="papayaResultsTable">
-        <thead><tr><th>#</th><th>PALLETS</th><th>CLIENTE</th><th>COLOR Y TAMAÑO</th></tr></thead>
+        <thead><tr><th>#</th><th>PALLETS</th><th>CLIENT</th><th>COLOR & SIZE</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
-    <p class="pp-footer">Chula Brand · Reporte de Papaya · procesamiento 100% local en tu navegador</p>
+    <p class="pp-footer">Chula Brand · Papaya Report · 100% local processing in your browser</p>
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -1423,7 +1426,7 @@ async function setExpectedReady(orden, value) {
     // se quedaba viendo el valor nuevo aunque el servidor se hubiera quedado con el
     // viejo — hasta el próximo refresh, cuando "se regresaba sola" sin explicación.
     if (o) { o.expectedReady = previousValue; renderOrdenes(); }
-    showToast('Connection error — no se guardó la hora esperada');
+    showToast('Connection error — expected time was not saved');
   }
 }
 // Genera las opciones del <select> de "Expected ready": cada 30 min, mostradas en
@@ -1500,7 +1503,7 @@ function isSessionExpiredError(result) {
   return !!(result && typeof result.error === 'string' && result.error.indexOf('Session expired') !== -1);
 }
 function handleSessionExpired() {
-  showToast('Tu sesión expiró — inicia sesión de nuevo');
+  showToast('Your session expired — please sign in again');
   goRol();
 }
 function goRol() {
@@ -1924,7 +1927,7 @@ document.getElementById('admin-new-pin').addEventListener('keydown', e => { if (
 document.getElementById('admin-new-name').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); adminAddUser(); } });
 
 async function adminToggleUser(name, active) {
-  if (!confirm(`¿Confirmas este cambio?\n\n"${name}": ${active ? 'Inactive' : 'Active'} → ${active ? 'Active' : 'Inactive'}`)) return;
+  if (!confirm(`Confirm this change?\n\n"${name}": ${active ? 'Inactive' : 'Active'} → ${active ? 'Active' : 'Inactive'}`)) return;
   try {
     await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminToggleUser', name, active }) });
     loadAdminUsers();
@@ -1953,7 +1956,7 @@ function confirmSettingsDiff(oldVals, newVals, labels) {
     }
   });
   if (!lines.length) return 'nochange';
-  return confirm('¿Confirmas este cambio?\n\n' + lines.join('\n'));
+  return confirm('Confirm this change?\n\n' + lines.join('\n'));
 }
 
 // ── CLIENTS (Admin) ──
@@ -1979,11 +1982,11 @@ function renderClientRowControls(c) {
     </div>
     <div class="client-edit-panel" style="display:none;flex-direction:column;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
       <div style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--text-muted);">
-        <span>Cajas por tarima:</span>
-        <input type="number" class="cajas-input" value="${c.cajasPorTarima || ''}" placeholder="${c.parent ? 'hereda de ' + escapeHtml(c.parent) : 'estándar'}" style="width:100px;height:28px;border:1px solid var(--border);border-radius:6px;padding:0 6px;font-family:'IBM Plex Mono',monospace;font-size:12px;">
+        <span>Boxes per pallet:</span>
+        <input type="number" class="cajas-input" value="${c.cajasPorTarima || ''}" placeholder="${c.parent ? 'inherits from ' + escapeHtml(c.parent) : 'standard'}" style="width:100px;height:28px;border:1px solid var(--border);border-radius:6px;padding:0 6px;font-family:'IBM Plex Mono',monospace;font-size:12px;">
         <button type="button" class="admin-toggle-btn" style="padding:4px 10px;" onclick="submitClientCajas('${safePattern}', this)">Save</button>
       </div>
-      <div style="font-size:11px;color:var(--text-faint);">Lo que ve el chofer/cliente en su pantalla de tracking:</div>
+      <div style="font-size:11px;color:var(--text-faint);">What the driver/client sees on their tracking screen:</div>
       <div style="display:flex;gap:8px;">
         <button type="button" class="admin-toggle-btn ${c.mostrarProductos?'is-active':'is-inactive'}" onclick="adminToggleClientDisplay('${safePattern}','mostrarProductos',${!c.mostrarProductos})">${c.mostrarProductos?'Products: shown':'Products: hidden'}</button>
         <button type="button" class="admin-toggle-btn ${c.mostrarCliente?'is-active':'is-inactive'}" onclick="adminToggleClientDisplay('${safePattern}','mostrarCliente',${!c.mostrarCliente})">${c.mostrarCliente?'Name: shown':'Name: hidden'}</button>
@@ -2060,7 +2063,7 @@ async function submitAddStore(parentName, btnEl) {
   const cajasInput = wrap.querySelector('.add-store-cajas');
   const nombrePatron = nameInput.value.trim();
   const cajasPorTarima = cajasInput.value.trim();
-  if (!nombrePatron) { showToast('Escribe el nombre de la tienda.'); return; }
+  if (!nombrePatron) { showToast('Enter the store name.'); return; }
   try {
     const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminAddClient', nombrePatron, nombreCorto: '', cajasPorTarima: cajasPorTarima ? parseInt(cajasPorTarima, 10) : null, parent: parentName }) });
     const result = await res.json();
@@ -2073,18 +2076,18 @@ async function submitAddStore(parentName, btnEl) {
 async function submitClientCajas(nombrePatron, btnEl) {
   const input = btnEl.previousElementSibling;
   const cajasPorTarima = input.value.trim();
-  if (!confirm(`¿Confirmas este cambio?\n\nCajas por tarima para "${nombrePatron}": ${cajasPorTarima || '(heredar / estándar)'}`)) return;
+  if (!confirm(`Confirm this change?\n\nBoxes per pallet for "${nombrePatron}": ${cajasPorTarima || '(inherit / standard)'}`)) return;
   try {
     const res = await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminSetClientCajas', nombrePatron, cajasPorTarima: cajasPorTarima || 0 }) });
     const result = await res.json();
-    if (result.error) { showToast(`"${nombrePatron}" — ${result.error}. Créalo primero con Add client.`); return; }
-    showToast('Cajas por tarima actualizado ✓');
+    if (result.error) { showToast(`"${nombrePatron}" — ${result.error}. Create it first with Add client.`); return; }
+    showToast('Boxes per pallet updated ✓');
     loadAdminClients();
     clientsConfigLoaded = false;
   } catch(e) { showToast('Connection error.'); }
 }
 async function adminToggleClient(nombrePatron, active) {
-  if (!confirm(`¿Confirmas este cambio?\n\n"${nombrePatron}": ${active ? 'Inactive' : 'Active'} → ${active ? 'Active' : 'Inactive'}`)) return;
+  if (!confirm(`Confirm this change?\n\n"${nombrePatron}": ${active ? 'Inactive' : 'Active'} → ${active ? 'Active' : 'Inactive'}`)) return;
   try {
     await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminToggleClient', nombrePatron, active }) });
     loadAdminClients();
@@ -2093,7 +2096,7 @@ async function adminToggleClient(nombrePatron, active) {
 }
 async function adminToggleClientDisplay(nombrePatron, field, value) {
   const fieldLabel = field === 'mostrarCliente' ? 'Name' : 'Products';
-  if (!confirm(`¿Confirmas este cambio?\n\n"${nombrePatron}" — ${fieldLabel}: ${value ? 'Hidden' : 'Shown'} → ${value ? 'Shown' : 'Hidden'}`)) return;
+  if (!confirm(`Confirm this change?\n\n"${nombrePatron}" — ${fieldLabel}: ${value ? 'Hidden' : 'Shown'} → ${value ? 'Shown' : 'Hidden'}`)) return;
   try {
     await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: ADMIN_SESSION_TOKEN, action: 'adminSetClientDisplay', nombrePatron, field, value }) });
     loadAdminClients();
@@ -2101,7 +2104,7 @@ async function adminToggleClientDisplay(nombrePatron, field, value) {
 }
 
 // ── SETTINGS (Admin) ──
-const GENERAL_SETTINGS_LABELS = { shipRefreshSeconds: 'Refrescar Order Coordinator (seg.)', stalledHours: 'Horas "Stalled"', soonHours: 'Horas "Soon"', lockHours: 'Horas para bloquear edición' };
+const GENERAL_SETTINGS_LABELS = { shipRefreshSeconds: 'Refresh Order Coordinator (sec.)', stalledHours: 'Hours "Stalled"', soonHours: 'Hours "Soon"', lockHours: 'Hours before locking edits' };
 let loadedGeneralSettings = {};
 // Las 5 secciones de "Today's orders" (Departed/estatus 6 nunca entra aquí, siempre va aparte).
 const STATUS_ORDER_CODES = [1, 2, 3, 4, 5];
@@ -2228,7 +2231,7 @@ async function saveSettingsFields(fields, storeRef, statusElId) {
 // ── CAJAS POR TARIMA (ahora vive en la pestaña Clients, junto a los overrides
 // por cliente/tienda, en vez de separado en Settings) ──
 const CAJAS_FIELDS = [
-  { key: 'standardDivisor', elId: 'setting-standardDivisor', type: 'number', default: 48, label: 'Estándar' },
+  { key: 'standardDivisor', elId: 'setting-standardDivisor', type: 'number', default: 48, label: 'Standard' },
   { key: 'hebDivisor', elId: 'setting-hebDivisor', type: 'number', default: 60, label: 'HEB' }
 ];
 let loadedCajasSettings = {};
@@ -4412,7 +4415,7 @@ function xlsxCell(col, row, value, style, isNum) {
 function buildXlsxBlob(title, rows, flags) {
   const rowsXml = [];
   rowsXml.push(`<row r="1">${xlsxCell(1, 1, title, 1)}</row>`);
-  const headers = ["#", "PALLETS", "CLIENTE", "COLOR Y TAMAÑO"];
+  const headers = ["#", "PALLETS", "CLIENT", "COLOR & SIZE"];
   rowsXml.push(`<row r="3">${headers.map((h, i) => xlsxCell(i + 1, 3, h, 2)).join("")}</row>`);
 
   let r = 4, total = 0;
@@ -4580,22 +4583,22 @@ papayaResetBtn.addEventListener("click", () => {
 
 async function handlePapayaFile(file) {
   if (file.type !== "application/pdf") {
-    papayaStatusEl.textContent = "Ese archivo no es un PDF.";
+    papayaStatusEl.textContent = "That file isn't a PDF.";
     return;
   }
   if (typeof pdfjsLib === "undefined") {
-    papayaStatusEl.textContent = "No se pudo cargar la librería para leer PDFs (revisa tu conexión a internet y recarga la página).";
+    papayaStatusEl.textContent = "Couldn't load the PDF-reading library (check your internet connection and reload the page).";
     return;
   }
   papayaLastFileName = file.name.replace(/\.pdf$/i, "");
-  papayaStatusEl.textContent = "Leyendo PDF...";
+  papayaStatusEl.textContent = "Reading PDF...";
   papayaResultsCard.style.display = "none";
   try {
     const buf = await file.arrayBuffer();
     const lines = await extractLines(buf);
     const orders = parseOrders(lines);
     if (!orders.length) {
-      papayaStatusEl.textContent = "No se encontraron órdenes en este PDF.";
+      papayaStatusEl.textContent = "No orders found in this PDF.";
       return;
     }
 
@@ -4617,20 +4620,20 @@ async function handlePapayaFile(file) {
     const [rows, flags] = buildReportRows(orders);
     papayaLastRows = rows; papayaLastFlags = flags;
     renderPapayaResults(rows, flags);
-    papayaStatusEl.textContent = rows.length ? "Listo." : "Listo — este PDF no trae papaya, pero ya puedes mandar las órdenes al Draft.";
+    papayaStatusEl.textContent = rows.length ? "Done." : "Done — this PDF has no papaya, but you can still send the orders to Draft.";
     sendAndSyncDraft(); // se manda solo, no depende de que alguien se acuerde de picarle
   } catch (err) {
     console.error(err);
-    papayaStatusEl.textContent = "Error al procesar el PDF: " + err.message;
+    papayaStatusEl.textContent = "Error processing the PDF: " + err.message;
   }
 }
 
 function renderPapayaResults(rows, flags) {
   if (!rows.length) {
-    papayaSummaryEl.innerHTML = `Este PDF no trae líneas de papaya — no hay reporte de pallets que mostrar, pero las órdenes ya están listas para <b>Send + Sync to Draft</b>.`;
+    papayaSummaryEl.innerHTML = `This PDF has no papaya lines — no pallet report to show, but the orders are already ready for <b>Send + Sync to Draft</b>.`;
   } else {
     const total = rows.reduce((s, r) => s + r.pallets_num, 0);
-    papayaSummaryEl.innerHTML = `<b>${rows.length}</b> órdenes con papaya &nbsp;·&nbsp; <b>${total}</b> pallets totales`;
+    papayaSummaryEl.innerHTML = `<b>${rows.length}</b> orders with papaya &nbsp;·&nbsp; <b>${total}</b> total pallets`;
   }
 
   papayaTbody.innerHTML = "";
@@ -4679,23 +4682,23 @@ papayaDownloadWordBtn.addEventListener("click", () => {
 // Manda las órdenes al Draft y sincroniza — se llama sola en cuanto termina de leer el PDF
 // (ver handlePapayaFile), y también queda disponible en el botón por si hay que reintentar a mano.
 async function sendAndSyncDraft() {
-  if (!papayaLastDraftRows.length) { showToast('No hay órdenes para enviar'); return; }
+  if (!papayaLastDraftRows.length) { showToast('No orders to send'); return; }
   const original = papayaSendDraftBtn.textContent;
   papayaSendDraftBtn.disabled = true;
   try {
-    papayaSendDraftBtn.textContent = 'Enviando al Draft...';
+    papayaSendDraftBtn.textContent = 'Sending to Draft...';
     const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'writeDraft', rows: papayaLastDraftRows }) });
     const result = await res.json();
     if (result.error) { showToast('Error: ' + result.error); return; }
 
-    papayaSendDraftBtn.textContent = 'Sincronizando...';
+    papayaSendDraftBtn.textContent = 'Syncing...';
     const res2 = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'syncDraft' }) });
     const result2 = await res2.json();
-    if (result2.error) { showToast(`Se guardó el Draft, pero el sync falló: ${result2.error}`); return; }
+    if (result2.error) { showToast(`Draft was saved, but sync failed: ${result2.error}`); return; }
 
-    showToast(`${result.count} órdenes enviadas, sincronizadas y Draft limpiado ✓`);
+    showToast(`${result.count} orders sent, synced, and Draft cleared ✓`);
   } catch (e) {
-    showToast('Connection error — usa el botón para reintentar');
+    showToast('Connection error — use the button to retry');
   } finally {
     // Antes este reset vivía DESPUÉS del try/catch, no en un finally — cualquier
     // "return" temprano (ej. "Session expired") se lo saltaba entero y el botón se
