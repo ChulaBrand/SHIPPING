@@ -3634,6 +3634,11 @@ function setOrderStatus(orden, status) {
   pushOrderStatus(orden, status, prevSnapshot);
 }
 
+// orden -> número de secuencia de la petición de estatus más reciente para ese pedido.
+// Si dos clics rápidos en el mismo pedido mandan 2 fetches y el primero resuelve
+// DESPUÉS del segundo (ya confirmado), su catch/revert ya no debe pisar el cambio más
+// nuevo — solo la petición más reciente para ese pedido tiene permiso de revertir.
+const orderStatusSeq = {};
 // prevSnapshot: estatus/hora/actualizado/productState de ANTES del cambio optimista —
 // si el fetch falla o el servidor rechaza el cambio (ej. candado de 48h), se usa para
 // regresar la tarjeta a como estaba. Antes, si fallaba la conexión justo después de
@@ -3641,6 +3646,7 @@ function setOrderStatus(orden, status) {
 // servidor se hubiera quedado con el viejo — hasta el próximo refresh, cuando "se
 // regresaba sola" sin ninguna explicación para quien la estaba usando.
 async function pushOrderStatus(orden, estatus, prevSnapshot) {
+  const seq = (orderStatusSeq[orden] = (orderStatusSeq[orden] || 0) + 1);
   const o = ordenes.find(x => String(x.orden) === String(orden));
   // El servidor va a guardar "ahora" como el último cambio (igual que updateStatus() en
   // Code.gs) — se refleja aquí también, si no la tarjeta se sigue viendo "Stalled" hasta
@@ -3659,7 +3665,7 @@ async function pushOrderStatus(orden, estatus, prevSnapshot) {
     const res = await fetch(API, { method: 'POST', body: JSON.stringify(body) });
     const result = await res.json();
     if (isSessionExpiredError(result)) {
-      if (o && prevSnapshot) {
+      if (o && prevSnapshot && orderStatusSeq[orden] === seq) {
         o.estatus = prevSnapshot.estatus;
         o.hora = prevSnapshot.hora;
         o.actualizado = prevSnapshot.actualizado;
@@ -3671,7 +3677,9 @@ async function pushOrderStatus(orden, estatus, prevSnapshot) {
     }
     if (result.error) throw new Error(result.error);
   } catch (e) {
-    if (o && prevSnapshot) {
+    // Si ya hay una petición más nueva para este mismo pedido en vuelo (o ya resuelta),
+    // esta respuesta llegó tarde — no hay que revertir sobre un cambio ya confirmado.
+    if (o && prevSnapshot && orderStatusSeq[orden] === seq) {
       o.estatus = prevSnapshot.estatus;
       o.hora = prevSnapshot.hora;
       o.actualizado = prevSnapshot.actualizado;
