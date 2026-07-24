@@ -221,6 +221,10 @@
   .search-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:1rem; margin-bottom:1.5rem; display:flex; gap:8px; }
   .orders-list { display:flex; flex-direction:column; gap:10px; }
   .results-list { display:flex; flex-direction:column; gap:10px; margin-top:4px; }
+  /* Mientras el auto-refresh está trayendo datos frescos, nada se toca — se ve
+     exactamente igual, solo que los controles no responden hasta que termine. */
+  .refresh-locked { pointer-events:none; }
+  .refresh-locked .order-card, .refresh-locked .order-card-compact { opacity:.6; transition:opacity .15s; }
   /* order cards */
   .order-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:1rem; }
   .order-card.highlight { border:2px solid var(--green-dark); }
@@ -3298,6 +3302,17 @@ function hideRefreshSpinner() {
 // disparar loadOrdenes() casi al mismo tiempo — sin esto, una respuesta más vieja que
 // llega DESPUÉS de una más nueva podía pisar los datos recién pintados con datos ya
 // obsoletos. Solo la petición más reciente tiene permiso de aplicar su resultado.
+// Mientras dura un refresh silencioso, el panel se pone "solo ver" (los controles no
+// responden al toque) SIN cambiar nada de lo que ya se ve — en cuanto los datos
+// nuevos ya están listos y pintados, se desbloquea solo. Así nunca hay chance de
+// tocar un botón de estatus justo cuando los datos de abajo están a medio cambiar.
+function setRefreshLocked(locked) {
+  const wrap = document.getElementById('normal-orders-wrap');
+  if (wrap) wrap.classList.toggle('refresh-locked', locked);
+  const etaSection = document.getElementById('eta-section');
+  if (etaSection) etaSection.classList.toggle('refresh-locked', locked);
+}
+
 let loadOrdenesSeq = 0;
 // silent=true (usado por el auto-refresh de fondo) NO borra la lista para mostrar
 // "Loading..." ni prende el spinner de pull-to-refresh — antes cada vuelta del timer
@@ -3311,6 +3326,8 @@ async function loadOrdenes(silent) {
   if (!silent) {
     list.innerHTML='<div class="empty-state"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i>Loading...</div>';
     showRefreshSpinner();
+  } else {
+    setRefreshLocked(true);
   }
   try {
     const r=await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getAll' }) });
@@ -3337,7 +3354,12 @@ async function loadOrdenes(silent) {
     }
     renderOrdenes();
   } catch(e){ if (seq === loadOrdenesSeq && !silent) list.innerHTML='<div class="empty-state">Connection error</div>'; }
-  finally { if (seq === loadOrdenesSeq && !silent) hideRefreshSpinner(); }
+  finally {
+    if (seq === loadOrdenesSeq) {
+      if (!silent) hideRefreshSpinner();
+      else setRefreshLocked(false);
+    }
+  }
 }
 
 // Cuando buscas, los resultados no filtran por fecha (a propósito, para poder
