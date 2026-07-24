@@ -3535,6 +3535,14 @@ function toggleEtaView() {
   else renderOrdenes(); // normal-orders-wrap no se actualizó mientras estaba escondido
 }
 function renderEtaView() {
+  // Igual que renderOrdenes(): esta vista se reconstruye completa cada vez (auto-
+  // refresh de fondo incluido) — sin esto, cualquier refresh mientras estabas
+  // scrolleado revisando o intentando expandir una orden aquí te regresaba al
+  // principio de la lista sin avisar, sintiéndose como que "no abría" o que se
+  // tardaba. renderOrdenes() ya se arregló para esto, pero esta vista tiene su propio
+  // render aparte (currentOrderView === 'eta' regresa antes de llegar a esa parte) y
+  // se había quedado fuera.
+  const savedScrollY = window.scrollY;
   const todayList = document.getElementById('eta-today-list');
   if (!todayList) return;
   const pastSection = document.getElementById('eta-past-section');
@@ -3559,6 +3567,7 @@ function renderEtaView() {
   } else {
     pastSection.style.display = 'none';
   }
+  window.scrollTo(0, savedScrollY);
 }
 
 async function loadCancelledOrders() {
