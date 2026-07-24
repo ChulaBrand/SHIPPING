@@ -4900,10 +4900,14 @@ if (location.hash === '#admin') {
 // intervalo es configurable desde Admin → Order Coordinator (APP_SETTINGS.shipRefreshSeconds,
 // default 120s/2min), así que se reprograma solo en cada vuelta en vez de un setInterval
 // de duración fija (mismo patrón que ya usa scheduleChoferRefresh() más abajo).
+// Si hay una tarjeta expandida (la estás viendo/editando), este ciclo se salta por
+// completo — nada se mueve mientras estás "adentro" de un pedido, ni siquiera
+// reacomodado. En cuanto la cierras, el siguiente ciclo vuelve a jalar datos frescos
+// normal.
 function scheduleShippingRefresh() {
   setTimeout(() => {
     const encScreen = document.getElementById('screen-enc');
-    if (encScreen && encScreen.classList.contains('active') && currentUser) loadOrdenes(true);
+    if (encScreen && encScreen.classList.contains('active') && currentUser && !expandedOrders.size) loadOrdenes(true);
     scheduleShippingRefresh();
   }, Math.max(20, APP_SETTINGS.shipRefreshSeconds || 120) * 1000);
 }
