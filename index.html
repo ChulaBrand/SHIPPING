@@ -3950,6 +3950,13 @@ function clearEncSearch() {
   renderOrdenes();
 }
 function renderSearchResults(raw) {
+  // Tercer lugar (después de renderOrdenes()/renderEtaView()) con el mismo problema:
+  // el auto-refresh de fondo vuelve a llamar a esto cuando hay una búsqueda activa
+  // (ver loadOrdenes()) para que los resultados se mantengan al día — pero sin
+  // preservar el scroll, si estabas viendo resultados más abajo (una búsqueda por
+  // cliente puede traer varios) el refresh te regresaba al principio, sintiéndose
+  // como que las órdenes "se comían" o desaparecían de la nada.
+  const savedScrollY = window.scrollY;
   const isNum = /^[0-9]+$/.test(raw);
   const val = isNum ? 'SP00'+raw : raw.toLowerCase();
   const exact = ordenes.find(o=>String(o.orden).toLowerCase()===val.toLowerCase());
@@ -3973,8 +3980,9 @@ function renderSearchResults(raw) {
     .filter(o=>!isOlderThan48h(o.actualizado) && (String(o.orden).toLowerCase().includes(val.toLowerCase())||o.cliente.toLowerCase().includes(val.toLowerCase())))
     .filter(o => !statusFilter.size || statusFilter.has(parseInt(o.estatus) || 1))
     .filter(orderMatchesProductFilter);
-  if(!filtered.length){ list.innerHTML='<div class="empty-state"><i class="ti ti-search-off"></i>No match found</div>'; return; }
+  if(!filtered.length){ list.innerHTML='<div class="empty-state"><i class="ti ti-search-off"></i>No match found</div>'; window.scrollTo(0, savedScrollY); return; }
   list.innerHTML = filtered.map(o => buildClerkCard(o)).join('');
+  window.scrollTo(0, savedScrollY);
 }
 document.getElementById('enc-search').addEventListener('keydown',e=>{if(e.key==='Enter')encBuscar();});
 
