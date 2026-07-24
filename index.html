@@ -3524,6 +3524,37 @@ async function toggleCancelledView() {
   else renderOrdenes(); // normal-orders-wrap no se actualizó mientras estaba escondido
 }
 
+// Ancla el scroll a la MISMA tarjeta (por número de orden), no solo al mismo número de
+// pixeles — si un refresh de fondo reordena las secciones (una orden cambió de
+// estatus y se movió), restaurar solo el scrollY dejaba la pantalla en el lugar
+// correcto pero con OTRA orden ahí parada, así que la que estabas viendo parecía
+// "desaparecer" hasta que la volvías a encontrar scrolleando. Se guarda cuál tarjeta
+// está justo en el borde de arriba (o la primera expandida, que es la que de verdad
+// importa si tenías una abierta) y a qué altura de pantalla estaba, y después del
+// repintado se busca esa MISMA tarjeta por su id y se ajusta el scroll para que
+// vuelva a quedar a esa misma altura — sin importar en qué sección haya terminado.
+function captureScrollAnchor() {
+  if (window.scrollY <= 0) return null; // arriba del todo, no hay nada que anclar
+  const expanded = expandedOrders.size ? [...expandedOrders][0] : null;
+  if (expanded && document.getElementById('card-' + expanded)) {
+    const rect = document.getElementById('card-' + expanded).getBoundingClientRect();
+    return { orden: expanded, top: rect.top };
+  }
+  const cards = document.querySelectorAll('[id^="card-"]');
+  for (const el of cards) {
+    const rect = el.getBoundingClientRect();
+    if (rect.bottom > 0) return { orden: el.id.slice(5), top: rect.top };
+  }
+  return null;
+}
+function restoreScrollAnchor(saved) {
+  if (!saved) return;
+  const el = document.getElementById('card-' + saved.orden);
+  if (!el) return; // esa orden ya no está en la lista (se archivó/despachó de verdad) — no hay a qué anclar
+  const rect = el.getBoundingClientRect();
+  window.scrollBy(0, rect.top - saved.top);
+}
+
 // Filtra las órdenes que ya tienen "Expected ready" puesto, más próximas primero —
 // usa el mismo arreglo "ordenes" que ya está cargado (sin pedir nada nuevo al
 // servidor), y las tarjetas son las normales (con sus botones de estatus/cancelar),
@@ -3535,14 +3566,7 @@ function toggleEtaView() {
   else renderOrdenes(); // normal-orders-wrap no se actualizó mientras estaba escondido
 }
 function renderEtaView() {
-  // Igual que renderOrdenes(): esta vista se reconstruye completa cada vez (auto-
-  // refresh de fondo incluido) — sin esto, cualquier refresh mientras estabas
-  // scrolleado revisando o intentando expandir una orden aquí te regresaba al
-  // principio de la lista sin avisar, sintiéndose como que "no abría" o que se
-  // tardaba. renderOrdenes() ya se arregló para esto, pero esta vista tiene su propio
-  // render aparte (currentOrderView === 'eta' regresa antes de llegar a esa parte) y
-  // se había quedado fuera.
-  const savedScrollY = window.scrollY;
+  const savedAnchor = captureScrollAnchor();
   const todayList = document.getElementById('eta-today-list');
   if (!todayList) return;
   const pastSection = document.getElementById('eta-past-section');
@@ -3567,7 +3591,7 @@ function renderEtaView() {
   } else {
     pastSection.style.display = 'none';
   }
-  window.scrollTo(0, savedScrollY);
+  restoreScrollAnchor(savedAnchor);
 }
 
 async function loadCancelledOrders() {
@@ -3835,12 +3859,7 @@ function renderAttentionCounts(attention) {
 }
 
 function renderOrdenes() {
-  // Se reconstruye TODA la lista de un jalón (innerHTML) — sin esto, cada refresh
-  // (sobre todo el silencioso de fondo) regresaba el scroll a la posición 0 aunque
-  // estuvieras leyendo una tarjeta a media pantalla, y si de paso una orden cambiaba
-  // de estatus (se mueve de sección), se sentía como que "todo se desacomodaba" de la
-  // nada. Se guarda la posición antes de repintar y se restaura al final.
-  const savedScrollY = window.scrollY;
+  const savedAnchor = captureScrollAnchor();
   const userLabel = document.getElementById('shippingUserLabel');
   if (userLabel) userLabel.textContent = currentUser ? '— ' + currentUser + (SHIPPING_READ_ONLY ? ' (view only)' : '') : '';
   const uploadBtn = document.getElementById('shippingUploadBtn');
@@ -3917,7 +3936,7 @@ function renderOrdenes() {
     pastList.innerHTML = groupByStatusHtml(pastOrders);
   } else { pastSection.style.display = 'none'; }
 
-  window.scrollTo(0, savedScrollY);
+  restoreScrollAnchor(savedAnchor);
 }
 
 // Ordena por estatus (1-5, Departed nunca llega aquí) según el orden que el Admin haya
@@ -3950,13 +3969,7 @@ function clearEncSearch() {
   renderOrdenes();
 }
 function renderSearchResults(raw) {
-  // Tercer lugar (después de renderOrdenes()/renderEtaView()) con el mismo problema:
-  // el auto-refresh de fondo vuelve a llamar a esto cuando hay una búsqueda activa
-  // (ver loadOrdenes()) para que los resultados se mantengan al día — pero sin
-  // preservar el scroll, si estabas viendo resultados más abajo (una búsqueda por
-  // cliente puede traer varios) el refresh te regresaba al principio, sintiéndose
-  // como que las órdenes "se comían" o desaparecían de la nada.
-  const savedScrollY = window.scrollY;
+  const savedAnchor = captureScrollAnchor();
   const isNum = /^[0-9]+$/.test(raw);
   const val = isNum ? 'SP00'+raw : raw.toLowerCase();
   const exact = ordenes.find(o=>String(o.orden).toLowerCase()===val.toLowerCase());
@@ -3980,9 +3993,9 @@ function renderSearchResults(raw) {
     .filter(o=>!isOlderThan48h(o.actualizado) && (String(o.orden).toLowerCase().includes(val.toLowerCase())||o.cliente.toLowerCase().includes(val.toLowerCase())))
     .filter(o => !statusFilter.size || statusFilter.has(parseInt(o.estatus) || 1))
     .filter(orderMatchesProductFilter);
-  if(!filtered.length){ list.innerHTML='<div class="empty-state"><i class="ti ti-search-off"></i>No match found</div>'; window.scrollTo(0, savedScrollY); return; }
+  if(!filtered.length){ list.innerHTML='<div class="empty-state"><i class="ti ti-search-off"></i>No match found</div>'; restoreScrollAnchor(savedAnchor); return; }
   list.innerHTML = filtered.map(o => buildClerkCard(o)).join('');
-  window.scrollTo(0, savedScrollY);
+  restoreScrollAnchor(savedAnchor);
 }
 document.getElementById('enc-search').addEventListener('keydown',e=>{if(e.key==='Enter')encBuscar();});
 
