@@ -3648,7 +3648,19 @@ function toggleCardExpand(orden) {
   // setCancelFlowStep/setRestoreFlowStep: reconstruir solo esa tarjeta.
   const o = ordenes.find(x => String(x.orden) === key);
   const card = document.getElementById('card-' + key);
-  if (card && o) { card.outerHTML = buildClerkCard(o); return; }
+  if (card && o) {
+    try {
+      card.outerHTML = buildClerkCard(o);
+    } catch (e) {
+      // Antes, si algo en los datos de ESTA orden en particular (producto raro,
+      // Expected ready mal formado, etc.) tronaba buildClerkCard(), el error se
+      // perdía en silencio — la tarjeta se quedaba tal cual, sin abrirse, sin ningún
+      // aviso de que algo falló. Ahora se ve el error en la consola y se avisa.
+      console.error('No se pudo expandir la orden ' + key + ':', e);
+      showToast('Could not expand order #' + key + ' — check the browser console');
+    }
+    return;
+  }
   renderOrdenes(); // no se encontró la tarjeta suelta (no debería pasar) -> full render de respaldo
 }
 
