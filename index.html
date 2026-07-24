@@ -1020,7 +1020,7 @@
       <p class="top-bar-title">Shipping Panel <span id="shippingUserLabel" style="font-weight:400;color:var(--text-muted);font-size:12px;"></span></p>
       <div style="display:flex;gap:8px;">
         <button class="btn-back" onclick="shippingBack()">← Back</button>
-        <button class="btn-back" onclick="loadOrdenes()" title="Refresh" aria-label="Refresh" style="padding:5px 9px;"><i class="ti ti-refresh"></i></button>
+        <button class="btn-back" onclick="loadOrdenes(true)" title="Refresh" aria-label="Refresh" style="padding:5px 9px;"><i class="ti ti-refresh"></i></button>
         <button class="btn-back" id="shippingUploadBtn" onclick="goPapayaUpload('screen-enc')">Upload</button>
         <button class="btn-back" onclick="goRol()">Sign out</button>
       </div>
@@ -1504,7 +1504,7 @@ function goPapayaBack() {
   show(papayaReturnScreen);
   // Si regresamos al Shipping Panel, recargar las órdenes automáticamente
   // (evita tener que hacer un refresh completo de la página, que saca del login)
-  if (papayaReturnScreen === 'screen-enc' && currentUser) loadOrdenes();
+  if (papayaReturnScreen === 'screen-enc' && currentUser) loadOrdenes(true);
 }
 // El token dura 10h — en un turno largo (o de madrugada) alguien se puede quedar
 // "deslogueado" a mitad de turno. Antes esto se veía igual que cualquier error de
@@ -1570,7 +1570,7 @@ function chooseAccess(key) {
     // permisos entra a Shipping, se va a Analytics, y regresa, cachedLoginOrders ya
     // no existe y esto pide datos frescos en vez de repintar la foto vieja del login.
     if (cachedLoginOrders) { ordenes = cachedLoginOrders; cachedLoginOrders = null; renderOrdenes(); }
-    else { loadOrdenes(); }
+    else { loadOrdenes(true); }
   } else {
     show('screen-analytics'); initAnalyticsScreen();
   }
@@ -1704,7 +1704,7 @@ async function completeLogin(result) {
   } else {
     show('screen-enc');
     if (cachedLoginOrders) { ordenes = cachedLoginOrders; cachedLoginOrders = null; renderOrdenes(); }
-    else { loadOrdenes(); }
+    else { loadOrdenes(true); }
   }
 }
 
@@ -3314,21 +3314,19 @@ function setRefreshLocked(locked) {
 }
 
 let loadOrdenesSeq = 0;
-// silent=true (usado por el auto-refresh de fondo) NO borra la lista para mostrar
-// "Loading..." ni prende el spinner de pull-to-refresh — antes cada vuelta del timer
-// (cada 2 min por default) hacía parpadear toda la lista a vacío y de regreso, aunque
-// nada hubiera cambiado, y si estabas viendo/leyendo una tarjeta se sentía como que
-// "se desacomodaba" todo de la nada. Un refresh que el usuario sí pidió (pull-to-
-// refresh, entrar a la pantalla) se queda con la señal visual de siempre.
-async function loadOrdenes(silent) {
+// Nunca borra la lista para mostrar "Loading..." — antes eso pasaba en CUALQUIER
+// refresh que no fuera el timer de fondo (botón manual, pull-to-refresh, entrar a la
+// pantalla), y se sentía como que toda la lista desaparecía y volvía a aparecer. Ahora
+// siempre se deja lo que ya había en pantalla mientras llegan los datos nuevos (con el
+// panel en "solo ver" via setRefreshLocked, y el resultado se aplica con el mismo
+// render que ya sigue a la MISMA orden aunque cambie de sección). showSpinner=true
+// solo prende/apaga el ícono chiquito de arriba (pull-to-refresh, botón de refresh) —
+// es la única diferencia visual entre un refresh que el usuario pidió y uno de fondo.
+async function loadOrdenes(showSpinner) {
   const seq = ++loadOrdenesSeq;
   const list=document.getElementById('orders-list');
-  if (!silent) {
-    list.innerHTML='<div class="empty-state"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i>Loading...</div>';
-    showRefreshSpinner();
-  } else {
-    setRefreshLocked(true);
-  }
+  if (showSpinner) showRefreshSpinner();
+  setRefreshLocked(true);
   try {
     const r=await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getAll' }) });
     const result = await r.json();
@@ -3340,9 +3338,10 @@ async function loadOrdenes(silent) {
     // "Connection error" (escondiendo el error real), dejando el panel roto hasta el
     // siguiente refresh que sí funcionara.
     if (result && result.error) {
-      // Silencioso: no borra lo que ya se veía (mejor datos viejos en pantalla que la
-      // lista entera desapareciendo por un hiccup de un ciclo del timer de fondo).
-      if (!silent) list.innerHTML = '<div class="empty-state">' + escapeHtml(result.error) + '</div>';
+      // Solo se reemplaza la lista si de plano no había nada que preservar (primera
+      // carga fallida) — si ya había pedidos en pantalla, se quedan tal cual y el toast
+      // ya avisa del error.
+      if (!list.children.length) list.innerHTML = '<div class="empty-state">' + escapeHtml(result.error) + '</div>';
       showToast(result.error);
       return;
     }
@@ -3353,11 +3352,16 @@ async function loadOrdenes(silent) {
       searchActive = false;
     }
     renderOrdenes();
-  } catch(e){ if (seq === loadOrdenesSeq && !silent) list.innerHTML='<div class="empty-state">Connection error</div>'; }
+  } catch(e){
+    if (seq === loadOrdenesSeq) {
+      if (!list.children.length) list.innerHTML='<div class="empty-state">Connection error</div>';
+      else showToast('Connection error');
+    }
+  }
   finally {
     if (seq === loadOrdenesSeq) {
-      if (!silent) hideRefreshSpinner();
-      else setRefreshLocked(false);
+      if (showSpinner) hideRefreshSpinner();
+      setRefreshLocked(false);
     }
   }
 }
@@ -4036,7 +4040,7 @@ function showToast(msg) {
 // apagarlo, y aquí se arma uno propio que solo vuelve a pedir los datos del panel
 // activo, sin perder el login.
 (function () {
-  const PULL_REFRESH_FNS = { 'screen-enc': loadOrdenes, 'screen-analytics': () => refreshAllPanels(true) };
+  const PULL_REFRESH_FNS = { 'screen-enc': () => loadOrdenes(true), 'screen-analytics': () => refreshAllPanels(true) };
   const THRESHOLD = 70;
   const indicator = document.getElementById('pull-refresh-indicator');
   let startY = null, pulling = false, refreshing = false;
@@ -4925,7 +4929,7 @@ if (location.hash === '#admin') {
 function scheduleShippingRefresh() {
   setTimeout(() => {
     const encScreen = document.getElementById('screen-enc');
-    if (encScreen && encScreen.classList.contains('active') && currentUser) loadOrdenes(true);
+    if (encScreen && encScreen.classList.contains('active') && currentUser) loadOrdenes(); // sin spinner, es de fondo
     scheduleShippingRefresh();
   }, Math.max(20, APP_SETTINGS.shipRefreshSeconds || 120) * 1000);
 }
