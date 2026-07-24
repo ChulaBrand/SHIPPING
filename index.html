@@ -971,6 +971,13 @@
 
     <div class="admin-tab-panel" id="admin-tab-analytics" style="display:none;">
       <div class="admin-section-card">
+        <p class="section-label">Auto-refresh</p>
+        <div class="settings-group"><div class="settings-row"><label>Refresh every (seconds)</label><input type="number" id="setting-analyticsRefreshSeconds" min="0"></div></div>
+        <p style="font-size:11px;color:var(--text-faint);margin:-2px 0 8px;">0 = off (only refreshes with the button or pull-to-refresh). If you turn it on, minimum is 60s — anything shorter doesn't really help since the server already caches results for 90s.</p>
+        <button class="btn-primary" style="margin-top:4px;" onclick="saveAnalyticsRefreshSettings()">Save changes</button>
+        <p class="upload-status show" id="admin-analytics-refresh-status" role="status" aria-live="polite" style="display:none;"></p>
+      </div>
+      <div class="admin-section-card">
         <p class="section-label">Data Analysis layout</p>
         <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:8px;">"Order" moves the panel up/down. The checkbox turns the whole panel on or off. The menu sets which date range it opens with by default.</p>
         <div style="display:flex;gap:10px;align-items:center;padding:0 4px 4px;font-size:10.5px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:.02em;">
@@ -1178,7 +1185,7 @@ function escapeForJsAttr(str) {
 
 // Valores editables desde Admin → Settings. Estos son el "de fábrica" mientras se
 // cargan de verdad (justo después del login); ver loadAppSettings()/loadClientsConfig().
-let APP_SETTINGS = { standardDivisor: 48, hebDivisor: 60, stalledHours: 6, soonHours: 1, lockHours: 48, chofRefreshSeconds: 30, chofShowClientName: 1, chofShowProducts: 1, shipRefreshSeconds: 120, statusRank1: 1, statusRank2: 2, statusRank3: 3, statusRank4: 4, statusRank5: 5 };
+let APP_SETTINGS = { standardDivisor: 48, hebDivisor: 60, stalledHours: 6, soonHours: 1, lockHours: 48, chofRefreshSeconds: 30, chofShowClientName: 1, chofShowProducts: 1, shipRefreshSeconds: 120, analyticsRefreshSeconds: 0, statusRank1: 1, statusRank2: 2, statusRank3: 3, statusRank4: 4, statusRank5: 5 };
 let CLIENTS_CONFIG = []; // [{ nombrePatron, nombreCorto, cajasPorTarima, activo }], desde Admin → Clients
 let clientsConfigLoaded = false;
 async function loadAppSettings() {
@@ -1709,7 +1716,7 @@ async function submitPassword() {
     if (pinMode === 'admin') {
       if (result.success && perms.includes('admin')) {
         ADMIN_SESSION_TOKEN = result.sessionToken;
-        show('screen-admin'); loadAdminUsers(); loadAdminAnalyticsConfig();
+        show('screen-admin'); loadAdminUsers(); loadAdminAnalyticsConfig(); loadAnalyticsRefreshSettings();
         return;
       }
       if (result.success) {
@@ -2280,6 +2287,42 @@ async function saveDriverScreenSettings() { await saveSettingsFields(DRIVER_FIEL
 // y poner el default de las 6 gráficas de abajo.
 const ANALYTICS_TOP_KEYS = ['core', 'boxes'];
 const ANALYTICS_PANEL_LABELS = { core: 'Summary', boxes: 'Boxes', status: 'Orders by Status', product: 'Boxes by Product', day: 'Departed per Day', complete: 'Complete vs Incomplete', shipped: 'Shipped vs Not Shipped', person: 'Activity by Person', vendedor: 'Boxes by Salesperson', bayUsage: 'Bay Usage', leftBehind: 'Left Behind per Day', overdue: 'Overdue', unloading: 'Unloading Trucks' };
+// analyticsRefreshSeconds no usa el helper genérico loadSettingsFields/saveSettingsFields
+// porque su "apagado" es 0, no un mínimo fijo — el helper genérico haría clamp de 0 hacia
+// arriba al mínimo, sin dejar apagarlo nunca.
+let loadedAnalyticsRefreshSeconds = 0;
+async function loadAnalyticsRefreshSettings() {
+  try {
+    const s = await adminApiCall('getSettings');
+    if (!s) return;
+    loadedAnalyticsRefreshSeconds = parseInt(s.analyticsRefreshSeconds, 10) || 0;
+    document.getElementById('setting-analyticsRefreshSeconds').value = loadedAnalyticsRefreshSeconds;
+  } catch (e) { showToast('Connection error loading settings.'); }
+}
+async function saveAnalyticsRefreshSettings() {
+  const statusEl = document.getElementById('admin-analytics-refresh-status');
+  const raw = parseInt(document.getElementById('setting-analyticsRefreshSeconds').value, 10) || 0;
+  const value = raw <= 0 ? 0 : Math.max(60, raw);
+  document.getElementById('setting-analyticsRefreshSeconds').value = value;
+  const check = confirmSettingsDiff(
+    { analyticsRefreshSeconds: loadedAnalyticsRefreshSeconds },
+    { analyticsRefreshSeconds: value },
+    { analyticsRefreshSeconds: 'Data Analysis auto-refresh (sec.)' }
+  );
+  statusEl.style.display = 'block';
+  if (check === 'nochange') { statusEl.textContent = 'No changes to save.'; statusEl.className = 'upload-status show'; return; }
+  if (!check) { statusEl.style.display = 'none'; return; }
+  statusEl.textContent = 'Saving...'; statusEl.className = 'upload-status show loading';
+  try {
+    const result = await adminApiCall('adminSetSettings', { settings: { analyticsRefreshSeconds: value } });
+    if (!result) return;
+    if (result.error) { statusEl.textContent = result.error; statusEl.className = 'upload-status show err'; return; }
+    statusEl.textContent = '✓ Settings saved.'; statusEl.className = 'upload-status show ok';
+    APP_SETTINGS.analyticsRefreshSeconds = value;
+    loadedAnalyticsRefreshSeconds = value;
+  } catch (e) { statusEl.textContent = 'Connection error.'; statusEl.className = 'upload-status show err'; }
+}
+
 let analyticsChartConfig = [];
 async function loadAdminAnalyticsConfig() {
   const list = document.getElementById('admin-analytics-list');
@@ -3256,11 +3299,19 @@ function hideRefreshSpinner() {
 // llega DESPUÉS de una más nueva podía pisar los datos recién pintados con datos ya
 // obsoletos. Solo la petición más reciente tiene permiso de aplicar su resultado.
 let loadOrdenesSeq = 0;
-async function loadOrdenes() {
+// silent=true (usado por el auto-refresh de fondo) NO borra la lista para mostrar
+// "Loading..." ni prende el spinner de pull-to-refresh — antes cada vuelta del timer
+// (cada 2 min por default) hacía parpadear toda la lista a vacío y de regreso, aunque
+// nada hubiera cambiado, y si estabas viendo/leyendo una tarjeta se sentía como que
+// "se desacomodaba" todo de la nada. Un refresh que el usuario sí pidió (pull-to-
+// refresh, entrar a la pantalla) se queda con la señal visual de siempre.
+async function loadOrdenes(silent) {
   const seq = ++loadOrdenesSeq;
   const list=document.getElementById('orders-list');
-  list.innerHTML='<div class="empty-state"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i>Loading...</div>';
-  showRefreshSpinner();
+  if (!silent) {
+    list.innerHTML='<div class="empty-state"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i>Loading...</div>';
+    showRefreshSpinner();
+  }
   try {
     const r=await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getAll' }) });
     const result = await r.json();
@@ -3271,7 +3322,13 @@ async function loadOrdenes() {
     // array — renderOrdenes() tronaba al primer .filter() y el catch de abajo mostraba
     // "Connection error" (escondiendo el error real), dejando el panel roto hasta el
     // siguiente refresh que sí funcionara.
-    if (result && result.error) { list.innerHTML = '<div class="empty-state">' + escapeHtml(result.error) + '</div>'; showToast(result.error); return; }
+    if (result && result.error) {
+      // Silencioso: no borra lo que ya se veía (mejor datos viejos en pantalla que la
+      // lista entera desapareciendo por un hiccup de un ciclo del timer de fondo).
+      if (!silent) list.innerHTML = '<div class="empty-state">' + escapeHtml(result.error) + '</div>';
+      showToast(result.error);
+      return;
+    }
     ordenes = result;
     if (searchActive) {
       const raw = document.getElementById('enc-search').value.trim();
@@ -3279,8 +3336,8 @@ async function loadOrdenes() {
       searchActive = false;
     }
     renderOrdenes();
-  } catch(e){ if (seq === loadOrdenesSeq) list.innerHTML='<div class="empty-state">Connection error</div>'; }
-  finally { if (seq === loadOrdenesSeq) hideRefreshSpinner(); }
+  } catch(e){ if (seq === loadOrdenesSeq && !silent) list.innerHTML='<div class="empty-state">Connection error</div>'; }
+  finally { if (seq === loadOrdenesSeq && !silent) hideRefreshSpinner(); }
 }
 
 // Cuando buscas, los resultados no filtran por fecha (a propósito, para poder
@@ -3757,6 +3814,12 @@ function renderAttentionCounts(attention) {
 }
 
 function renderOrdenes() {
+  // Se reconstruye TODA la lista de un jalón (innerHTML) — sin esto, cada refresh
+  // (sobre todo el silencioso de fondo) regresaba el scroll a la posición 0 aunque
+  // estuvieras leyendo una tarjeta a media pantalla, y si de paso una orden cambiaba
+  // de estatus (se mueve de sección), se sentía como que "todo se desacomodaba" de la
+  // nada. Se guarda la posición antes de repintar y se restaura al final.
+  const savedScrollY = window.scrollY;
   const userLabel = document.getElementById('shippingUserLabel');
   if (userLabel) userLabel.textContent = currentUser ? '— ' + currentUser + (SHIPPING_READ_ONLY ? ' (view only)' : '') : '';
   const uploadBtn = document.getElementById('shippingUploadBtn');
@@ -3833,6 +3896,7 @@ function renderOrdenes() {
     pastList.innerHTML = groupByStatusHtml(pastOrders);
   } else { pastSection.style.display = 'none'; }
 
+  window.scrollTo(0, savedScrollY);
 }
 
 // Ordena por estatus (1-5, Departed nunca llega aquí) según el orden que el Admin haya
@@ -4797,7 +4861,7 @@ if (location.hash === '#admin') {
 function scheduleShippingRefresh() {
   setTimeout(() => {
     const encScreen = document.getElementById('screen-enc');
-    if (encScreen && encScreen.classList.contains('active') && currentUser) loadOrdenes();
+    if (encScreen && encScreen.classList.contains('active') && currentUser) loadOrdenes(true);
     scheduleShippingRefresh();
   }, Math.max(20, APP_SETTINGS.shipRefreshSeconds || 120) * 1000);
 }
@@ -4816,6 +4880,21 @@ function scheduleChoferRefresh() {
   }, Math.max(10, CHOFER_REFRESH_SECONDS || 30) * 1000);
 }
 scheduleChoferRefresh();
+
+// Auto-refresh de Data Analysis — apagado por default (analyticsRefreshSeconds = 0),
+// a diferencia de los otros dos, porque cada vuelta relee Orders/OrdersArchive/Log
+// para varios paneles a la vez, no un solo getAll chico. Si está apagado, de todos
+// modos se sigue revisando cada 30s por si un Admin lo prende mientras la pantalla ya
+// está abierta, en vez de necesitar recargar la página para que aplique.
+function scheduleAnalyticsRefresh() {
+  const seconds = parseInt(APP_SETTINGS.analyticsRefreshSeconds, 10) || 0;
+  setTimeout(() => {
+    const screen = document.getElementById('screen-analytics');
+    if (seconds > 0 && screen && screen.classList.contains('active') && currentUser) refreshAllPanels(true);
+    scheduleAnalyticsRefresh();
+  }, (seconds > 0 ? Math.max(60, seconds) : 30) * 1000);
+}
+scheduleAnalyticsRefresh();
 
 // Registro del Service Worker para modo PWA (instalable en iPad/celular)
 if ('serviceWorker' in navigator) {
