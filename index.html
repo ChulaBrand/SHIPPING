@@ -567,7 +567,7 @@
       <p class="top-bar-title">Data Analysis</p>
       <div style="display:flex;gap:8px;">
         <button class="btn-back" onclick="analyticsBack()">← Back</button>
-        <button class="btn-back" id="analyticsRefreshBtn" onclick="refreshAllPanels()" title="Refresh" aria-label="Refresh"><i class="ti ti-refresh" id="analyticsRefreshIcon"></i></button>
+        <button class="btn-back" id="analyticsRefreshBtn" onclick="refreshAllPanels(true)" title="Refresh" aria-label="Refresh"><i class="ti ti-refresh" id="analyticsRefreshIcon"></i></button>
         <div class="dropdown-wrap">
           <button class="btn-back" id="exportDropdownBtn" onclick="openExportPanel()" title="Export to CSV" aria-label="Export to CSV"><i class="ti ti-download"></i> Export</button>
           <div class="dropdown-panel" id="exportDropdownPanel" style="right:0;left:auto;min-width:230px;">
@@ -2696,15 +2696,21 @@ async function refreshPanel(panelKey, force) {
 // muestra un toast, además de que ya se puede esperar (await) a que de verdad
 // termine, cosa que el pull-to-refresh también necesitaba para no cortar su propio
 // spinner antes de tiempo.
-async function refreshAllPanels() {
-  rangeCache = {};
+// force=true SOLO desde el botón "Refresh" (de verdad quiere datos frescos, ignorando
+// el cache de 90s del servidor). Antes esta función se usaba TAMBIÉN para abrir la
+// pantalla la primera vez y para cambiar de rango (Day/Week/Month) — pero forzaba
+// siempre, sin importar quién la llamó, así que el cache de 90s nunca se aprovechaba y
+// cada apertura de Data Analysis volvía a escanear todo desde cero. Esa era la causa
+// real de que se sintiera lento.
+async function refreshAllPanels(force) {
+  if (force) rangeCache = {};
   const btn = document.getElementById('analyticsRefreshBtn');
   const icon = document.getElementById('analyticsRefreshIcon');
   if (btn) btn.disabled = true;
   if (icon) icon.classList.add('spin-icon');
   try {
-    await Promise.all(ALL_PANEL_KEYS.map(k => refreshPanel(k, true)));
-    showToast('Data updated');
+    await Promise.all(ALL_PANEL_KEYS.map(k => refreshPanel(k, force)));
+    if (force) showToast('Data updated');
   } finally {
     if (btn) btn.disabled = false;
     if (icon) icon.classList.remove('spin-icon');
@@ -3902,7 +3908,7 @@ function showToast(msg) {
 // apagarlo, y aquí se arma uno propio que solo vuelve a pedir los datos del panel
 // activo, sin perder el login.
 (function () {
-  const PULL_REFRESH_FNS = { 'screen-enc': loadOrdenes, 'screen-analytics': refreshAllPanels };
+  const PULL_REFRESH_FNS = { 'screen-enc': loadOrdenes, 'screen-analytics': () => refreshAllPanels(true) };
   const THRESHOLD = 70;
   const indicator = document.getElementById('pull-refresh-indicator');
   let startY = null, pulling = false, refreshing = false;
