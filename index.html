@@ -1548,12 +1548,17 @@ function goRol() {
   if (tokenToKill) fetch(API, { method:'POST', body: JSON.stringify({ action:'logout', sessionToken: tokenToKill }) }).catch(()=>{});
   pinVal=""; updateDots(); currentUser=null; selectedUser=null; SESSION_TOKEN=null; ADMIN_SESSION_TOKEN=null; pendingUploadAfterLogin=false; SHIPPING_READ_ONLY=false; show('screen-rol'); prefetchUsers();
 }
-function goChofer() {
+async function goChofer() {
   document.getElementById('error-msg').style.display='none';
   document.getElementById('results-list').innerHTML='';
   document.getElementById('orden-input').value='';
   show('screen-chofer');
-  loadChoferPublicSettings();
+  // Espera la respuesta ANTES de podar la lista guardada — si no, la primera poda de
+  // cada sesión siempre usaba el default de fábrica (24h) en vez del valor que de
+  // verdad configuró el Admin, y como podar borra de golpe (no se puede deshacer),
+  // una orden guardada de 24-48h (con un Admin que puso 48h) se perdía para siempre
+  // justo al abrir la pantalla, antes de que le diera tiempo de llegar el ajuste real.
+  await loadChoferPublicSettings();
   renderSavedOrders();
 }
 let CHOFER_REFRESH_SECONDS = 30;
