@@ -221,6 +221,12 @@
   .search-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:1rem; margin-bottom:1.5rem; display:flex; gap:8px; }
   .orders-list { display:flex; flex-direction:column; gap:10px; }
   .results-list { display:flex; flex-direction:column; gap:10px; margin-top:4px; }
+  .saved-orders-section { margin-top:1.75rem; padding-top:1.5rem; border-top:1px solid var(--border); }
+  .saved-chip-row { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+  .saved-chip { display:flex; align-items:center; gap:6px; font-family:'IBM Plex Mono',monospace; font-size:11.5px; background:var(--white); border:1px solid var(--border-strong); border-radius:99px; padding:6px 6px 6px 12px; color:var(--text); }
+  .saved-chip button { border:none; background:var(--border); color:var(--text-muted); width:16px; height:16px; border-radius:50%; font-size:9px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; flex-shrink:0; }
+  .saved-chip button:active { background:var(--border-strong); }
+  .saved-orders-hint { font-size:12px; color:var(--text-faint); line-height:1.5; margin:-2px 0 12px; }
   /* Mientras el auto-refresh está trayendo datos frescos, nada se toca — se ve
      exactamente igual, solo que los controles no responden hasta que termine. */
   .refresh-locked { pointer-events:none; }
@@ -944,6 +950,10 @@
           <div class="settings-row"><label>Show products</label><label class="toggle-switch"><input type="checkbox" id="setting-chofShowProducts"><span class="toggle-slider"></span></label></div>
           <p class="settings-caption">Master switch for the entire driver/client screen. If you want to make an exception for a single client instead of all of them, use the checkboxes on the Clients tab.</p>
         </div>
+        <div class="settings-group">
+          <div class="settings-row"><label>Saved orders list — clear after (hours)</label><input type="number" id="setting-savedOrdersHours" min="1"></div>
+          <p class="settings-caption">On the tracking screen, a driver/client can add several order numbers to see them all together (kept only on their own device, never synced). Entries older than this are cleared automatically so the list doesn't carry over from one day to the next.</p>
+        </div>
         <button class="btn-primary" style="margin-top:14px;" onclick="saveDriverScreenSettings()">Save changes</button>
         <p class="upload-status show" id="admin-driver-status" role="status" aria-live="polite" style="display:none;"></p>
       </div>
@@ -1012,6 +1022,20 @@
     </div>
     <p class="error-msg" id="error-msg" role="alert"><i class="ti ti-alert-circle"></i> Order not found.</p>
     <div class="results-list" id="results-list"></div>
+
+    <div class="saved-orders-section">
+      <p class="section-label">My saved orders</p>
+      <p class="saved-orders-hint" id="saved-orders-hint">Carrying more than one order on this trip? Add each order number below to see them all together, without searching one at a time. This list only lives on this device, and clears itself automatically after a while.</p>
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+        <div style="display:flex;flex:1;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--white);overflow:hidden;">
+          <span style="padding:0 8px;height:40px;display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-faint);background:var(--bg);border-right:1px solid var(--border);white-space:nowrap;">SP00</span>
+          <input id="saved-orden-input" type="text" inputmode="numeric" placeholder="Add another order #" maxlength="16" style="flex:1;border:none;outline:none;padding:0 10px;height:40px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);background:var(--white);" />
+        </div>
+        <button class="btn-search-sm" onclick="addSavedOrder()">Add</button>
+      </div>
+      <div class="saved-chip-row" id="saved-chip-row"></div>
+      <div class="results-list" id="saved-orders-list"></div>
+    </div>
   </div>
 
   <!-- ENCARGADO -->
@@ -1189,7 +1213,7 @@ function escapeForJsAttr(str) {
 
 // Valores editables desde Admin → Settings. Estos son el "de fábrica" mientras se
 // cargan de verdad (justo después del login); ver loadAppSettings()/loadClientsConfig().
-let APP_SETTINGS = { standardDivisor: 48, hebDivisor: 60, stalledHours: 6, soonHours: 1, lockHours: 48, chofRefreshSeconds: 30, chofShowClientName: 1, chofShowProducts: 1, shipRefreshSeconds: 120, analyticsRefreshSeconds: 0, statusRank1: 1, statusRank2: 2, statusRank3: 3, statusRank4: 4, statusRank5: 5 };
+let APP_SETTINGS = { standardDivisor: 48, hebDivisor: 60, stalledHours: 6, soonHours: 1, lockHours: 48, chofRefreshSeconds: 30, chofShowClientName: 1, chofShowProducts: 1, shipRefreshSeconds: 120, analyticsRefreshSeconds: 0, savedOrdersHours: 24, statusRank1: 1, statusRank2: 2, statusRank3: 3, statusRank4: 4, statusRank5: 5 };
 let CLIENTS_CONFIG = []; // [{ nombrePatron, nombreCorto, cajasPorTarima, activo }], desde Admin → Clients
 let clientsConfigLoaded = false;
 async function loadAppSettings() {
@@ -1530,6 +1554,7 @@ function goChofer() {
   document.getElementById('orden-input').value='';
   show('screen-chofer');
   loadChoferPublicSettings();
+  renderSavedOrders();
 }
 let CHOFER_REFRESH_SECONDS = 30;
 async function loadChoferPublicSettings() {
@@ -1537,7 +1562,8 @@ async function loadChoferPublicSettings() {
     const res = await fetch(`${API}?action=getChoferPublicSettings`);
     const s = await res.json();
     if (s && s.chofRefreshSeconds) CHOFER_REFRESH_SECONDS = s.chofRefreshSeconds;
-  } catch (e) { /* se queda con los 30s de fábrica si falla */ }
+    if (s && s.savedOrdersHours) APP_SETTINGS.savedOrdersHours = s.savedOrdersHours;
+  } catch (e) { /* se queda con los valores de fábrica si falla */ }
 }
 
 let pinMode = 'clerk'; // 'clerk' or 'admin'
@@ -2280,7 +2306,8 @@ async function saveCajasSettings() { await saveSettingsFields(CAJAS_FIELDS, load
 const DRIVER_FIELDS = [
   { key: 'chofRefreshSeconds', elId: 'setting-chofRefreshSeconds', type: 'number', default: 30, min: 10, label: 'Refresh every (seconds)' },
   { key: 'chofShowClientName', elId: 'setting-chofShowClientName', type: 'checkbox', label: 'Show client name', format: v => (v !== 0 ? 'On' : 'Off') },
-  { key: 'chofShowProducts', elId: 'setting-chofShowProducts', type: 'checkbox', label: 'Show products', format: v => (v !== 0 ? 'On' : 'Off') }
+  { key: 'chofShowProducts', elId: 'setting-chofShowProducts', type: 'checkbox', label: 'Show products', format: v => (v !== 0 ? 'On' : 'Off') },
+  { key: 'savedOrdersHours', elId: 'setting-savedOrdersHours', type: 'number', default: 24, min: 1, label: 'Saved orders — clear after (hrs)' }
 ];
 let loadedDriverSettings = {};
 async function loadDriverScreenSettings() { await loadSettingsFields(DRIVER_FIELDS, loadedDriverSettings); }
@@ -3283,6 +3310,84 @@ async function buscar(overrideVal) {
   } catch(e){ if (seq === buscarSeq) { btn.innerHTML='Search'; btn.disabled=false; errEl.textContent='Connection error.'; errEl.style.display='block'; } }
 }
 document.getElementById('orden-input').addEventListener('keydown',e=>{if(e.key==='Enter')buscar();});
+
+// ── "Mis órdenes guardadas" ──────────────────────────────────────────────
+// Para un chofer que trae varias cargas en el mismo viaje: una lista de números de
+// orden que arma él mismo (chip por chip), para verlos todos juntos sin tener que
+// buscar uno por uno cada vez que quiere revisar cómo van. Vive SOLO en este aparato
+// (localStorage, nunca toca el servidor) y cada entrada se guarda con la hora en que
+// se agregó — pruneSavedOrders() descarta las más viejas que APP_SETTINGS.savedOrdersHours
+// (configurable en Admin → Driver/Client Screen) cada vez que se dibuja la lista, para
+// que no se te vayan juntando los pedidos de un día con los del día siguiente.
+const SAVED_ORDERS_KEY = 'chula-saved-orders';
+function readSavedOrdersRaw() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(SAVED_ORDERS_KEY) || '[]');
+    return Array.isArray(raw) ? raw : [];
+  } catch (e) { return []; }
+}
+function writeSavedOrdersRaw(arr) {
+  try { localStorage.setItem(SAVED_ORDERS_KEY, JSON.stringify(arr)); } catch (e) { /* localStorage lleno/deshabilitado — la lista nomás no persiste */ }
+}
+function pruneSavedOrders() {
+  const limitMs = Math.max(1, APP_SETTINGS.savedOrdersHours || 24) * 3600000;
+  const now = Date.now();
+  const all = readSavedOrdersRaw();
+  const kept = all.filter(e => e && e.orden && (now - e.addedAt) < limitMs);
+  if (kept.length !== all.length) writeSavedOrdersRaw(kept);
+  return kept;
+}
+function addSavedOrder() {
+  const input = document.getElementById('saved-orden-input');
+  const raw = input.value.trim();
+  if (!raw) return;
+  const orden = 'SP00' + raw.replace(/^SP00/i, '');
+  const all = pruneSavedOrders();
+  if (all.some(e => e.orden === orden)) { showToast('Already in your list.'); input.value = ''; return; }
+  all.push({ orden, addedAt: Date.now() });
+  writeSavedOrdersRaw(all);
+  input.value = '';
+  renderSavedOrders();
+}
+function removeSavedOrder(orden) {
+  writeSavedOrdersRaw(pruneSavedOrders().filter(e => e.orden !== orden));
+  renderSavedOrders();
+}
+document.getElementById('saved-orden-input').addEventListener('keydown', e => { if (e.key === 'Enter') addSavedOrder(); });
+
+function renderSavedOrdersChips(entries) {
+  document.getElementById('saved-orders-hint').style.display = entries.length ? 'none' : 'block';
+  document.getElementById('saved-chip-row').innerHTML = entries.map(e =>
+    `<span class="saved-chip">${escapeHtml(e.orden)}<button onclick="removeSavedOrder('${escapeHtml(e.orden)}')" title="Remove" aria-label="Remove ${escapeHtml(e.orden)}">✕</button></span>`
+  ).join('');
+}
+
+// Cada entrada se busca con getOrder() (igual que la búsqueda sencilla de arriba) — son
+// pocas órdenes a la vez (un chofer normal trae unas cuantas, no cientos), así que N
+// llamadas en paralelo es más simple que agregar una acción nueva al servidor solo
+// para esto. seq evita que una vuelta vieja (por ejemplo el timer de fondo) pise el
+// resultado de una más nueva (por ejemplo el usuario agregando otra orden de golpe).
+let savedOrdersSeq = 0;
+async function renderSavedOrders() {
+  const seq = ++savedOrdersSeq;
+  const entries = pruneSavedOrders();
+  renderSavedOrdersChips(entries);
+  const list = document.getElementById('saved-orders-list');
+  if (!entries.length) { list.innerHTML = ''; return; }
+  const results = await Promise.all(entries.map(async e => {
+    try {
+      const res = await fetch(`${API}?action=getOrder&orden=${encodeURIComponent(e.orden)}`);
+      const o = await res.json();
+      if (o && !o.error && !isOlderThan48h(o.actualizado)) return o;
+    } catch (err) { /* se muestra como "not found" abajo */ }
+    return { orden: e.orden, __missing: true };
+  }));
+  if (seq !== savedOrdersSeq) return; // una vuelta más nueva ya está en camino
+  list.innerHTML = results.map(o => o.__missing
+    ? `<div class="order-card"><p class="order-num" style="margin-bottom:6px;">Order #${escapeHtml(o.orden)}</p><p style="font-size:12.5px;color:var(--text-faint);">Not found — <a href="javascript:void(0)" onclick="removeSavedOrder('${escapeHtml(o.orden)}')" style="color:var(--pink);">remove from list</a></p></div>`
+    : renderDriverCard(o, false)
+  ).join('');
+}
 
 // ── CLERK ────────────────────────────────────────────────
 // Indicador de "cargando" arriba del todo — visible sin importar en qué parte de la
@@ -4943,7 +5048,10 @@ let lastChoferSearch = '';
 function scheduleChoferRefresh() {
   setTimeout(() => {
     const choferScreen = document.getElementById('screen-chofer');
-    if (choferScreen && choferScreen.classList.contains('active') && lastChoferSearch) buscar(lastChoferSearch);
+    if (choferScreen && choferScreen.classList.contains('active')) {
+      if (lastChoferSearch) buscar(lastChoferSearch);
+      renderSavedOrders(); // también vuelve a checar la lista guardada (y la poda si algo ya expiró)
+    }
     scheduleChoferRefresh();
   }, Math.max(10, CHOFER_REFRESH_SECONDS || 30) * 1000);
 }
