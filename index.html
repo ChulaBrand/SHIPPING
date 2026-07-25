@@ -970,6 +970,10 @@
         <div class="settings-group"><div class="settings-row"><label>Hours to mark "Stalled"</label><input type="number" id="setting-stalledHours"></div></div>
         <div class="settings-group"><div class="settings-row"><label>Hours to mark "Soon"</label><input type="number" id="setting-soonHours"></div></div>
         <div class="settings-group"><div class="settings-row"><label>Hours before locking edits</label><input type="number" id="setting-lockHours"></div></div>
+        <div class="settings-group">
+          <div class="settings-row"><label>Hours before archiving cancelled orders</label><input type="number" id="setting-cancelledArchiveHours"></div>
+          <p class="settings-caption">The Cancelled screen is for undoing a recent mistake, not a long history — anything older than this moves out automatically and can no longer be restored from there.</p>
+        </div>
         <button class="btn-primary" style="margin-top:14px;" onclick="saveAdminSettings()">Save changes</button>
         <p class="upload-status show" id="admin-settings-status" role="status" aria-live="polite" style="display:none;"></p>
       </div>
@@ -2167,7 +2171,7 @@ async function adminToggleClientDisplay(nombrePatron, field, value) {
 }
 
 // ── SETTINGS (Admin) ──
-const GENERAL_SETTINGS_LABELS = { shipRefreshSeconds: 'Refresh Order Coordinator (sec.)', stalledHours: 'Hours "Stalled"', soonHours: 'Hours "Soon"', lockHours: 'Hours before locking edits' };
+const GENERAL_SETTINGS_LABELS = { shipRefreshSeconds: 'Refresh Order Coordinator (sec.)', stalledHours: 'Hours "Stalled"', soonHours: 'Hours "Soon"', lockHours: 'Hours before locking edits', cancelledArchiveHours: 'Hours before archiving cancelled orders' };
 let loadedGeneralSettings = {};
 // Las 5 secciones de "Today's orders" (Departed/estatus 6 nunca entra aquí, siempre va aparte).
 const STATUS_ORDER_CODES = [1, 2, 3, 4, 5];
@@ -2180,7 +2184,8 @@ async function loadAdminSettings() {
     document.getElementById('setting-stalledHours').value = s.stalledHours;
     document.getElementById('setting-soonHours').value = s.soonHours;
     document.getElementById('setting-lockHours').value = s.lockHours;
-    loadedGeneralSettings = { shipRefreshSeconds: s.shipRefreshSeconds, stalledHours: s.stalledHours, soonHours: s.soonHours, lockHours: s.lockHours };
+    document.getElementById('setting-cancelledArchiveHours').value = s.cancelledArchiveHours;
+    loadedGeneralSettings = { shipRefreshSeconds: s.shipRefreshSeconds, stalledHours: s.stalledHours, soonHours: s.soonHours, lockHours: s.lockHours, cancelledArchiveHours: s.cancelledArchiveHours };
     statusOrderConfig = STATUS_ORDER_CODES
       .map(est => ({ est, label: LABELS[est - 1], rank: s['statusRank' + est] || est }))
       .sort((a, b) => a.rank - b.rank)
@@ -2194,7 +2199,8 @@ async function saveAdminSettings() {
     shipRefreshSeconds: Math.max(20, parseInt(document.getElementById('setting-shipRefreshSeconds').value, 10) || 120),
     stalledHours: parseInt(document.getElementById('setting-stalledHours').value, 10) || 6,
     soonHours: parseInt(document.getElementById('setting-soonHours').value, 10) || 1,
-    lockHours: parseInt(document.getElementById('setting-lockHours').value, 10) || 48
+    lockHours: parseInt(document.getElementById('setting-lockHours').value, 10) || 48,
+    cancelledArchiveHours: parseInt(document.getElementById('setting-cancelledArchiveHours').value, 10) || 48
   };
   const check = confirmSettingsDiff(loadedGeneralSettings, payload, GENERAL_SETTINGS_LABELS);
   statusEl.style.display = 'block';
