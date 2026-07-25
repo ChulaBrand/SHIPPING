@@ -1,3 +1,27 @@
+// Notificaciones push (Firebase Cloud Messaging) — solo se disparan cuando llega un
+// push y esta pantalla NO está abierta/enfocada (con la pantalla abierta, Firebase lo
+// entrega directo al JS de la página en vez de aquí). Va en un try/catch: si esto
+// falla (CDN de Firebase no disponible, navegador raro), el resto del Service Worker
+// (caché sin conexión, lo que ya llevaba funcionando) debe seguir funcionando igual.
+try {
+  importScripts('https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js');
+  importScripts('https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js');
+  firebase.initializeApp({
+    apiKey: "AIzaSyBmZfwEFOpN4O1TRynOrac57yM6YKWPhJI",
+    authDomain: "chula-shipping.firebaseapp.com",
+    projectId: "chula-shipping",
+    storageBucket: "chula-shipping.firebasestorage.app",
+    messagingSenderId: "558898601922",
+    appId: "1:558898601922:web:9b028a38e28bd1e08b805b"
+  });
+  const messaging = firebase.messaging();
+  messaging.onBackgroundMessage((payload) => {
+    const title = (payload.notification && payload.notification.title) || 'Chula Brand';
+    const body = (payload.notification && payload.notification.body) || '';
+    self.registration.showNotification(title, { body, icon: './icons/icon-192.png' });
+  });
+} catch (e) { /* sin avisos en segundo plano, pero el resto del Service Worker sigue igual */ }
+
 const CACHE_NAME = 'chula-embarques-v6';
 const urlsToCache = [
   './index.html',

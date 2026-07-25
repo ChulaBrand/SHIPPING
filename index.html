@@ -32,6 +32,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
   :root {
@@ -1178,6 +1180,30 @@
 
 <script>
 const API = "https://script.google.com/macros/s/AKfycbwJ8viClBTNp-fOnZ4mYlwDobAWSdKX1rD05E3OIN-y9yIXXBLVeeRbuMo5hYJssI_cuQ/exec";
+
+// ── Firebase (solo para notificaciones push, botón "🔔 Notify me") ──────────
+// Este config NO es secreto — es normal/esperado que viva en el código del cliente,
+// a diferencia de la llave de servicio que sí se quedó SOLO en Script Properties del
+// lado de Apps Script (esa es la que autoriza a MANDAR; esto de aquí solo identifica
+// a qué proyecto de Firebase pertenece este navegador).
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBmZfwEFOpN4O1TRynOrac57yM6YKWPhJI",
+  authDomain: "chula-shipping.firebaseapp.com",
+  projectId: "chula-shipping",
+  storageBucket: "chula-shipping.firebasestorage.app",
+  messagingSenderId: "558898601922",
+  appId: "1:558898601922:web:9b028a38e28bd1e08b805b"
+};
+const FIREBASE_VAPID_KEY = "BNRls69gpDoECpXr2w58vcZwQhD18GUtlVndNzKyfHNGcNJMdDpTV1w-6fbGCZlAZBj8kSS47l9x96AYgv3-3zk";
+// Si el script de Firebase no cargó (CDN caído, navegador viejo) esto no debe tumbar
+// el resto de la app — el botón de notificaciones simplemente avisa que no funciona.
+let firebaseMessaging = null;
+try {
+  if (window.firebase) {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    firebaseMessaging = firebase.messaging();
+  }
+} catch (e) { /* firebaseMessaging se queda null, onNotifyMeClick() lo checa */ }
 // Ya no hay un PIN fijo escrito aquí. SESSION_TOKEN/ADMIN_SESSION_TOKEN se generan
 // en el servidor solo al hacer login y expiran solos — no son un secreto permanente
 // que alguien pueda copiar del código fuente y usar para siempre.
@@ -1585,6 +1611,7 @@ async function goChofer() {
   // justo al abrir la pantalla, antes de que le diera tiempo de llegar el ajuste real.
   await loadChoferPublicSettings();
   renderSavedOrders();
+  updateNotifyButtonUI();
 }
 let CHOFER_REFRESH_SECONDS = 30;
 async function loadChoferPublicSettings() {
@@ -3397,20 +3424,71 @@ function addSavedOrder() {
   writeSavedOrdersRaw(all);
   input.value = '';
   renderSavedOrders();
+  maybeResubscribePush([orden]); // si ya tenía notificaciones activas, suma la nueva
 }
 function removeSavedOrder(orden) {
   writeSavedOrdersRaw(pruneSavedOrders().filter(e => e.orden !== orden));
   renderSavedOrders();
 }
 
-// El botón ya está en la pantalla, pero todavía no hace nada de verdad — falta armar
-// el lado del servidor (Firebase + que Apps Script mande el push cuando cambie el
-// estatus) antes de que pedir el permiso del navegador sirva de algo. A propósito NO
-// llama a Notification.requestPermission() todavía: pedirlo ahora y no usarlo después
-// quema el único permiso que el navegador deja pedir sin que se vuelva más difícil de
-// conceder la próxima vez.
-function onNotifyMeClick() {
-  showToast('Notifications are coming soon — not available yet.');
+// ── Notificaciones push (Firebase Cloud Messaging) ────────────────────────
+const PUSH_SUBSCRIBED_KEY = 'chula-push-subscribed';
+const PUSH_TOKEN_KEY = 'chula-push-token';
+function updateNotifyButtonUI() {
+  const btn = document.getElementById('notifyMeBtn');
+  if (!btn) return;
+  btn.textContent = localStorage.getItem(PUSH_SUBSCRIBED_KEY) === '1' ? '🔔 Notifications on' : '🔔 Notify me';
+}
+// Ya estaba suscrito y agregó una orden nueva a su lista — se manda de una vez para que
+// también le avise a esa, sin que tenga que volver a tocar "Notify me". No bloquea nada
+// (fire-and-forget): si falla, la orden nueva simplemente no manda avisos hasta que se
+// vuelva a intentar, no es motivo para interrumpir el flujo de agregarla a la lista.
+function maybeResubscribePush(nuevasOrdenes) {
+  const token = localStorage.getItem(PUSH_TOKEN_KEY);
+  if (!token || localStorage.getItem(PUSH_SUBSCRIBED_KEY) !== '1') return;
+  fetch(API, { method: 'POST', body: JSON.stringify({ action: 'subscribePush', token, ordenes: nuevasOrdenes }) }).catch(() => {});
+}
+let pushSubscribing = false;
+async function onNotifyMeClick() {
+  if (pushSubscribing) return;
+  if (localStorage.getItem(PUSH_SUBSCRIBED_KEY) === '1') {
+    showToast('Notifications are already on for this device.');
+    return;
+  }
+  if (!('Notification' in window) || !('serviceWorker' in navigator) || !firebaseMessaging) {
+    showToast('Notifications are not supported on this browser.');
+    return;
+  }
+  const entries = pruneSavedOrders();
+  if (!entries.length) {
+    showToast('Add at least one order to your list first.');
+    return;
+  }
+  pushSubscribing = true;
+  const btn = document.getElementById('notifyMeBtn');
+  btn.textContent = 'Enabling…'; btn.disabled = true;
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      showToast('Notifications blocked — you can enable them later in your browser settings.');
+      return;
+    }
+    const registration = swRegistration || await navigator.serviceWorker.ready;
+    const token = await firebaseMessaging.getToken({ vapidKey: FIREBASE_VAPID_KEY, serviceWorkerRegistration: registration });
+    if (!token) { showToast('Could not enable notifications — try again.'); return; }
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ action: 'subscribePush', token, ordenes: entries.map(e => e.orden) }) });
+    const result = await res.json();
+    if (result && result.error) { showToast(result.error); return; }
+    localStorage.setItem(PUSH_TOKEN_KEY, token);
+    localStorage.setItem(PUSH_SUBSCRIBED_KEY, '1');
+    showToast('Notifications enabled for your saved orders.');
+  } catch (e) {
+    showToast('Could not enable notifications — try again.');
+  } finally {
+    pushSubscribing = false;
+    btn.disabled = false;
+    updateNotifyButtonUI();
+  }
 }
 
 function renderSavedOrdersChips(entries) {
@@ -5157,10 +5235,14 @@ function scheduleAnalyticsRefresh() {
 }
 scheduleAnalyticsRefresh();
 
-// Registro del Service Worker para modo PWA (instalable en iPad/celular)
+// Registro del Service Worker para modo PWA (instalable en iPad/celular) — el mismo
+// sw.js también maneja los avisos push de Firebase en segundo plano (ver sw.js). Se
+// guarda la referencia (swRegistration) porque onNotifyMeClick() la necesita para
+// pedirle a Firebase un token de notificaciones ligado a ESTE Service Worker.
+let swRegistration = null;
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch((err) => {
+    navigator.serviceWorker.register('sw.js').then((reg) => { swRegistration = reg; }).catch((err) => {
       console.log('Service Worker no se pudo registrar:', err);
     });
   });
