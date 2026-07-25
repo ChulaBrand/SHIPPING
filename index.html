@@ -4039,7 +4039,9 @@ function renderOrdenes() {
   // primera, dejando la otra desincronizada.
   if (currentOrderView === 'eta') { renderEtaView(); return; }
   if (currentOrderView === 'cancelled') { return; }
-  document.getElementById('orders-list-label').textContent = "Today's orders"; // por si veníamos de una búsqueda
+  // Igual que "Search results" en encBuscar() — si no se avisa con texto que la lista
+  // está filtrada, parece que "Incomplete orders" son TODAS las órdenes de hoy.
+  document.getElementById('orders-list-label').textContent = incompleteFilterActive ? '⚠️ Incomplete orders' : "Today's orders";
   const today = todayStr();
   const visible = ordenes.filter(o => !isOlderThan48h(o.actualizado)).filter(o => !statusFilter.size || statusFilter.has(parseInt(o.estatus) || 1)).filter(orderMatchesProductFilter).filter(o => !incompleteFilterActive || isOrderIncomplete(o));
 
