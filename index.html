@@ -3312,31 +3312,47 @@ function renderDriverCard(o, highlighted) {
 // pantalla de tracking está abierta — si el usuario también busca a mano justo cuando
 // el timer ya tenía una petición en vuelo, la que responda más tarde (aunque sea la
 // más vieja) no debe pisar los resultados de la más reciente.
+// silent=true (usado solo por el timer de fondo) nunca toca el botón "Search" ni borra
+// nada mientras espera — deja lo que ya había en pantalla tal cual, y solo lo reemplaza
+// de un jalón cuando los datos nuevos ya están listos (mismo arreglo que ya se hizo en
+// el Shipping Panel: antes esto hacía list.innerHTML='' ANTES de tener los datos
+// nuevos, así que cada vuelta del refresh automático se sentía como que la orden
+// desaparecía y volvía a aparecer un instante después).
 let buscarSeq = 0;
-async function buscar(overrideVal) {
+async function buscar(overrideVal, silent) {
   const seq = ++buscarSeq;
   const raw = overrideVal !== undefined ? overrideVal : document.getElementById('orden-input').value.trim();
   if(!raw) return;
   lastChoferSearch = raw;
   const val = 'SP00' + raw.replace(/^SP00/i, '');
   const errEl=document.getElementById('error-msg'), list=document.getElementById('results-list'), btn=document.getElementById('btn-buscar');
-  errEl.style.display='none'; list.innerHTML='';
-  btn.innerHTML='<span class="spinner"></span>Searching...'; btn.disabled=true;
+  if (!silent) {
+    errEl.style.display='none';
+    btn.innerHTML='<span class="spinner"></span>Searching...'; btn.disabled=true;
+  }
   try {
     const res=await fetch(`${API}?action=getOrder&orden=${encodeURIComponent(val)}`);
     const found=await res.json();
     if (seq !== buscarSeq) return; // una búsqueda más nueva ya está en vuelo o ya aplicó su resultado
-    if(found.error || isOlderThan48h(found.actualizado)){ btn.innerHTML='Search'; btn.disabled=false; errEl.innerHTML='<i class="ti ti-alert-circle"></i> Order not found.'; errEl.style.display='block'; return; }
+    if(found.error || isOlderThan48h(found.actualizado)){
+      if (!silent) { btn.innerHTML='Search'; btn.disabled=false; errEl.innerHTML='<i class="ti ti-alert-circle"></i> Order not found.'; errEl.style.display='block'; }
+      else showToast('This order is no longer available.'); // deja lo que ya se veía tal cual, no lo tapa con el banner de error
+      return;
+    }
     const clientOrders = await loadClientOrders(val);
     if (seq !== buscarSeq) return;
-    btn.innerHTML='Search'; btn.disabled=false;
+    if (!silent) { btn.innerHTML='Search'; btn.disabled=false; }
     const toShow=clientOrders.length>0?clientOrders:[found];
     let html='';
     if(toShow.length>1) html+=`<div class="client-header"><i class="ti ti-user"></i><div>${found.mostrarCliente !== false ? `<p class="client-header-name">${escapeHtml(found.cliente)}</p>` : ''}<p class="client-header-sub">${toShow.length} orders today</p></div></div>`;
     html+=renderDriverCard(found,true);
     toShow.filter(o=>String(o.orden)!==String(found.orden)).forEach(o=>{html+=renderDriverCard(o,false);});
     list.innerHTML=html;
-  } catch(e){ if (seq === buscarSeq) { btn.innerHTML='Search'; btn.disabled=false; errEl.textContent='Connection error.'; errEl.style.display='block'; } }
+  } catch(e){
+    if (seq === buscarSeq && !silent) { btn.innerHTML='Search'; btn.disabled=false; errEl.textContent='Connection error.'; errEl.style.display='block'; }
+    // silencioso: si el refresh de fondo falla (wifi intermitente, típico en un patio de
+    // carga), se deja lo que ya había en pantalla — se reintenta solo en el siguiente ciclo.
+  }
 }
 document.getElementById('orden-input').addEventListener('keydown',e=>{if(e.key==='Enter')buscar();});
 
@@ -5084,12 +5100,29 @@ scheduleShippingRefresh();
 // configurable desde Admin → Settings (CHOFER_REFRESH_SECONDS, default 30s), así que
 // se reprograma solo en cada vuelta en vez de usar un setInterval de duración fija.
 let lastChoferSearch = '';
+// Mismo tratamiento visual que setRefreshLocked() en el Shipping Panel — mientras dura
+// el refresh de fondo, las tarjetas se ven "solo ver" (atenuadas, sin responder al
+// toque) sin que nada desaparezca ni se mueva; en cuanto los datos nuevos ya están
+// pintados, se desbloquea solo.
+function setChoferRefreshLocked(locked) {
+  const results = document.getElementById('results-list');
+  if (results) results.classList.toggle('refresh-locked', locked);
+  const saved = document.getElementById('saved-orders-list');
+  if (saved) saved.classList.toggle('refresh-locked', locked);
+}
 function scheduleChoferRefresh() {
-  setTimeout(() => {
+  setTimeout(async () => {
     const choferScreen = document.getElementById('screen-chofer');
     if (choferScreen && choferScreen.classList.contains('active')) {
-      if (lastChoferSearch) buscar(lastChoferSearch);
-      renderSavedOrders(); // también vuelve a checar la lista guardada (y la poda si algo ya expiró)
+      setChoferRefreshLocked(true);
+      try {
+        await Promise.all([
+          lastChoferSearch ? buscar(lastChoferSearch, true) : Promise.resolve(),
+          renderSavedOrders() // también vuelve a checar la lista guardada (y la poda si algo ya expiró)
+        ]);
+      } finally {
+        setChoferRefreshLocked(false);
+      }
     }
     scheduleChoferRefresh();
   }, Math.max(10, CHOFER_REFRESH_SECONDS || 30) * 1000);
