@@ -1019,20 +1019,14 @@
         <input id="orden-input" type="text" inputmode="numeric" placeholder="Order #" maxlength="16" style="flex:1;border:none;outline:none;padding:0 12px;height:48px;font-family:'IBM Plex Mono',monospace;font-size:16px;color:var(--text);background:var(--white);" />
       </div>
       <button class="btn-primary" id="btn-buscar" onclick="buscar()" style="width:auto;padding:0 18px;white-space:nowrap;">Search</button>
+      <button id="btn-add-saved" onclick="addSavedOrder()" title="Add to my saved orders" aria-label="Add to my saved orders" style="width:auto;height:48px;padding:0 16px;white-space:nowrap;background:var(--white);border:2px solid var(--pink);color:var(--pink);border-radius:var(--radius-sm);font-size:15px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">+ Add</button>
     </div>
     <p class="error-msg" id="error-msg" role="alert"><i class="ti ti-alert-circle"></i> Order not found.</p>
     <div class="results-list" id="results-list"></div>
 
     <div class="saved-orders-section">
       <p class="section-label">My saved orders</p>
-      <p class="saved-orders-hint" id="saved-orders-hint">Carrying more than one order on this trip? Add each order number below to see them all together, without searching one at a time. This list only lives on this device, and clears itself automatically after a while.</p>
-      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
-        <div style="display:flex;flex:1;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--white);overflow:hidden;">
-          <span style="padding:0 8px;height:40px;display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-faint);background:var(--bg);border-right:1px solid var(--border);white-space:nowrap;">SP00</span>
-          <input id="saved-orden-input" type="text" inputmode="numeric" placeholder="Add another order #" maxlength="16" style="flex:1;border:none;outline:none;padding:0 10px;height:40px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);background:var(--white);" />
-        </div>
-        <button class="btn-search-sm" onclick="addSavedOrder()">Add</button>
-      </div>
+      <p class="saved-orders-hint" id="saved-orders-hint">Carrying more than one order on this trip? Type an order number above and tap "+ Add" to see them all together here, without searching one at a time. This list only lives on this device, and clears itself automatically after a while.</p>
       <div class="saved-chip-row" id="saved-chip-row"></div>
       <div class="results-list" id="saved-orders-list"></div>
     </div>
@@ -3343,7 +3337,8 @@ function pruneSavedOrders() {
   return kept;
 }
 function addSavedOrder() {
-  const input = document.getElementById('saved-orden-input');
+  // Comparte la misma caja que "Search" (arriba) — no hay un input aparte para esto.
+  const input = document.getElementById('orden-input');
   const raw = input.value.trim();
   if (!raw) return;
   const orden = 'SP00' + raw.replace(/^SP00/i, '');
@@ -3358,7 +3353,6 @@ function removeSavedOrder(orden) {
   writeSavedOrdersRaw(pruneSavedOrders().filter(e => e.orden !== orden));
   renderSavedOrders();
 }
-document.getElementById('saved-orden-input').addEventListener('keydown', e => { if (e.key === 'Enter') addSavedOrder(); });
 
 function renderSavedOrdersChips(entries) {
   document.getElementById('saved-orders-hint').style.display = entries.length ? 'none' : 'block';
