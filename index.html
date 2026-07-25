@@ -1042,7 +1042,7 @@
       <p class="top-bar-title">Shipping Panel <span id="shippingUserLabel" style="font-weight:400;color:var(--text-muted);font-size:12px;"></span></p>
       <div style="display:flex;gap:8px;">
         <button class="btn-back" onclick="shippingBack()">← Back</button>
-        <button class="btn-back" onclick="loadOrdenes(true)" title="Refresh" aria-label="Refresh" style="padding:5px 9px;"><i class="ti ti-refresh"></i></button>
+        <button class="btn-back" onclick="loadOrdenes()" title="Refresh" aria-label="Refresh" style="padding:5px 9px;"><i class="ti ti-refresh"></i></button>
         <button class="btn-back" id="shippingUploadBtn" onclick="goPapayaUpload('screen-enc')">Upload</button>
         <button class="btn-back" onclick="goRol()">Sign out</button>
       </div>
@@ -1067,6 +1067,7 @@
     <div class="controls-row" style="justify-content:flex-start;margin-top:8px;">
       <div class="controls-actions">
         <button class="view-toggle-btn" id="etaViewBtn" onclick="toggleEtaView()" title="View orders with Expected ready set" aria-label="View orders with Expected ready set"><i class="ti ti-clock"></i></button>
+        <button class="view-toggle-btn" id="incompleteFilterBtn" onclick="toggleIncompleteFilter()" title="Show only incomplete orders (moved ahead with products not Ready)" aria-label="Show only incomplete orders"><i class="ti ti-alert-triangle"></i></button>
         <div class="dropdown-wrap">
           <button class="view-toggle-btn" id="productDropdownBtn" onclick="toggleDropdown('product')" title="Filter by product" aria-label="Filter by product"><i class="ti ti-filter"></i></button>
           <div class="dropdown-panel" id="productDropdownPanel">
@@ -1292,6 +1293,29 @@ function orderMatchesProductFilter(o) {
   const cats = getOrderProductCategories(o);
   for (const c of productFilter) { if (cats.has(c)) return true; }
   return false;
+}
+
+// "Incompleto" = el estatus general ya avanzó más allá de Ready (Waiting for dock,
+// Loading o Departed) pero al menos un producto se quedó atrás, todavía sin llegar a
+// Ready — el mismo caso que ya marca el aviso "⚠️ Order moved ahead" dentro de la
+// tarjeta expandida, nomás que aquí se puede filtrar SIN tener que abrir cada una para
+// verlo. No depende de que la tarjeta ya se haya construido (productState solo se
+// llena al expandir) — calcula directo del array que ya manda el servidor.
+let incompleteFilterActive = false;
+function isOrderIncomplete(o) {
+  const est = parseInt(o.estatus) || 1;
+  if (est <= 3) return false;
+  const prods = parseProductos(o.productos);
+  if (!prods.length) return false;
+  const statuses = Array.isArray(o.productEstatus) && o.productEstatus.length === prods.length
+    ? o.productEstatus
+    : prods.map(() => Math.min(est, 3));
+  return statuses.some(s => s < 3);
+}
+function toggleIncompleteFilter() {
+  incompleteFilterActive = !incompleteFilterActive;
+  document.getElementById('incompleteFilterBtn').classList.toggle('active', incompleteFilterActive);
+  renderOrdenes();
 }
 function toggleAllProductFilter(el) {
   document.querySelectorAll('.product-filter-check').forEach(c => c.checked = el.checked);
@@ -1526,7 +1550,7 @@ function goPapayaBack() {
   show(papayaReturnScreen);
   // Si regresamos al Shipping Panel, recargar las órdenes automáticamente
   // (evita tener que hacer un refresh completo de la página, que saca del login)
-  if (papayaReturnScreen === 'screen-enc' && currentUser) loadOrdenes(true);
+  if (papayaReturnScreen === 'screen-enc' && currentUser) loadOrdenes();
 }
 // El token dura 10h — en un turno largo (o de madrugada) alguien se puede quedar
 // "deslogueado" a mitad de turno. Antes esto se veía igual que cualquier error de
@@ -1599,7 +1623,7 @@ function chooseAccess(key) {
     // permisos entra a Shipping, se va a Analytics, y regresa, cachedLoginOrders ya
     // no existe y esto pide datos frescos en vez de repintar la foto vieja del login.
     if (cachedLoginOrders) { ordenes = cachedLoginOrders; cachedLoginOrders = null; renderOrdenes(); }
-    else { loadOrdenes(true); }
+    else { loadOrdenes(); }
   } else {
     show('screen-analytics'); initAnalyticsScreen();
   }
@@ -1733,7 +1757,7 @@ async function completeLogin(result) {
   } else {
     show('screen-enc');
     if (cachedLoginOrders) { ordenes = cachedLoginOrders; cachedLoginOrders = null; renderOrdenes(); }
-    else { loadOrdenes(true); }
+    else { loadOrdenes(); }
   }
 }
 
@@ -3429,13 +3453,14 @@ let loadOrdenesSeq = 0;
 // pantalla), y se sentía como que toda la lista desaparecía y volvía a aparecer. Ahora
 // siempre se deja lo que ya había en pantalla mientras llegan los datos nuevos (con el
 // panel en "solo ver" via setRefreshLocked, y el resultado se aplica con el mismo
-// render que ya sigue a la MISMA orden aunque cambie de sección). showSpinner=true
-// solo prende/apaga el ícono chiquito de arriba (pull-to-refresh, botón de refresh) —
-// es la única diferencia visual entre un refresh que el usuario pidió y uno de fondo.
-async function loadOrdenes(showSpinner) {
+// render que ya sigue a la MISMA orden aunque cambie de sección). El ícono de arriba
+// se prende siempre que el panel se bloquea (también en el refresh de fondo) — antes
+// solo salía en el botón manual/pull-to-refresh, y sin él el bloqueo se sentía como
+// que el panel se puso raro/translúcido sin ninguna razón visible.
+async function loadOrdenes() {
   const seq = ++loadOrdenesSeq;
   const list=document.getElementById('orders-list');
-  if (showSpinner) showRefreshSpinner();
+  showRefreshSpinner();
   setRefreshLocked(true);
   try {
     const r=await fetch(API, { method:'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getAll' }) });
@@ -3470,7 +3495,7 @@ async function loadOrdenes(showSpinner) {
   }
   finally {
     if (seq === loadOrdenesSeq) {
-      if (showSpinner) hideRefreshSpinner();
+      hideRefreshSpinner();
       setRefreshLocked(false);
     }
   }
@@ -3505,7 +3530,7 @@ function buildClerkCard(o) {
     const badge = state ? ' · ' + attentionBadgeHtml(state) : '';
     const driverBadge = o.driverArrived ? ' · <span class="driver-here-badge">🚗 Driver Here' + (o.driverArrived.rampa ? ' — ' + escapeHtml(o.driverArrived.rampa) : '') + '</span>' : '';
     const dateBadge = dateBadgeIfNotToday(o.fecha);
-    return `<div class="order-card-compact${locked ? ' locked' : ''}${state ? ' ' + state : ''}" id="card-${o.orden}" onclick="toggleCardExpand('${o.orden}')">
+    return `<div class="order-card-compact${locked ? ' locked' : ''}${state ? ' ' + state : ''}" id="card-${o.orden}" onclick="toggleCardExpand('${o.orden}', event)">
       <div class="oc-left">
         <p class="oc-num">Order #${escapeHtml(o.orden)}${locked ? ' · <span class="locked-badge">Locked</span>' : ''}${dateBadge}${badge}${driverBadge}</p>
         <p class="oc-cliente">${escapeHtml(o.cliente)}</p>
@@ -3569,7 +3594,7 @@ function buildClerkCard(o) {
   const cancelBtn = (canEdit && est < 6) ? cancelFlowHtml(o) : '';
 
   return `<div class="order-card${locked ? ' locked' : ''}${state ? ' ' + state + '-expanded' : ''}" id="card-${o.orden}">
-    <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;cursor:pointer;" onclick="toggleCardExpand('${o.orden}')">
+    <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;cursor:pointer;" onclick="toggleCardExpand('${o.orden}', event)">
       <div>
         <p class="order-num">Order #${escapeHtml(o.orden)}${locked ? '<span class="locked-badge">Locked</span>' : ''}${dateBadgeIfNotToday(o.fecha)}${badgeExpanded}${driverBadgeExpanded}</p>
         <p class="order-cliente">${escapeHtml(o.cliente)}</p>
@@ -3802,7 +3827,7 @@ async function submitRestoreOrder(orden) {
   finally { pendingCancelRestore.delete(key); }
 }
 
-function toggleCardExpand(orden) {
+function toggleCardExpand(orden, evt) {
   const key = String(orden);
   if (expandedOrders.has(key)) expandedOrders.delete(key);
   else expandedOrders.add(key);
@@ -3816,7 +3841,14 @@ function toggleCardExpand(orden) {
   // repartidas en 5 secciones) nomás para abrir una. Mismo patrón ya usado por
   // setCancelFlowStep/setRestoreFlowStep: reconstruir solo esa tarjeta.
   const o = ordenes.find(x => String(x.orden) === key);
-  const card = document.getElementById('card-' + key);
+  // Se usa el elemento que de verdad disparó el click (evt.currentTarget), NO
+  // document.getElementById('card-'+key) — si el mismo número de orden aparece 2 veces
+  // en los datos (fila duplicada en el Sheet, un problema de datos aparte que hay que
+  // arreglar por su cuenta), 2 tarjetas terminan con el mismo id y getElementById()
+  // siempre agarra la PRIMERA del documento sin importar cuál se tocó. Antes eso hacía
+  // que la tarjeta que sí estabas viendo se quedara exactamente igual al tocarla, sin
+  // ningún error ni aviso — como si "no dejara abrirla".
+  const card = evt && evt.currentTarget ? evt.currentTarget.closest('[id^="card-"]') : document.getElementById('card-' + key);
   if (card && o) {
     try {
       card.outerHTML = buildClerkCard(o);
@@ -4009,7 +4041,7 @@ function renderOrdenes() {
   if (currentOrderView === 'cancelled') { return; }
   document.getElementById('orders-list-label').textContent = "Today's orders"; // por si veníamos de una búsqueda
   const today = todayStr();
-  const visible = ordenes.filter(o => !isOlderThan48h(o.actualizado)).filter(o => !statusFilter.size || statusFilter.has(parseInt(o.estatus) || 1)).filter(orderMatchesProductFilter);
+  const visible = ordenes.filter(o => !isOlderThan48h(o.actualizado)).filter(o => !statusFilter.size || statusFilter.has(parseInt(o.estatus) || 1)).filter(orderMatchesProductFilter).filter(o => !incompleteFilterActive || isOrderIncomplete(o));
 
   // Clasifica cada orden en: Departed (est 6, va al fondo) / Needs Attention
   // (overdue, stalled o soon — ya no aparece también en Today/Past, para no duplicar)
@@ -4150,7 +4182,7 @@ function showToast(msg) {
 // apagarlo, y aquí se arma uno propio que solo vuelve a pedir los datos del panel
 // activo, sin perder el login.
 (function () {
-  const PULL_REFRESH_FNS = { 'screen-enc': () => loadOrdenes(true), 'screen-analytics': () => refreshAllPanels(true) };
+  const PULL_REFRESH_FNS = { 'screen-enc': () => loadOrdenes(), 'screen-analytics': () => refreshAllPanels(true) };
   const THRESHOLD = 70;
   const indicator = document.getElementById('pull-refresh-indicator');
   let startY = null, pulling = false, refreshing = false;
@@ -5039,7 +5071,7 @@ if (location.hash === '#admin') {
 function scheduleShippingRefresh() {
   setTimeout(() => {
     const encScreen = document.getElementById('screen-enc');
-    if (encScreen && encScreen.classList.contains('active') && currentUser) loadOrdenes(); // sin spinner, es de fondo
+    if (encScreen && encScreen.classList.contains('active') && currentUser) loadOrdenes();
     scheduleShippingRefresh();
   }, Math.max(20, APP_SETTINGS.shipRefreshSeconds || 120) * 1000);
 }
