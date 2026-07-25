@@ -1029,7 +1029,10 @@
     <div class="results-list" id="results-list"></div>
 
     <div class="saved-orders-section">
-      <p class="section-label">My saved orders</p>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">
+        <p class="section-label" style="margin-bottom:0;">My saved orders</p>
+        <button id="notifyMeBtn" onclick="onNotifyMeClick()" title="Get notified when these orders update" aria-label="Get notified when these orders update" style="display:flex;align-items:center;gap:5px;background:none;border:1px solid var(--border-strong);border-radius:99px;padding:5px 11px;font-size:11.5px;font-weight:600;color:var(--text-muted);cursor:pointer;white-space:nowrap;font-family:'Inter',sans-serif;">🔔 Notify me</button>
+      </div>
       <p class="saved-orders-hint" id="saved-orders-hint">Carrying more than one order on this trip? Type an order number above and tap "+ Add" to see them all together here, without searching one at a time. This list only lives on this device, and clears itself automatically after a while.</p>
       <div class="saved-chip-row" id="saved-chip-row"></div>
       <div class="results-list" id="saved-orders-list"></div>
@@ -3398,6 +3401,16 @@ function addSavedOrder() {
 function removeSavedOrder(orden) {
   writeSavedOrdersRaw(pruneSavedOrders().filter(e => e.orden !== orden));
   renderSavedOrders();
+}
+
+// El botón ya está en la pantalla, pero todavía no hace nada de verdad — falta armar
+// el lado del servidor (Firebase + que Apps Script mande el push cuando cambie el
+// estatus) antes de que pedir el permiso del navegador sirva de algo. A propósito NO
+// llama a Notification.requestPermission() todavía: pedirlo ahora y no usarlo después
+// quema el único permiso que el navegador deja pedir sin que se vuelva más difícil de
+// conceder la próxima vez.
+function onNotifyMeClick() {
+  showToast('Notifications are coming soon — not available yet.');
 }
 
 function renderSavedOrdersChips(entries) {
