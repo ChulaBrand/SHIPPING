@@ -376,6 +376,9 @@
   .pcircle.active.p5{background:var(--s5-bg);border-color:var(--s5-border);color:var(--s5-text);}
   .pcircle.active.p6{background:var(--s6-bg);border-color:var(--s6-border);color:var(--s6-text);}
   .pcircle.disabled { cursor:default; opacity:.55; }
+  .pcircle { padding:0; }
+  .pcircle:disabled { cursor:default; opacity:.55; }
+  [role="button"]:focus-visible, .pcircle:focus-visible, .cancel-flow-link:focus-visible, .cancel-flow-back:focus-visible { outline:2px solid var(--pink); outline-offset:2px; }
   .driver-product-row { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:12.5px; padding:3px 0; }
   .driver-product-row span:first-child { color:var(--text); }
   .driver-product-badge { font-size:9.5px; font-weight:700; padding:3px 8px; border-radius:99px; white-space:nowrap; }
@@ -384,9 +387,9 @@
   .btn-cancel-dots { display:block; margin-top:8px; margin-left:auto; background:none; border:none; color:var(--text-faint); font-size:15px; letter-spacing:1px; cursor:pointer; padding:4px 10px; line-height:1; }
   .cancel-flow-row { display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding:7px 10px; background:var(--danger-bg); border-radius:var(--radius-sm); }
   .cancel-flow-row.success { background:var(--success-bg); }
-  .cancel-flow-link { color:var(--danger-text); font-size:12px; font-weight:600; cursor:pointer; }
+  .cancel-flow-link { background:none; border:none; font-family:'Inter',sans-serif; color:var(--danger-text); font-size:12px; font-weight:600; cursor:pointer; padding:0; }
   .cancel-flow-link.success { color:var(--success-text); }
-  .cancel-flow-back { color:var(--text-faint); cursor:pointer; font-size:14px; padding:0 4px; }
+  .cancel-flow-back { background:none; border:none; font-family:'Inter',sans-serif; color:var(--text-faint); cursor:pointer; font-size:14px; padding:0 4px; }
   .cancel-flow-confirm { margin-top:8px; padding:10px; background:var(--danger-bg); border:1px solid var(--danger-border); border-radius:var(--radius-sm); }
   .cancel-flow-confirm.success { background:var(--success-bg); border-color:var(--success-border); }
   .cancel-flow-confirm p { font-size:11.5px; color:var(--danger-text-strong); margin-bottom:8px; }
@@ -568,7 +571,7 @@
 
   <!-- ACCESS CHOOSER (cuentas con 2+ permisos) -->
   <div class="screen" id="screen-access-chooser">
-    <div class="top-bar"><span></span><button class="btn-back" onclick="goRol()">Sign out</button></div>
+    <div class="top-bar"><span></span><button class="btn-back" onclick="confirmSignOut()">Sign out</button></div>
     <p class="page-title" style="text-align:center;">Where to?</p>
     <div class="role-grid" id="access-chooser-grid" style="margin-top:16px;"></div>
   </div>
@@ -1061,7 +1064,7 @@
         <button class="btn-back" onclick="shippingBack()">← Back</button>
         <button class="btn-back" onclick="loadOrdenes()" title="Refresh" aria-label="Refresh" style="padding:5px 9px;"><i class="ti ti-refresh"></i></button>
         <button class="btn-back" id="shippingUploadBtn" onclick="goPapayaUpload('screen-enc')">Upload</button>
-        <button class="btn-back" onclick="goRol()">Sign out</button>
+        <button class="btn-back" onclick="confirmSignOut()">Sign out</button>
       </div>
     </div>
     <p class="section-label">Find order</p>
@@ -1603,6 +1606,15 @@ function isSessionExpiredError(result) {
 function handleSessionExpired() {
   showToast('Your session expired — please sign in again');
   goRol();
+}
+// Solo para el botón explícito de "Sign out" — goRol() por su cuenta NO pide
+// confirmación porque también la usan shippingBack()/analyticsBack() (cuando la cuenta
+// solo tiene un permiso, "Back" es lo mismo que cerrar sesión) y handleSessionExpired(),
+// casos donde interrumpir con un confirm() sería raro o redundante. "Sign out" vive junto
+// a Refresh/Upload con el mismo estilo de botón — un toque de más ahí cerraba la sesión
+// al instante, sin aviso.
+function confirmSignOut() {
+  if (confirm('Sign out?')) goRol();
 }
 function goRol() {
   // Invalida la sesión en el servidor de inmediato (no solo la olvida aquí) — así un
@@ -2803,7 +2815,12 @@ function kpiCardsHtml(kpis) {
 async function fetchRange(r, force) {
   const key = r.start + '|' + r.end;
   if (force || !rangeCache[key]) {
-    rangeCache[key] = fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getAnalytics', start: r.start, end: r.end, force: !!force }) }).then(res => res.json());
+    // Si el fetch falla, se borra su propio lugar en el cache — si no, la petición
+    // fallida se queda "cacheada" para siempre y ese rango de fechas nunca se vuelve a
+    // intentar solo (se queda roto hasta un Refresh manual o cambiar de rango).
+    rangeCache[key] = fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getAnalytics', start: r.start, end: r.end, force: !!force }) })
+      .then(res => res.json())
+      .catch(err => { delete rangeCache[key]; throw err; });
   }
   return rangeCache[key];
 }
@@ -3652,7 +3669,7 @@ function buildClerkCard(o) {
     const badge = state ? ' · ' + attentionBadgeHtml(state) : '';
     const driverBadge = o.driverArrived ? ' · <span class="driver-here-badge">🚗 Driver Here' + (o.driverArrived.rampa ? ' — ' + escapeHtml(o.driverArrived.rampa) : '') + '</span>' : '';
     const dateBadge = dateBadgeIfNotToday(o.fecha);
-    return `<div class="order-card-compact${locked ? ' locked' : ''}${state ? ' ' + state : ''}" id="card-${o.orden}" onclick="toggleCardExpand('${o.orden}', event)">
+    return `<div class="order-card-compact${locked ? ' locked' : ''}${state ? ' ' + state : ''}" id="card-${o.orden}" tabindex="0" role="button" aria-label="Order #${escapeHtml(o.orden)}, ${escapeHtml(o.cliente)} — tap to expand" onclick="toggleCardExpand('${o.orden}', event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCardExpand('${o.orden}', event);}">
       <div class="oc-left">
         <p class="oc-num">Order #${escapeHtml(o.orden)}${locked ? ' · <span class="locked-badge">Locked</span>' : ''}${dateBadge}${badge}${driverBadge}</p>
         <p class="oc-cliente">${escapeHtml(o.cliente)}</p>
@@ -3681,7 +3698,7 @@ function buildClerkCard(o) {
         const idx = ci + 1;
         const activeCls = pStat === idx ? ` active p${idx}` : '';
         const clickAttr = canEdit ? `onclick="event.stopPropagation();setProductStatus('${o.orden}',${i},${idx})"` : '';
-        return `<div class="pcircle${activeCls}${!canEdit ? ' disabled' : ''}" ${clickAttr}>${letter}</div>`;
+        return `<button type="button" class="pcircle${activeCls}${!canEdit ? ' disabled' : ''}" ${!canEdit ? 'disabled' : ''} aria-label="${escapeHtml(p)} — status ${letter}" ${clickAttr}>${letter}</button>`;
       }).join('');
       return `<div class="product-item"><span class="product-name">${escapeHtml(p)}</span><div class="pcircle-row">${circles}</div></div>`;
     }).join('');
@@ -3716,7 +3733,7 @@ function buildClerkCard(o) {
   const cancelBtn = (canEdit && est < 6) ? cancelFlowHtml(o) : '';
 
   return `<div class="order-card${locked ? ' locked' : ''}${state ? ' ' + state + '-expanded' : ''}" id="card-${o.orden}">
-    <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;cursor:pointer;" onclick="toggleCardExpand('${o.orden}', event)">
+    <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;cursor:pointer;" tabindex="0" role="button" aria-label="Order #${escapeHtml(o.orden)}, ${escapeHtml(o.cliente)} — tap to collapse" onclick="toggleCardExpand('${o.orden}', event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCardExpand('${o.orden}', event);}">
       <div>
         <p class="order-num">Order #${escapeHtml(o.orden)}${locked ? '<span class="locked-badge">Locked</span>' : ''}${dateBadgeIfNotToday(o.fecha)}${badgeExpanded}${driverBadgeExpanded}</p>
         <p class="order-cliente">${escapeHtml(o.cliente)}</p>
@@ -3739,26 +3756,29 @@ const cancelFlowStep = {}; // orden -> 0 (escondido) | 1 (menú) | 2 (confirmand
 function cancelFlowHtml(o) {
   const step = cancelFlowStep[o.orden] || 0;
   if (step === 0) {
-    return `<div style="text-align:right;"><button class="btn-cancel-dots" onclick="event.stopPropagation();setCancelFlowStep('${o.orden}',1)" title="More options" aria-label="More options">⋯</button></div>`;
+    return `<div style="text-align:right;"><button class="btn-cancel-dots" onclick="event.stopPropagation();setCancelFlowStep('${o.orden}',1,event)" title="More options" aria-label="More options">⋯</button></div>`;
   }
   if (step === 1) {
     return `<div class="cancel-flow-row" onclick="event.stopPropagation();">
-      <span class="cancel-flow-link" onclick="setCancelFlowStep('${o.orden}',2)">🗑 Cancel this order</span>
-      <span class="cancel-flow-back" onclick="setCancelFlowStep('${o.orden}',0)">✕</span>
+      <button type="button" class="cancel-flow-link" onclick="setCancelFlowStep('${o.orden}',2,event)">🗑 Cancel this order</button>
+      <button type="button" class="cancel-flow-back" onclick="setCancelFlowStep('${o.orden}',0,event)" aria-label="Close">✕</button>
     </div>`;
   }
   return `<div class="cancel-flow-confirm" onclick="event.stopPropagation();">
     <p>Cancel order #${escapeHtml(o.orden)} — ${escapeHtml(o.cliente)}? This can't be undone from the app.</p>
     <div style="display:flex;gap:8px;">
       <button class="btn-cancel-final" onclick="submitCancelOrder('${o.orden}')">Yes, cancel it</button>
-      <button class="btn-cancel-back" onclick="setCancelFlowStep('${o.orden}',0)">No, keep it</button>
+      <button class="btn-cancel-back" onclick="setCancelFlowStep('${o.orden}',0,event)">No, keep it</button>
     </div>
   </div>`;
 }
-function setCancelFlowStep(orden, step) {
+// Igual que toggleCardExpand: usa el elemento que de verdad disparó el click en vez de
+// document.getElementById('card-'+orden), que siempre agarra la PRIMERA tarjeta con ese
+// id si el número de orden está duplicado en los datos.
+function setCancelFlowStep(orden, step, evt) {
   cancelFlowStep[orden] = step;
   const o = ordenes.find(x => String(x.orden) === String(orden));
-  const card = document.getElementById('card-' + orden);
+  const card = evt && evt.currentTarget ? evt.currentTarget.closest('[id^="card-"]') : document.getElementById('card-' + orden);
   if (card && o) card.outerHTML = buildClerkCard(o);
 }
 // Pedidos con una petición de cancelar/restaurar ya en vuelo — con wifi lento, un
@@ -3877,14 +3897,18 @@ function renderEtaView() {
   restoreScrollAnchor(savedAnchor);
 }
 
+let loadCancelledOrdersSeq = 0;
 async function loadCancelledOrders() {
+  const seq = ++loadCancelledOrdersSeq;
   const list = document.getElementById('cancelled-list');
   list.innerHTML = '<div class="empty-state"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i>Loading...</div>';
   try {
     const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getCancelledOrders' }) });
-    cancelledOrders = await res.json();
+    const result = await res.json();
+    if (seq !== loadCancelledOrdersSeq) return; // una llamada más nueva ya está en vuelo o ya aplicó su resultado
+    cancelledOrders = result;
     renderCancelledOrders();
-  } catch (e) { list.innerHTML = '<div class="empty-state">Connection error</div>'; }
+  } catch (e) { if (seq === loadCancelledOrdersSeq) list.innerHTML = '<div class="empty-state">Connection error</div>'; }
 }
 
 function renderCancelledOrders() {
@@ -3910,27 +3934,29 @@ function buildCancelledCard(o) {
 function restoreFlowHtml(o) {
   const step = restoreFlowStep[o.orden] || 0;
   if (step === 0) {
-    return `<div style="text-align:right;"><button class="btn-cancel-dots" onclick="setRestoreFlowStep('${o.orden}',1)" title="More options" aria-label="More options">⋯</button></div>`;
+    return `<div style="text-align:right;"><button class="btn-cancel-dots" onclick="setRestoreFlowStep('${o.orden}',1,event)" title="More options" aria-label="More options">⋯</button></div>`;
   }
   if (step === 1) {
     return `<div class="cancel-flow-row success">
-      <span class="cancel-flow-link success" onclick="setRestoreFlowStep('${o.orden}',2)">↩ Restore this order</span>
-      <span class="cancel-flow-back" onclick="setRestoreFlowStep('${o.orden}',0)">✕</span>
+      <button type="button" class="cancel-flow-link success" onclick="setRestoreFlowStep('${o.orden}',2,event)">↩ Restore this order</button>
+      <button type="button" class="cancel-flow-back" onclick="setRestoreFlowStep('${o.orden}',0,event)" aria-label="Close">✕</button>
     </div>`;
   }
   return `<div class="cancel-flow-confirm success">
     <p style="color:var(--success-text);">Restore order #${escapeHtml(o.orden)} — ${escapeHtml(o.cliente)}? It goes back to today's orders.</p>
     <div style="display:flex;gap:8px;">
       <button class="btn-cancel-final" style="background:#16A34A;" onclick="submitRestoreOrder('${o.orden}')">Yes, restore it</button>
-      <button class="btn-cancel-back" onclick="setRestoreFlowStep('${o.orden}',0)">No, keep cancelled</button>
+      <button class="btn-cancel-back" onclick="setRestoreFlowStep('${o.orden}',0,event)">No, keep cancelled</button>
     </div>
   </div>`;
 }
 
-function setRestoreFlowStep(orden, step) {
+// Mismo fix que setCancelFlowStep/toggleCardExpand: targetea el elemento que disparó el
+// click en vez de getElementById, que agarra la primera tarjeta si el orden se duplica.
+function setRestoreFlowStep(orden, step, evt) {
   restoreFlowStep[orden] = step;
   const o = cancelledOrders.find(x => String(x.orden) === String(orden));
-  const card = document.getElementById('cancelled-card-' + orden);
+  const card = evt && evt.currentTarget ? evt.currentTarget.closest('[id^="cancelled-card-"]') : document.getElementById('cancelled-card-' + orden);
   if (card && o) card.outerHTML = buildCancelledCard(o);
 }
 
@@ -5114,7 +5140,7 @@ function renderPapayaResults(rows, flags) {
   papayaFlagsEl.innerHTML = "";
   if (flags.length) {
     const title = document.createElement("div");
-    title.innerHTML = "<b style='color:#B3261E'>REVISAR:</b>";
+    title.innerHTML = "<b style='color:var(--pp-red)'>REVISAR:</b>";
     papayaFlagsEl.appendChild(title);
     flags.forEach(f => {
       const d = document.createElement("div");
