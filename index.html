@@ -130,9 +130,9 @@
   .container { width:100%; max-width:420px; }
   .pull-refresh-indicator {
     position:fixed; top:8px; left:50%; z-index:999; width:32px; height:32px; border-radius:50%;
-    background:var(--text); color:#fff; display:flex; align-items:center; justify-content:center;
+    background:var(--pink); color:#fff; display:flex; align-items:center; justify-content:center;
     opacity:0; pointer-events:none; transform:translate(-50%,-40px) rotate(0deg);
-    transition:transform .15s ease, opacity .15s ease;
+    transition:transform .15s ease, opacity .15s ease; box-shadow:0 2px 8px rgba(0,0,0,.25);
   }
   .pull-refresh-indicator.pulling { opacity:1; }
   .pull-refresh-indicator.spinning i { animation:pull-refresh-spin .6s linear infinite; }
@@ -2849,12 +2849,14 @@ async function refreshAllPanels(force) {
   const icon = document.getElementById('analyticsRefreshIcon');
   if (btn) btn.disabled = true;
   if (icon) icon.classList.add('spin-icon');
+  showRefreshSpinner();
   try {
     await Promise.all(ALL_PANEL_KEYS.map(k => refreshPanel(k, force)));
     if (force) showToast('Data updated');
   } finally {
     if (btn) btn.disabled = false;
     if (icon) icon.classList.remove('spin-icon');
+    hideRefreshSpinner();
   }
 }
 
@@ -5213,6 +5215,7 @@ function scheduleChoferRefresh() {
   setTimeout(async () => {
     const choferScreen = document.getElementById('screen-chofer');
     if (choferScreen && choferScreen.classList.contains('active')) {
+      showRefreshSpinner();
       setChoferRefreshLocked(true);
       try {
         await Promise.all([
@@ -5221,6 +5224,7 @@ function scheduleChoferRefresh() {
         ]);
       } finally {
         setChoferRefreshLocked(false);
+        hideRefreshSpinner();
       }
     }
     scheduleChoferRefresh();
