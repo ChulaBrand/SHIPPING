@@ -178,7 +178,7 @@
   .role-desc { font-size:12.5px; color:var(--text-faint); line-height:1.4; }
   .top-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; }
   .top-bar-title { font-size:17px; font-weight:600; }
-  .btn-back { background:none; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px; color:var(--text-muted); cursor:pointer; padding:5px 12px; font-family:'Inter',sans-serif; }
+  .btn-back { background:none; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px; color:var(--text-muted); cursor:pointer; padding:5px 12px; font-family:'Inter',sans-serif; min-height:44px; display:inline-flex; align-items:center; justify-content:center; }
   .btn-back:disabled { opacity:.5; cursor:default; }
   .spin-icon { display:inline-block; animation:spin .8s linear infinite; }
   .admin-tabs { display:flex; gap:4px; margin-bottom:1.5rem; padding:5px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); overflow-x:auto; }
@@ -284,6 +284,11 @@
   .dropdown-checkbox:hover { background:var(--bg); border-radius:6px; }
   .analytics-panel-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px; }
   .analytics-panel { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:14px; box-shadow:0 1px 3px rgba(0,0,0,.03); }
+  /* El resto de los paneles son informativos (volumen, tendencias neutras) — Overdue es
+     el único con juicio de "esto está mal" (avgOverdue en rojo, delta bad-up), así que es
+     el único que se destaca visualmente entre 11 paneles que si no se ven todos iguales. */
+  #analytics-panel-overdue { border-left: 3px solid var(--danger-border); }
+  #analytics-panel-overdue .panel-title { color: var(--danger-text-strong); }
   .panel-title { font-size:11.5px; font-weight:700; color:var(--text); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px; }
   .analytics-panel > canvas { max-height:190px; }
   .chart-scroll-wrap { max-height:340px; overflow-y:auto; overflow-x:hidden; }
@@ -350,7 +355,7 @@
   .error-msg { font-size:13px; color:var(--danger-text); margin:10px 0 0; display:none; }
   /* clerk status btns — 3+3 grid */
   .status-btns { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:8px; }
-  .sbtn { height:40px; font-size:11px; font-weight:500; border:2px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; background:var(--bg); color:var(--text-muted); font-family:'Inter',sans-serif; line-height:1.2; padding:0 4px; }
+  .sbtn { height:44px; font-size:11px; font-weight:500; border:2px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; background:var(--bg); color:var(--text-muted); font-family:'Inter',sans-serif; line-height:1.2; padding:0 4px; }
   .sbtn:active { transform:scale(.97); }
   .sbtn.sel-1{background:var(--s1-bg);color:var(--s1-text);border-color:var(--s1-border);font-weight:600;}
   .sbtn.sel-2{background:var(--s2-bg);color:var(--s2-text);border-color:var(--s2-border);font-weight:600;}
@@ -417,6 +422,7 @@
   .empty-state i { font-size:28px; display:block; margin-bottom:6px; }
   .toast { position:fixed; bottom:2rem; left:50%; transform:translateX(-50%) translateY(80px); background:var(--green-dark); color:#fff; font-size:13px; font-weight:500; padding:10px 20px; border-radius:99px; transition:transform .3s; white-space:nowrap; z-index:99; }
   .toast.show { transform:translateX(-50%) translateY(0); }
+  .toast.error { background:#DC2626; }
   .spinner { display:inline-block; width:15px; height:15px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; vertical-align:-3px; margin-right:6px; }
   @keyframes spin { to { transform:rotate(360deg); } }
   /* upload-status: usado por el panel de Admin (mensajes de agregar usuario) */
@@ -480,7 +486,8 @@
   /* Compact/expand toggle + status filter chips */
   .controls-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
   .controls-actions { display:flex; gap:6px; flex-shrink:0; }
-  .view-toggle-btn { width:38px; height:38px; font-size:15px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--white); color:var(--text-muted); cursor:pointer; display:flex; align-items:center; justify-content:center; font-family:'Inter',sans-serif; }
+  .view-toggle-btn { min-width:38px; height:38px; padding:0 9px; font-size:15px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--white); color:var(--text-muted); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; font-family:'Inter',sans-serif; }
+  .view-toggle-btn .vtb-label { font-size:10.5px; font-weight:600; white-space:nowrap; }
   .view-toggle-btn:active { background:var(--bg); }
   .view-toggle-btn.active { background:var(--danger-bg); border-color:var(--danger-border); color:var(--danger-text); }
   .filter-chips { display:flex; flex-wrap:wrap; gap:6px; }
@@ -822,7 +829,7 @@
       </div>
       <div class="analytics-panel" id="analytics-panel-overdue">
         <div class="panel-title-row">
-          <p class="panel-title">Overdue</p>
+          <p class="panel-title">🔴 Overdue</p>
           <div class="panel-title-row-right">
             <span class="panel-range-badge" id="badge-overdue">Week</span>
             <div class="mini-dropdown-wrap">
@@ -865,7 +872,7 @@
   <div class="screen" id="screen-admin">
     <div class="top-bar">
       <p class="top-bar-title">Admin</p>
-      <button class="btn-back" onclick="goRol()">← Back</button>
+      <button class="btn-back" onclick="confirmSignOut()">Sign out</button>
     </div>
     <div class="admin-tabs">
       <button class="admin-tab-btn active" data-tab="users" onclick="showAdminTab('users')"><i class="ti ti-users"></i>Users</button>
@@ -1079,17 +1086,17 @@
     <div class="controls-row">
       <div class="filter-chips" id="statusFilterChips"></div>
       <div class="controls-actions">
-        <button class="view-toggle-btn" id="viewToggleBtn" onclick="toggleGlobalView()" title="View all" aria-label="View all"><i class="ti ti-arrows-maximize"></i></button>
-        <button class="view-toggle-btn" id="dailySummaryBtn" onclick="goDailySummary()" title="Download today's summary" aria-label="Download today's summary"><i class="ti ti-file-spreadsheet"></i></button>
-        <button class="view-toggle-btn" id="cancelledViewBtn" onclick="toggleCancelledView()" title="View cancelled orders" aria-label="View cancelled orders"><i class="ti ti-trash"></i></button>
+        <button class="view-toggle-btn" id="viewToggleBtn" onclick="toggleGlobalView()" title="View all" aria-label="View all"><i class="ti ti-arrows-maximize"></i><span class="vtb-label">All</span></button>
+        <button class="view-toggle-btn" id="dailySummaryBtn" onclick="goDailySummary()" title="Download today's summary" aria-label="Download today's summary"><i class="ti ti-file-spreadsheet"></i><span class="vtb-label">Summary</span></button>
+        <button class="view-toggle-btn" id="cancelledViewBtn" onclick="toggleCancelledView()" title="View cancelled orders" aria-label="View cancelled orders"><i class="ti ti-trash"></i><span class="vtb-label">Cancelled</span></button>
       </div>
     </div>
     <div class="controls-row" style="justify-content:flex-start;margin-top:8px;">
       <div class="controls-actions">
-        <button class="view-toggle-btn" id="etaViewBtn" onclick="toggleEtaView()" title="View orders with Expected ready set" aria-label="View orders with Expected ready set"><i class="ti ti-clock"></i></button>
-        <button class="view-toggle-btn" id="incompleteFilterBtn" onclick="toggleIncompleteFilter()" title="Show only incomplete orders (moved ahead with products not Ready)" aria-label="Show only incomplete orders"><i class="ti ti-alert-triangle"></i></button>
+        <button class="view-toggle-btn" id="etaViewBtn" onclick="toggleEtaView()" title="View orders with Expected ready set" aria-label="View orders with Expected ready set"><i class="ti ti-clock"></i><span class="vtb-label">ETA</span></button>
+        <button class="view-toggle-btn" id="incompleteFilterBtn" onclick="toggleIncompleteFilter()" title="Show only incomplete orders (moved ahead with products not Ready)" aria-label="Show only incomplete orders"><i class="ti ti-alert-triangle"></i><span class="vtb-label">Incomplete</span></button>
         <div class="dropdown-wrap">
-          <button class="view-toggle-btn" id="productDropdownBtn" onclick="toggleDropdown('product')" title="Filter by product" aria-label="Filter by product"><i class="ti ti-filter"></i></button>
+          <button class="view-toggle-btn" id="productDropdownBtn" onclick="toggleDropdown('product')" title="Filter by product" aria-label="Filter by product"><i class="ti ti-filter"></i><span class="vtb-label">Product</span></button>
           <div class="dropdown-panel" id="productDropdownPanel">
             <label class="dropdown-checkbox"><input type="checkbox" id="product-filter-all" checked onchange="toggleAllProductFilter(this)"> All</label>
             <label class="dropdown-checkbox"><input type="checkbox" class="product-filter-check" value="papaya" checked onchange="onProductFilterCheck()"> Papaya</label>
@@ -1956,7 +1963,7 @@ async function adminEditPermissions(name, el) {
     if (!result) return;
     // Antes esto no revisaba result.error — si el servidor rechazaba el cambio, el
     // admin igual veía "Permissions updated" aunque nada hubiera cambiado.
-    if (result.error) { showToast(result.error); loadAdminUsers(); return; }
+    if (result.error) { showToast(result.error, 'error'); loadAdminUsers(); return; }
     showToast('Permissions updated ✓');
   } catch(e) { showToast('Connection error.'); }
 }
@@ -1971,7 +1978,7 @@ async function confirmDeleteUser(name) {
   try {
     const result = await adminApiCall('adminDeleteUser', { name });
     if (!result) return;
-    if (result.error) { showToast(result.error); return; }
+    if (result.error) { showToast(result.error, 'error'); return; }
     showToast('User deleted');
     loadAdminUsers();
   } catch(e) { showToast('Connection error.'); }
@@ -2001,7 +2008,7 @@ async function submitResetUserPin(name, formEl) {
   try {
     const result = await adminApiCall('adminResetUserPin', { name, newPin });
     if (!result) return;
-    if (result.error) { showToast(result.error); return; }
+    if (result.error) { showToast(result.error, 'error'); return; }
     panel.style.display = 'none';
     showToast('PIN reset ✓');
   } catch(e) { showToast('Connection error.'); }
@@ -2068,7 +2075,7 @@ async function adminToggleUser(name, active) {
     if (!result) return;
     // Antes esto no revisaba result.error — si el servidor rechazaba el cambio, la
     // lista se recargaba igual y se veía como si hubiera funcionado.
-    if (result.error) showToast(result.error);
+    if (result.error) showToast(result.error, 'error');
     loadAdminUsers();
   } catch(e) { showToast('Connection error.'); }
 }
@@ -2206,7 +2213,7 @@ async function submitAddStore(parentName, btnEl) {
   try {
     const result = await adminApiCall('adminAddClient', { nombrePatron, nombreCorto: '', cajasPorTarima: cajasPorTarima ? parseInt(cajasPorTarima, 10) : null, parent: parentName });
     if (!result) return;
-    if (result.error) { showToast(result.error); return; }
+    if (result.error) { showToast(result.error, 'error'); return; }
     showToast('Store added ✓');
     loadAdminClients();
     clientsConfigLoaded = false;
@@ -2232,7 +2239,7 @@ async function adminToggleClient(nombrePatron, active) {
     if (!result) return;
     // Antes esto no revisaba result.error — si el servidor rechazaba el cambio, la
     // lista se recargaba igual y se veía como si hubiera funcionado.
-    if (result.error) showToast(result.error);
+    if (result.error) showToast(result.error, 'error');
     loadAdminClients();
     clientsConfigLoaded = false;
   } catch(e) { showToast('Connection error.'); }
@@ -2243,7 +2250,7 @@ async function adminToggleClientDisplay(nombrePatron, field, value) {
   try {
     const result = await adminApiCall('adminSetClientDisplay', { nombrePatron, field, value });
     if (!result) return;
-    if (result.error) showToast(result.error);
+    if (result.error) showToast(result.error, 'error');
     loadAdminClients();
   } catch(e) { showToast('Connection error.'); }
 }
@@ -2912,7 +2919,7 @@ async function downloadAnalyticsCSV() {
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Loading...';
   try {
     const d = await fetchRange({ start, end }, false);
-    if (d.error) { showToast(d.error); return; }
+    if (d.error) { showToast(d.error, 'error'); return; }
     const selected = getSelectedFruits();
     const rangeStr = start === end ? formatShortDate(start) : `${formatShortDate(start)} to ${formatShortDate(end)}`;
     const rows = [csvRow(['Chula Brand — Data Analysis Export']), csvRow(['Range', rangeStr]), ''];
@@ -3497,7 +3504,7 @@ async function onNotifyMeClick() {
     if (!token) { showToast('Could not enable notifications — try again.'); return; }
     const res = await fetch(API, { method: 'POST', body: JSON.stringify({ action: 'subscribePush', token, ordenes: entries.map(e => e.orden) }) });
     const result = await res.json();
-    if (result && result.error) { showToast(result.error); return; }
+    if (result && result.error) { showToast(result.error, 'error'); return; }
     localStorage.setItem(PUSH_TOKEN_KEY, token);
     localStorage.setItem(PUSH_SUBSCRIBED_KEY, '1');
     showToast('Notifications enabled for your saved orders.');
@@ -3603,7 +3610,7 @@ async function loadOrdenes() {
       // carga fallida) — si ya había pedidos en pantalla, se quedan tal cual y el toast
       // ya avisa del error.
       if (!list.children.length) list.innerHTML = '<div class="empty-state">' + escapeHtml(result.error) + '</div>';
-      showToast(result.error);
+      showToast(result.error, 'error');
       return;
     }
     ordenes = result;
@@ -3777,7 +3784,7 @@ async function submitCancelOrder(orden) {
   try {
     const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'cancelOrder', orden }) });
     const result = await res.json();
-    if (result.error) { showToast(result.error); return; }
+    if (result.error) { showToast(result.error, 'error'); return; }
     expandedOrders.delete(String(orden));
     ordenes = ordenes.filter(x => String(x.orden) !== String(orden));
     showToast('Order cancelled');
@@ -3953,7 +3960,7 @@ async function submitRestoreOrder(orden) {
   try {
     const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'restoreOrder', orden }) });
     const result = await res.json();
-    if (result.error) { showToast(result.error); return; }
+    if (result.error) { showToast(result.error, 'error'); return; }
     cancelledOrders = cancelledOrders.filter(x => String(x.orden) !== String(orden));
     renderCancelledOrders();
     showToast('Order restored');
@@ -4018,7 +4025,9 @@ function toggleGlobalView() {
   globalViewMode = globalViewMode === 'compact' ? 'expanded' : 'compact';
   expandedOrders.clear(); // el toggle general manda: limpia las expansiones manuales
   const btn = document.getElementById('viewToggleBtn');
-  btn.innerHTML = globalViewMode === 'compact' ? '<i class="ti ti-arrows-maximize"></i>' : '<i class="ti ti-arrows-minimize"></i>';
+  btn.innerHTML = globalViewMode === 'compact'
+    ? '<i class="ti ti-arrows-maximize"></i><span class="vtb-label">All</span>'
+    : '<i class="ti ti-arrows-minimize"></i><span class="vtb-label">Less</span>';
   btn.title = globalViewMode === 'compact' ? 'View all' : 'View less';
   renderOrdenes();
 }
@@ -4304,8 +4313,15 @@ function renderSearchResults(raw) {
 document.getElementById('enc-search').addEventListener('keydown',e=>{if(e.key==='Enter')encBuscar();});
 
 let toastTimeoutId = null;
-function showToast(msg) {
-  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+// type: pásale 'error' explícito cuando el mensaje viene de result.error (el texto que
+// manda el servidor no siempre incluye la palabra "error" — "Locked", "Not found", etc.).
+// Si no se manda, se detecta solo por si el mensaje contiene "error"/"failed" (cubre la
+// mayoría de los mensajes fijos ya escritos en este archivo, tipo "Connection error.").
+function showToast(msg, type) {
+  const t=document.getElementById('toast'); t.textContent=msg;
+  const isError = type === 'error' || (type === undefined && /error|failed/i.test(msg));
+  t.classList.toggle('error', isError);
+  t.classList.add('show');
   // Sin clearTimeout, 2 toasts seguidos en menos de 2.5s se pisaban: el timer del
   // primero escondía el toast antes de tiempo, cortando el mensaje del segundo.
   if (toastTimeoutId) clearTimeout(toastTimeoutId);
