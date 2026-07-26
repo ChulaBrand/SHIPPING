@@ -1027,17 +1027,20 @@
       <button class="btn-primary" id="btn-buscar" onclick="buscar()" style="width:auto;padding:0 18px;white-space:nowrap;">Search</button>
       <button id="btn-add-saved" onclick="addSavedOrder()" title="Add to my saved orders" aria-label="Add to my saved orders" style="width:auto;height:48px;padding:0 16px;white-space:nowrap;background:var(--white);border:2px solid var(--pink);color:var(--pink);border-radius:var(--radius-sm);font-size:15px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">+ Add</button>
     </div>
+
+    <!-- Este encabezado (título + botón de notificaciones) se queda SIEMPRE aquí arriba,
+         fijo — lo que cambia de lugar es el CONTENIDO: primero se ve la orden que se
+         está buscando (justo abajo), y hasta el final la lista guardada completa (nomás
+         de referencia, para ver qué ya tienes guardado). -->
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);">
+      <p class="section-label" style="margin-bottom:0;">My saved orders</p>
+      <button id="notifyMeBtn" onclick="onNotifyMeClick()" title="Get notified when these orders update" aria-label="Get notified when these orders update" style="display:flex;align-items:center;gap:5px;background:none;border:1px solid var(--border-strong);border-radius:99px;padding:5px 11px;font-size:11.5px;font-weight:600;color:var(--text-muted);cursor:pointer;white-space:nowrap;font-family:'Inter',sans-serif;">🔔 Notify me</button>
+    </div>
+
     <p class="error-msg" id="error-msg" role="alert"><i class="ti ti-alert-circle"></i> Order not found.</p>
     <div class="results-list" id="results-list"></div>
 
-    <!-- Debajo de la orden que se está buscando a propósito — el resultado de la
-         búsqueda tiene que verse de inmediato, sin tener que pasar primero por toda la
-         lista guardada (que puede ser larga). -->
     <div class="saved-orders-section">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">
-        <p class="section-label" style="margin-bottom:0;">My saved orders</p>
-        <button id="notifyMeBtn" onclick="onNotifyMeClick()" title="Get notified when these orders update" aria-label="Get notified when these orders update" style="display:flex;align-items:center;gap:5px;background:none;border:1px solid var(--border-strong);border-radius:99px;padding:5px 11px;font-size:11.5px;font-weight:600;color:var(--text-muted);cursor:pointer;white-space:nowrap;font-family:'Inter',sans-serif;">🔔 Notify me</button>
-      </div>
       <p class="saved-orders-hint" id="saved-orders-hint">Carrying more than one order on this trip? Type an order number above and tap "+ Add" to see them all together here, without searching one at a time. This list only lives on this device, and clears itself automatically after a while.</p>
       <div class="saved-chip-row" id="saved-chip-row"></div>
       <div class="results-list" id="saved-orders-list"></div>
