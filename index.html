@@ -1027,9 +1027,11 @@
       <button class="btn-primary" id="btn-buscar" onclick="buscar()" style="width:auto;padding:0 18px;white-space:nowrap;">Search</button>
       <button id="btn-add-saved" onclick="addSavedOrder()" title="Add to my saved orders" aria-label="Add to my saved orders" style="width:auto;height:48px;padding:0 16px;white-space:nowrap;background:var(--white);border:2px solid var(--pink);color:var(--pink);border-radius:var(--radius-sm);font-size:15px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">+ Add</button>
     </div>
-    <p class="error-msg" id="error-msg" role="alert"><i class="ti ti-alert-circle"></i> Order not found.</p>
-    <div class="results-list" id="results-list"></div>
 
+    <!-- Arriba de la búsqueda individual a propósito — así esta sección se queda fija en
+         el mismo lugar (y las tarjetas guardadas siguen ahí, aunque su CONTENIDO cambie
+         solo con el refresh) en vez de moverse cada vez que buscas una orden distinta,
+         que hacía que el resultado de esa búsqueda empujara todo lo demás hacia abajo. -->
     <div class="saved-orders-section">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">
         <p class="section-label" style="margin-bottom:0;">My saved orders</p>
@@ -1038,6 +1040,11 @@
       <p class="saved-orders-hint" id="saved-orders-hint">Carrying more than one order on this trip? Type an order number above and tap "+ Add" to see them all together here, without searching one at a time. This list only lives on this device, and clears itself automatically after a while.</p>
       <div class="saved-chip-row" id="saved-chip-row"></div>
       <div class="results-list" id="saved-orders-list"></div>
+    </div>
+
+    <div style="margin-top:1.75rem;padding-top:1.5rem;border-top:1px solid var(--border);">
+      <p class="error-msg" id="error-msg" role="alert"><i class="ti ti-alert-circle"></i> Order not found.</p>
+      <div class="results-list" id="results-list"></div>
     </div>
   </div>
 
