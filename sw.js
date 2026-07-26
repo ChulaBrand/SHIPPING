@@ -48,9 +48,21 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// fetch() no tiene límite de tiempo por su cuenta — en datos celulares con señal débil,
+// una petición se puede quedar "colgada" sin fallar nunca, y como nunca falla, nunca cae
+// al respaldo de caché de abajo (la página se queda esperando en vez de abrir con lo que
+// ya había guardado). Esto le pone un límite: si la red no responde a tiempo, se aborta y
+// se sigue con el catch de abajo como si hubiera fallado.
+function fetchWithTimeout(request, ms) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return fetch(request, { signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
 // El HTML principal siempre se pide primero a la red (para que cualquier cambio se
 // vea de inmediato, sin depender de subir un número de versión nuevo). Si no hay
-// internet, usa la última copia guardada para que la app no se quede en blanco.
+// internet (o tarda demasiado), usa la última copia guardada para que la app no se
+// quede en blanco.
 self.addEventListener('fetch', (event) => {
   const url = event.request.url;
 
@@ -60,7 +72,7 @@ self.addEventListener('fetch', (event) => {
 
   if (isMainPage) {
     event.respondWith(
-      fetch(event.request)
+      fetchWithTimeout(event.request, 5000)
         .then((response) => {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
