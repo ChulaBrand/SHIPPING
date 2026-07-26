@@ -2249,51 +2249,30 @@ async function adminToggleClientDisplay(nombrePatron, field, value) {
 }
 
 // ── SETTINGS (Admin) ──
-const GENERAL_SETTINGS_LABELS = { shipRefreshSeconds: 'Refresh Order Coordinator (sec.)', stalledHours: 'Hours "Stalled"', soonHours: 'Hours "Soon"', lockHours: 'Hours before locking edits', cancelledArchiveHours: 'Hours before archiving cancelled orders' };
+// Mismo helper genérico que usan Driver/Client Screen y Cajas (loadSettingsFields/
+// saveSettingsFields) — statusOrderConfig se arma aparte después de cargar estos 5
+// campos porque no es un campo simple de este mismo molde (guarda un orden, no un valor).
+const GENERAL_SETTINGS_FIELDS = [
+  { key: 'shipRefreshSeconds', elId: 'setting-shipRefreshSeconds', type: 'number', default: 120, min: 20, label: 'Refresh Order Coordinator (sec.)' },
+  { key: 'stalledHours', elId: 'setting-stalledHours', type: 'number', default: 6, label: 'Hours "Stalled"' },
+  { key: 'soonHours', elId: 'setting-soonHours', type: 'number', default: 1, label: 'Hours "Soon"' },
+  { key: 'lockHours', elId: 'setting-lockHours', type: 'number', default: 48, label: 'Hours before locking edits' },
+  { key: 'cancelledArchiveHours', elId: 'setting-cancelledArchiveHours', type: 'number', default: 48, label: 'Hours before archiving cancelled orders' }
+];
 let loadedGeneralSettings = {};
 // Las 5 secciones de "Today's orders" (Departed/estatus 6 nunca entra aquí, siempre va aparte).
 const STATUS_ORDER_CODES = [1, 2, 3, 4, 5];
 let statusOrderConfig = []; // [{ est, label }], en el orden que el Admin haya guardado
 async function loadAdminSettings() {
-  try {
-    const s = await adminApiCall('getSettings');
-    if (!s) return;
-    document.getElementById('setting-shipRefreshSeconds').value = s.shipRefreshSeconds;
-    document.getElementById('setting-stalledHours').value = s.stalledHours;
-    document.getElementById('setting-soonHours').value = s.soonHours;
-    document.getElementById('setting-lockHours').value = s.lockHours;
-    document.getElementById('setting-cancelledArchiveHours').value = s.cancelledArchiveHours;
-    loadedGeneralSettings = { shipRefreshSeconds: s.shipRefreshSeconds, stalledHours: s.stalledHours, soonHours: s.soonHours, lockHours: s.lockHours, cancelledArchiveHours: s.cancelledArchiveHours };
-    statusOrderConfig = STATUS_ORDER_CODES
-      .map(est => ({ est, label: LABELS[est - 1], rank: s['statusRank' + est] || est }))
-      .sort((a, b) => a.rank - b.rank)
-      .map(({ est, label }) => ({ est, label }));
-    renderStatusOrderConfig();
-  } catch(e) { showToast('Connection error loading settings.'); }
+  const s = await loadSettingsFields(GENERAL_SETTINGS_FIELDS, loadedGeneralSettings);
+  if (!s) return;
+  statusOrderConfig = STATUS_ORDER_CODES
+    .map(est => ({ est, label: LABELS[est - 1], rank: s['statusRank' + est] || est }))
+    .sort((a, b) => a.rank - b.rank)
+    .map(({ est, label }) => ({ est, label }));
+  renderStatusOrderConfig();
 }
-async function saveAdminSettings() {
-  const statusEl = document.getElementById('admin-settings-status');
-  const payload = {
-    shipRefreshSeconds: Math.max(20, parseInt(document.getElementById('setting-shipRefreshSeconds').value, 10) || 120),
-    stalledHours: parseInt(document.getElementById('setting-stalledHours').value, 10) || 6,
-    soonHours: parseInt(document.getElementById('setting-soonHours').value, 10) || 1,
-    lockHours: parseInt(document.getElementById('setting-lockHours').value, 10) || 48,
-    cancelledArchiveHours: parseInt(document.getElementById('setting-cancelledArchiveHours').value, 10) || 48
-  };
-  const check = confirmSettingsDiff(loadedGeneralSettings, payload, GENERAL_SETTINGS_LABELS);
-  statusEl.style.display = 'block';
-  if (check === 'nochange') { statusEl.textContent = 'No changes to save.'; statusEl.className = 'upload-status show'; return; }
-  if (!check) { statusEl.style.display = 'none'; return; }
-  statusEl.textContent = 'Saving...'; statusEl.className = 'upload-status show loading';
-  try {
-    const result = await adminApiCall('adminSetSettings', { settings: payload });
-    if (!result) return;
-    if (result.error) { statusEl.textContent = result.error; statusEl.className = 'upload-status show err'; return; }
-    statusEl.textContent = '✓ Settings saved.'; statusEl.className = 'upload-status show ok';
-    Object.assign(APP_SETTINGS, payload); // aplica de inmediato en esta misma sesión también
-    loadedGeneralSettings = payload;
-  } catch(e) { statusEl.textContent = 'Connection error.'; statusEl.className = 'upload-status show err'; }
-}
+async function saveAdminSettings() { await saveSettingsFields(GENERAL_SETTINGS_FIELDS, loadedGeneralSettings, 'admin-settings-status'); }
 
 // Reordenar con flechas ▲▼ (mismo patrón que Analytics Layout), guarda como
 // statusRank1..5 (rank = posición) para reusar el esquema genérico Key|Value de Settings.
@@ -2336,17 +2315,20 @@ async function saveStatusOrder() {
 // molde). Admin Settings general se deja aparte porque además arma el orden de estatus
 // (statusOrderConfig), que no es un campo simple de este mismo patrón.
 // fields: [{ key, elId, type: 'number'|'checkbox', min, default, label, format(raw) }]
+// Regresa los settings crudos (además de aplicarlos a storeRef) — loadAdminSettings lo
+// usa para armar statusOrderConfig sin tener que pedir el Sheet de Settings dos veces.
 async function loadSettingsFields(fields, storeRef) {
   try {
     const s = await adminApiCall('getSettings');
-    if (!s) return;
+    if (!s) return null;
     fields.forEach(f => {
       const el = document.getElementById(f.elId);
       if (f.type === 'checkbox') el.checked = s[f.key] !== 0;
       else el.value = s[f.key];
       storeRef[f.key] = f.format ? f.format(s[f.key]) : s[f.key];
     });
-  } catch (e) { showToast('Connection error loading settings.'); }
+    return s;
+  } catch (e) { showToast('Connection error loading settings.'); return null; }
 }
 async function saveSettingsFields(fields, storeRef, statusElId) {
   const statusEl = document.getElementById(statusElId);
@@ -3469,21 +3451,26 @@ const PUSH_TOKEN_KEY = 'chula-push-token';
 function updateNotifyButtonUI() {
   const btn = document.getElementById('notifyMeBtn');
   if (!btn) return;
-  btn.textContent = localStorage.getItem(PUSH_SUBSCRIBED_KEY) === '1' ? '🔔 Notifications on' : '🔔 Notify me';
+  let subscribed = false;
+  try { subscribed = localStorage.getItem(PUSH_SUBSCRIBED_KEY) === '1'; } catch (e) { /* localStorage bloqueado (ej. Safari privado) — se asume que no está suscrito */ }
+  btn.textContent = subscribed ? '🔔 Notifications on' : '🔔 Notify me';
 }
 // Ya estaba suscrito y agregó una orden nueva a su lista — se manda de una vez para que
 // también le avise a esa, sin que tenga que volver a tocar "Notify me". No bloquea nada
 // (fire-and-forget): si falla, la orden nueva simplemente no manda avisos hasta que se
 // vuelva a intentar, no es motivo para interrumpir el flujo de agregarla a la lista.
 function maybeResubscribePush(nuevasOrdenes) {
-  const token = localStorage.getItem(PUSH_TOKEN_KEY);
-  if (!token || localStorage.getItem(PUSH_SUBSCRIBED_KEY) !== '1') return;
+  let token = null, subscribed = false;
+  try { token = localStorage.getItem(PUSH_TOKEN_KEY); subscribed = localStorage.getItem(PUSH_SUBSCRIBED_KEY) === '1'; } catch (e) { /* localStorage bloqueado — no hay token que reenviar */ }
+  if (!token || !subscribed) return;
   fetch(API, { method: 'POST', body: JSON.stringify({ action: 'subscribePush', token, ordenes: nuevasOrdenes }) }).catch(() => {});
 }
 let pushSubscribing = false;
 async function onNotifyMeClick() {
   if (pushSubscribing) return;
-  if (localStorage.getItem(PUSH_SUBSCRIBED_KEY) === '1') {
+  let alreadySubscribed = false;
+  try { alreadySubscribed = localStorage.getItem(PUSH_SUBSCRIBED_KEY) === '1'; } catch (e) { /* localStorage bloqueado — se deja seguir e intentar suscribir */ }
+  if (alreadySubscribed) {
     showToast('Notifications are already on for this device.');
     return;
   }
@@ -3687,7 +3674,6 @@ function buildClerkCard(o) {
       productState[o.orden] = prods.length ? prods.map(() => Math.min(est, 3)) : [Math.min(est, 3)];
     }
   }
-  const minProd = prods.length ? Math.min(...productState[o.orden]) : est;
   const incomplete = prods.length > 0 && est > 3 && productState[o.orden].some(s => s < 3);
 
   let checklistHtml = '';
