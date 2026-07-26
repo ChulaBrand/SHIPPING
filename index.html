@@ -953,6 +953,10 @@
           <p class="settings-caption">Master switch for the entire driver/client screen. If you want to make an exception for a single client instead of all of them, use the checkboxes on the Clients tab.</p>
         </div>
         <div class="settings-group">
+          <div class="settings-row"><label>Group same-client orders</label><label class="toggle-switch"><input type="checkbox" id="setting-chofGroupClientOrders"><span class="toggle-slider"></span></label></div>
+          <p class="settings-caption">When searching an order, also show that client's other orders from today underneath it. Turn off to show only the order that was searched.</p>
+        </div>
+        <div class="settings-group">
           <div class="settings-row"><label>Saved orders list — clear after (hours)</label><input type="number" id="setting-savedOrdersHours" min="1"></div>
           <p class="settings-caption">On the tracking screen, a driver/client can add several order numbers to see them all together (kept only on their own device, never synced). Entries older than this are cleared automatically so the list doesn't carry over from one day to the next.</p>
         </div>
@@ -1249,7 +1253,7 @@ function escapeForJsAttr(str) {
 
 // Valores editables desde Admin → Settings. Estos son el "de fábrica" mientras se
 // cargan de verdad (justo después del login); ver loadAppSettings()/loadClientsConfig().
-let APP_SETTINGS = { standardDivisor: 48, hebDivisor: 60, stalledHours: 6, soonHours: 1, lockHours: 48, chofRefreshSeconds: 30, chofShowClientName: 1, chofShowProducts: 1, shipRefreshSeconds: 120, analyticsRefreshSeconds: 0, savedOrdersHours: 24, statusRank1: 1, statusRank2: 2, statusRank3: 3, statusRank4: 4, statusRank5: 5 };
+let APP_SETTINGS = { standardDivisor: 48, hebDivisor: 60, stalledHours: 6, soonHours: 1, lockHours: 48, chofRefreshSeconds: 30, chofShowClientName: 1, chofShowProducts: 1, chofGroupClientOrders: 1, shipRefreshSeconds: 120, analyticsRefreshSeconds: 0, savedOrdersHours: 24, statusRank1: 1, statusRank2: 2, statusRank3: 3, statusRank4: 4, statusRank5: 5 };
 let CLIENTS_CONFIG = []; // [{ nombrePatron, nombreCorto, cajasPorTarima, activo }], desde Admin → Clients
 let clientsConfigLoaded = false;
 async function loadAppSettings() {
@@ -2374,6 +2378,7 @@ const DRIVER_FIELDS = [
   { key: 'chofRefreshSeconds', elId: 'setting-chofRefreshSeconds', type: 'number', default: 30, min: 10, label: 'Refresh every (seconds)' },
   { key: 'chofShowClientName', elId: 'setting-chofShowClientName', type: 'checkbox', label: 'Show client name', format: v => (v !== 0 ? 'On' : 'Off') },
   { key: 'chofShowProducts', elId: 'setting-chofShowProducts', type: 'checkbox', label: 'Show products', format: v => (v !== 0 ? 'On' : 'Off') },
+  { key: 'chofGroupClientOrders', elId: 'setting-chofGroupClientOrders', type: 'checkbox', label: 'Group same-client orders', format: v => (v !== 0 ? 'On' : 'Off') },
   { key: 'savedOrdersHours', elId: 'setting-savedOrdersHours', type: 'number', default: 24, min: 1, label: 'Saved orders — clear after (hrs)' }
 ];
 let loadedDriverSettings = {};
