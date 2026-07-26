@@ -223,7 +223,7 @@
   .search-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:1rem; margin-bottom:1.5rem; display:flex; gap:8px; }
   .orders-list { display:flex; flex-direction:column; gap:10px; }
   .results-list { display:flex; flex-direction:column; gap:10px; margin-top:4px; }
-  .saved-orders-section { margin-top:.5rem; }
+  .saved-orders-section { margin-top:1.75rem; padding-top:1.5rem; border-top:1px solid var(--border); }
   .saved-chip-row { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
   .saved-chip { display:flex; align-items:center; gap:6px; font-family:'IBM Plex Mono',monospace; font-size:11.5px; background:var(--white); border:1px solid var(--border-strong); border-radius:99px; padding:6px 6px 6px 12px; color:var(--text); }
   .saved-chip button { border:none; background:var(--border); color:var(--text-muted); width:16px; height:16px; border-radius:50%; font-size:9px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; flex-shrink:0; }
@@ -1027,15 +1027,12 @@
       <button class="btn-primary" id="btn-buscar" onclick="buscar()" style="width:auto;padding:0 18px;white-space:nowrap;">Search</button>
       <button id="btn-add-saved" onclick="addSavedOrder()" title="Add to my saved orders" aria-label="Add to my saved orders" style="width:auto;height:48px;padding:0 16px;white-space:nowrap;background:var(--white);border:2px solid var(--pink);color:var(--pink);border-radius:var(--radius-sm);font-size:15px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">+ Add</button>
     </div>
-    <!-- "Order not found" se queda pegado al buscador (línea chica, altura fija) para
-         que se vea de inmediato — es "My saved orders" (abajo) la que se queda fija en
-         su lugar, no esto. -->
     <p class="error-msg" id="error-msg" role="alert"><i class="ti ti-alert-circle"></i> Order not found.</p>
+    <div class="results-list" id="results-list"></div>
 
-    <!-- Arriba de la búsqueda individual a propósito — así esta sección se queda fija en
-         el mismo lugar (y las tarjetas guardadas siguen ahí, aunque su CONTENIDO cambie
-         solo con el refresh) en vez de moverse cada vez que buscas una orden distinta,
-         que hacía que el resultado de esa búsqueda empujara todo lo demás hacia abajo. -->
+    <!-- Debajo de la orden que se está buscando a propósito — el resultado de la
+         búsqueda tiene que verse de inmediato, sin tener que pasar primero por toda la
+         lista guardada (que puede ser larga). -->
     <div class="saved-orders-section">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">
         <p class="section-label" style="margin-bottom:0;">My saved orders</p>
@@ -1044,10 +1041,6 @@
       <p class="saved-orders-hint" id="saved-orders-hint">Carrying more than one order on this trip? Type an order number above and tap "+ Add" to see them all together here, without searching one at a time. This list only lives on this device, and clears itself automatically after a while.</p>
       <div class="saved-chip-row" id="saved-chip-row"></div>
       <div class="results-list" id="saved-orders-list"></div>
-    </div>
-
-    <div style="margin-top:1.75rem;padding-top:1.5rem;border-top:1px solid var(--border);">
-      <div class="results-list" id="results-list"></div>
     </div>
   </div>
 
