@@ -22,7 +22,13 @@ try {
     // payload algún día trae su propio link (fcmOptions.link o data.url), se usa ese;
     // si no, la raíz de la app.
     const clickUrl = (payload.fcmOptions && payload.fcmOptions.link) || (payload.data && payload.data.url) || './';
-    self.registration.showNotification(title, { body, icon: './icons/icon-192.png', data: { url: clickUrl } });
+    // tag: si el mismo aviso llega a entregarse más de una vez (FCM no garantiza
+    // entrega única — puede reenviar el mismo push bajo ciertas condiciones de red/
+    // reconexión, sin que el servidor haya mandado nada dos veces), el navegador
+    // REEMPLAZA la notificación anterior que tenga el mismo tag en vez de amontonar
+    // una segunda. title+body ya identifica de sobra "este mismo cambio de estatus,
+    // de esta misma orden" — no hace falta nada más para el tag.
+    self.registration.showNotification(title, { body, icon: './icons/icon-192.png', tag: title + '::' + body, data: { url: clickUrl } });
   });
 } catch (e) { /* sin avisos en segundo plano, pero el resto del Service Worker sigue igual */ }
 
@@ -42,7 +48,7 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-const CACHE_NAME = 'chula-embarques-v8';
+const CACHE_NAME = 'chula-embarques-v9';
 const urlsToCache = [
   './index.html',
   './manifest.json',
