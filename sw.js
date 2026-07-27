@@ -18,11 +18,31 @@ try {
   messaging.onBackgroundMessage((payload) => {
     const title = (payload.notification && payload.notification.title) || 'Chula Brand';
     const body = (payload.notification && payload.notification.body) || '';
-    self.registration.showNotification(title, { body, icon: './icons/icon-192.png' });
+    // Se guarda a dónde abrir al tocar el aviso (ver notificationclick abajo) — si el
+    // payload algún día trae su propio link (fcmOptions.link o data.url), se usa ese;
+    // si no, la raíz de la app.
+    const clickUrl = (payload.fcmOptions && payload.fcmOptions.link) || (payload.data && payload.data.url) || './';
+    self.registration.showNotification(title, { body, icon: './icons/icon-192.png', data: { url: clickUrl } });
   });
 } catch (e) { /* sin avisos en segundo plano, pero el resto del Service Worker sigue igual */ }
 
-const CACHE_NAME = 'chula-embarques-v7';
+// Antes no había ningún manejo de esto — en Android, tocar el aviso solo lo cerraba sin
+// abrir ni enfocar nada. Si ya hay una pestaña de la app abierta, la enfoca en vez de
+// abrir otra (así no se van juntando pestañas duplicadas cada vez que llega un aviso).
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = new URL((event.notification.data && event.notification.data.url) || './', self.location.href).href;
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (const client of windowClients) {
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) return client.focus();
+      }
+      if (clients.openWindow) return clients.openWindow(targetUrl);
+    })
+  );
+});
+
+const CACHE_NAME = 'chula-embarques-v8';
 const urlsToCache = [
   './index.html',
   './manifest.json',
