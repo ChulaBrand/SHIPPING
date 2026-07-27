@@ -198,6 +198,8 @@
   .settings-row label { font-size:13px; color:var(--text); font-weight:500; }
   .settings-row input[type=number] { width:80px; height:36px; border:1px solid var(--border); border-radius:var(--radius-sm); padding:0 10px; font-family:'IBM Plex Mono',monospace; font-size:13px; text-align:right; background:var(--bg); }
   .settings-row input[type=number]:focus { outline:2px solid var(--purple); outline-offset:-1px; }
+  .settings-row input[type=text] { height:36px; border:1px solid var(--border); border-radius:var(--radius-sm); padding:0 10px; font-family:'Inter',sans-serif; font-size:13px; background:var(--bg); color:var(--text); }
+  .settings-row input[type=text]:focus { outline:2px solid var(--purple); outline-offset:-1px; }
   .settings-caption { font-size:11.5px; color:var(--text-faint); margin-top:6px; }
   .toggle-switch { position:relative; display:inline-block; width:42px; height:24px; flex-shrink:0; }
   .toggle-switch input { opacity:0; width:0; height:0; position:absolute; }
@@ -1016,8 +1018,13 @@
         </div>
         <p class="section-label" style="margin-top:1.25rem;">Alerts</p>
         <div class="settings-group">
-          <div class="settings-row"><label>Email me if no PDF was uploaded by 11am</label><label class="toggle-switch"><input type="checkbox" id="setting-uploadAlertEnabled" aria-label="Email me if no PDF was uploaded by 11am"><span class="toggle-slider"></span></label></div>
-          <p class="settings-caption">Checks once a day — if there's still no order for today by then, sends an email so someone knows to upload it.</p>
+          <div class="settings-row"><label>Email me if no PDF was uploaded</label><label class="toggle-switch"><input type="checkbox" id="setting-uploadAlertEnabled" aria-label="Email me if no PDF was uploaded"><span class="toggle-slider"></span></label></div>
+          <p class="settings-caption">Checks once a day — if there's still no order for today by the hour below, sends an email so someone knows to upload it.</p>
+        </div>
+        <div class="settings-group"><div class="settings-row"><label>Alert hour (24h, e.g. 11 = 11am)</label><input type="number" id="setting-uploadAlertHour" min="0" max="23"></div></div>
+        <div class="settings-group">
+          <div class="settings-row"><label>Alert emails</label><input type="text" id="setting-alertEmails" placeholder="name@example.com, other@example.com" style="flex:1;min-width:0;"></div>
+          <p class="settings-caption">Who gets the "no PDF uploaded" and daily close-of-day summary emails. Separate several addresses with commas. Leave blank to use the default account email.</p>
         </div>
         <button class="btn-primary" style="margin-top:14px;" onclick="saveAdminSettings()">Save changes</button>
         <p class="upload-status show" id="admin-settings-status" role="status" aria-live="polite" style="display:none;"></p>
@@ -2318,7 +2325,9 @@ const GENERAL_SETTINGS_FIELDS = [
   { key: 'soonHours', elId: 'setting-soonHours', type: 'number', default: 1, label: 'Hours "Soon"' },
   { key: 'lockHours', elId: 'setting-lockHours', type: 'number', default: 48, label: 'Hours before locking edits' },
   { key: 'cancelledArchiveHours', elId: 'setting-cancelledArchiveHours', type: 'number', default: 48, label: 'Hours before archiving cancelled orders' },
-  { key: 'uploadAlertEnabled', elId: 'setting-uploadAlertEnabled', type: 'checkbox', label: 'Email if no PDF by 11am', format: v => (v !== 0 ? 'On' : 'Off') }
+  { key: 'uploadAlertEnabled', elId: 'setting-uploadAlertEnabled', type: 'checkbox', label: 'Email if no PDF uploaded', format: v => (v !== 0 ? 'On' : 'Off') },
+  { key: 'uploadAlertHour', elId: 'setting-uploadAlertHour', type: 'number', default: 11, min: 0, label: 'Alert hour' },
+  { key: 'alertEmails', elId: 'setting-alertEmails', type: 'text', label: 'Alert emails' }
 ];
 let loadedGeneralSettings = {};
 // Las 5 secciones de "Today's orders" (Departed/estatus 6 nunca entra aquí, siempre va aparte).
@@ -2410,6 +2419,7 @@ async function saveSettingsFields(fields, storeRef, statusElId) {
     const el = document.getElementById(f.elId);
     let raw;
     if (f.type === 'checkbox') raw = el.checked ? 1 : 0;
+    else if (f.type === 'text') raw = String(el.value || '').trim();
     else { raw = parseInt(el.value, 10); if (!raw) raw = f.default; if (f.min !== undefined) raw = Math.max(f.min, raw); }
     payload[f.key] = raw;
     displayNew[f.key] = f.format ? f.format(raw) : raw;
