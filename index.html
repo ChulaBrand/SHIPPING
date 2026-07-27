@@ -1055,7 +1055,10 @@
   <div class="screen" id="screen-chofer">
     <div class="top-bar">
       <p class="top-bar-title">Check Order</p>
-      <button class="btn-back" onclick="goRol()">← Back</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-back" onclick="goRol()">← Back</button>
+        <button class="btn-back" onclick="refreshChoferScreen(false)" title="Refresh" aria-label="Refresh"><i class="ti ti-refresh"></i><span class="vtb-label">Refresh</span></button>
+      </div>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
       <div style="display:flex;flex:1;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--white);overflow:hidden;">
@@ -1322,19 +1325,32 @@ const BANNER_ICONS= ["📥","🕐","✅","🚧","📦","🚛"];
 
 // per-product status, in-memory for this session: { "orden": [1,2,1,...] }
 const productState = {};
-// productState/cancelFlowStep/restoreFlowStep viven todo lo que dure la pestaña abierta
-// (el uso normal de este panel es dejarlo abierto días) — sin esto, cada orden que
-// alguna vez pasó por pantalla se queda ahí para siempre, aunque ya no exista en el
-// refresh más reciente. Se llama después de cada loadOrdenes()/loadCancelledOrders(),
-// para quedarse solo con las órdenes que de verdad siguen en la lista actual.
+// productState/cancelFlowStep/restoreFlowStep/pendingReorder viven todo lo que dure la
+// pestaña abierta (el uso normal de este panel es dejarlo abierto días) — sin esto,
+// cada orden que alguna vez pasó por pantalla se queda ahí para siempre, aunque ya no
+// exista en el refresh más reciente. Se llama después de cada loadOrdenes()/
+// loadCancelledOrders(), para quedarse solo con las órdenes que de verdad siguen en la
+// lista actual. stateMap puede ser un objeto plano (orden -> valor) o un Set (solo
+// ordenes).
 function pruneOrderState(stateMap, currentList) {
   const validKeys = new Set((Array.isArray(currentList) ? currentList : []).map(o => String(o.orden)));
-  Object.keys(stateMap).forEach(k => { if (!validKeys.has(k)) delete stateMap[k]; });
+  if (stateMap instanceof Set) {
+    [...stateMap].forEach(k => { if (!validKeys.has(k)) stateMap.delete(k); });
+  } else {
+    Object.keys(stateMap).forEach(k => { if (!validKeys.has(k)) delete stateMap[k]; });
+  }
 }
 // modo de vista del panel del clerk: 'compact' (default) o 'expanded' (todas abiertas)
 let globalViewMode = 'compact';
 // órdenes abiertas individualmente a mano, sin importar el modo global
 const expandedOrders = new Set();
+// Órdenes cuyo estatus cambió mientras su tarjeta seguía abierta — un cambio de estatus
+// puede mover la orden a otra sección/posición (renderOrdenes() reclasifica todo), pero
+// hacerlo AL INSTANTE se sentía como que la tarjeta se te desaparecía de abajo del dedo
+// justo después de tocarla. Mientras esté aquí, el cambio se ve reflejado en la MISMA
+// tarjeta sin moverla de lugar; el reacomodo de verdad pasa hasta que se cierra esa
+// tarjeta (ver toggleCardExpand) o en el siguiente refresh normal.
+const pendingReorder = new Set();
 // filtro por estatus activo (vacío = mostrar todos)
 const statusFilter = new Set();
 // filtro por producto activo (vacío = mostrar todos) — ej. solo Limes, o Limes+Pineapples
@@ -3687,6 +3703,7 @@ async function loadOrdenes() {
     ordenes = result;
     pruneOrderState(productState, ordenes);
     pruneOrderState(cancelFlowStep, ordenes);
+    pruneOrderState(pendingReorder, ordenes);
     if (searchActive) {
       const raw = document.getElementById('enc-search').value.trim();
       if (raw) { renderSearchResults(raw); return; }
@@ -4044,12 +4061,21 @@ async function submitRestoreOrder(orden) {
 
 function toggleCardExpand(orden, evt) {
   const key = String(orden);
-  if (expandedOrders.has(key)) expandedOrders.delete(key);
+  const wasOpen = expandedOrders.has(key);
+  if (wasOpen) expandedOrders.delete(key);
   else expandedOrders.add(key);
   if (searchActive) {
     const raw = document.getElementById('enc-search').value.trim();
     if (raw) { renderSearchResults(raw); return; }
     searchActive = false;
+  }
+  // Se está CERRANDO una tarjeta cuyo estatus cambió mientras seguía abierta (ver
+  // pendingReorder/applyOrderCardUpdate) — este es el momento de dejarla reacomodarse
+  // de verdad: renderOrdenes() completo en vez de solo repintar esta tarjeta en su lugar.
+  if (wasOpen && pendingReorder.has(key)) {
+    pendingReorder.delete(key);
+    renderOrdenes();
+    return;
   }
   // Expandir/colapsar UNA tarjeta nunca cambia a qué sección pertenece (Today/Departed/
   // Attention/Past) — antes esto reconstruía TODA la lista (podían ser 50-100+ tarjetas
@@ -4088,6 +4114,7 @@ document.addEventListener('click', (e) => {
   if (document.querySelector('.screen.active')?.id !== 'screen-enc') return;
   if (e.target.closest('.order-card, .order-card-compact')) return;
   expandedOrders.clear();
+  pendingReorder.clear(); // el renderOrdenes() de abajo ya deja todo reacomodado
   if (searchActive) {
     const raw = document.getElementById('enc-search').value.trim();
     if (raw) { renderSearchResults(raw); return; }
@@ -4098,6 +4125,7 @@ document.addEventListener('click', (e) => {
 function toggleGlobalView() {
   globalViewMode = globalViewMode === 'compact' ? 'expanded' : 'compact';
   expandedOrders.clear(); // el toggle general manda: limpia las expansiones manuales
+  pendingReorder.clear(); // el renderOrdenes() de abajo ya deja todo reacomodado
   const btn = document.getElementById('viewToggleBtn');
   btn.innerHTML = globalViewMode === 'compact'
     ? '<i class="ti ti-arrows-maximize"></i><span class="vtb-label">All</span>'
@@ -4169,6 +4197,26 @@ function setOrderStatus(orden, status) {
   pushOrderStatus(orden, status, prevSnapshot);
 }
 
+// Repinta SOLO la tarjeta de esta orden si sigue abierta ahorita (sin moverla de lugar
+// en la lista) y deja pendiente el reacomodo de sección/orden para cuando se cierre —
+// ver pendingReorder y toggleCardExpand. Si la tarjeta no está abierta o no se
+// encuentra en el DOM, no hay nada que preservar: se hace el renderOrdenes() completo
+// de una vez, como antes.
+function applyOrderCardUpdate(orden) {
+  const key = String(orden);
+  const o = ordenes.find(x => String(x.orden) === key);
+  const isOpen = globalViewMode === 'expanded' || expandedOrders.has(key);
+  const card = document.getElementById('card-' + key);
+  if (isOpen && card && o) {
+    try {
+      card.outerHTML = buildClerkCard(o);
+      pendingReorder.add(key);
+      return;
+    } catch (e) { /* si algo tronó, cae al renderOrdenes() completo de abajo */ }
+  }
+  renderOrdenes();
+}
+
 // orden -> número de secuencia de la petición de estatus más reciente para ese pedido.
 // Si dos clics rápidos en el mismo pedido mandan 2 fetches y el primero resuelve
 // DESPUÉS del segundo (ya confirmado), su catch/revert ya no debe pisar el cambio más
@@ -4188,11 +4236,7 @@ async function pushOrderStatus(orden, estatus, prevSnapshot) {
   // el próximo refresh automático (2 min) porque la copia local del navegador no sabía
   // que el estatus acababa de cambiar.
   if (o) { o.hora = clientNowTime(); o.actualizado = todayStr(); }
-  // Antes esto solo repintaba la tarjeta donde ya estaba (card.outerHTML) — pero un
-  // cambio de estatus puede sacarla de Needs Attention, mandarla a Departed, o
-  // meterla/sacarla de otras secciones. renderOrdenes() sí reclasifica todo de nuevo,
-  // así la tarjeta aparece en la sección correcta en vez de quedarse pegada.
-  renderOrdenes();
+  applyOrderCardUpdate(orden);
   showToast('Status updated ✓');
   const body = { sessionToken: SESSION_TOKEN, action: 'updateStatus', orden, estatus, usuario: currentUser };
   if (productState[orden]) body.productEstatus = productState[orden]; // persiste el detalle por producto
@@ -4205,6 +4249,7 @@ async function pushOrderStatus(orden, estatus, prevSnapshot) {
         o.hora = prevSnapshot.hora;
         o.actualizado = prevSnapshot.actualizado;
         if (prevSnapshot.productState) productState[orden] = prevSnapshot.productState;
+        pendingReorder.delete(String(orden)); // el renderOrdenes() de abajo ya deja todo en su lugar correcto
         renderOrdenes();
       }
       handleSessionExpired();
@@ -4219,6 +4264,7 @@ async function pushOrderStatus(orden, estatus, prevSnapshot) {
       o.hora = prevSnapshot.hora;
       o.actualizado = prevSnapshot.actualizado;
       if (prevSnapshot.productState) productState[orden] = prevSnapshot.productState;
+      pendingReorder.delete(String(orden));
       renderOrdenes();
     }
     showToast('Sync error — check connection');
@@ -5326,22 +5372,28 @@ function setChoferRefreshLocked(locked) {
   const saved = document.getElementById('saved-orders-list');
   if (saved) saved.classList.toggle('refresh-locked', locked);
 }
+// silent=true (el timer de fondo): igual que buscar(...,true), deja lo que ya había en
+// pantalla tal cual mientras espera, sin tocar ningún botón. silent=false (el botón
+// manual de Refresh): sí muestra "Searching..." en el botón de Search mientras dura.
+// Refresca las 2 cosas que se ven en esta pantalla — la orden buscada (si hay una) y la
+// lista de guardadas — para que "Refresh" de verdad actualice todo, no solo la mitad.
+async function refreshChoferScreen(silent) {
+  showRefreshSpinner();
+  setChoferRefreshLocked(true);
+  try {
+    await Promise.all([
+      lastChoferSearch ? buscar(lastChoferSearch, silent) : Promise.resolve(),
+      renderSavedOrders() // también vuelve a checar la lista guardada (y la poda si algo ya expiró)
+    ]);
+  } finally {
+    setChoferRefreshLocked(false);
+    hideRefreshSpinner();
+  }
+}
 function scheduleChoferRefresh() {
   setTimeout(async () => {
     const choferScreen = document.getElementById('screen-chofer');
-    if (choferScreen && choferScreen.classList.contains('active')) {
-      showRefreshSpinner();
-      setChoferRefreshLocked(true);
-      try {
-        await Promise.all([
-          lastChoferSearch ? buscar(lastChoferSearch, true) : Promise.resolve(),
-          renderSavedOrders() // también vuelve a checar la lista guardada (y la poda si algo ya expiró)
-        ]);
-      } finally {
-        setChoferRefreshLocked(false);
-        hideRefreshSpinner();
-      }
-    }
+    if (choferScreen && choferScreen.classList.contains('active')) await refreshChoferScreen(true);
     scheduleChoferRefresh();
   }, Math.max(10, CHOFER_REFRESH_SECONDS || 30) * 1000);
 }
