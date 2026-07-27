@@ -1023,8 +1023,14 @@
         </div>
         <div class="settings-group"><div class="settings-row"><label>Alert hour (24h, e.g. 11 = 11am)</label><input type="number" id="setting-uploadAlertHour" min="0" max="23"></div></div>
         <div class="settings-group">
-          <div class="settings-row"><label>Alert emails</label><input type="text" id="setting-alertEmails" placeholder="name@example.com, other@example.com" style="flex:1;min-width:0;"></div>
-          <p class="settings-caption">Who gets the "no PDF uploaded" and daily close-of-day summary emails. Separate several addresses with commas. Leave blank to use the default account email.</p>
+          <p style="font-size:13px;color:var(--text);font-weight:500;margin-bottom:8px;">Alert emails</p>
+          <div class="saved-chip-row" id="alertEmailsChips" style="margin-bottom:8px;"></div>
+          <div style="display:flex;gap:8px;">
+            <input type="email" id="alertEmailInput" placeholder="name@example.com" style="flex:1;min-width:0;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'Inter',sans-serif;font-size:13px;background:var(--bg);color:var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();addAlertEmail();}">
+            <button type="button" class="admin-toggle-btn" style="white-space:nowrap;" onclick="addAlertEmail()">+ Add</button>
+          </div>
+          <input type="hidden" id="setting-alertEmails">
+          <p class="settings-caption">Who gets the "no PDF uploaded" and daily close-of-day summary emails. Leave empty to use the default account email.</p>
         </div>
         <button class="btn-primary" style="margin-top:14px;" onclick="saveAdminSettings()">Save changes</button>
         <p class="upload-status show" id="admin-settings-status" role="status" aria-live="polite" style="display:none;"></p>
@@ -2341,8 +2347,42 @@ async function loadAdminSettings() {
     .sort((a, b) => a.rank - b.rank)
     .map(({ est, label }) => ({ est, label }));
   renderStatusOrderConfig();
+  // alertEmails ya se cargó como texto plano ("a@x.com,b@y.com") en el input escondido
+  // (setting-alertEmails, ver GENERAL_SETTINGS_FIELDS) — aquí se separa en la lista que
+  // de verdad se ve como recuadritos.
+  alertEmailsList = String(s.alertEmails || '').split(',').map(e => e.trim()).filter(Boolean);
+  renderAlertEmailChips();
 }
 async function saveAdminSettings() { await saveSettingsFields(GENERAL_SETTINGS_FIELDS, loadedGeneralSettings, 'admin-settings-status'); }
+
+// alertEmailsList es la fuente de verdad visual (los recuadritos) — cada vez que cambia,
+// se vuelve a juntar en el input escondido setting-alertEmails, que es lo que
+// saveSettingsFields() de verdad lee y manda al guardar (mismo mecanismo de siempre,
+// sin tener que tocar el helper genérico para este campo en particular).
+let alertEmailsList = [];
+function renderAlertEmailChips() {
+  const wrap = document.getElementById('alertEmailsChips');
+  wrap.innerHTML = alertEmailsList.map(email =>
+    `<span class="saved-chip">${escapeHtml(email)}<button type="button" onclick="removeAlertEmail('${escapeForJsAttr(email)}')" title="Remove" aria-label="Remove ${escapeHtml(email)}">✕</button></span>`
+  ).join('');
+  document.getElementById('setting-alertEmails').value = alertEmailsList.join(',');
+}
+function addAlertEmail() {
+  const input = document.getElementById('alertEmailInput');
+  const email = input.value.trim();
+  if (!email) return;
+  // Validación simple — no perfecta (los correos válidos de verdad son más permisivos
+  // que esto), solo para atrapar errores de dedo obvios antes de guardarlo.
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast("That doesn't look like a valid email.", 'error'); return; }
+  if (alertEmailsList.some(e => e.toLowerCase() === email.toLowerCase())) { showToast('Already in the list.'); input.value = ''; return; }
+  alertEmailsList.push(email);
+  input.value = '';
+  renderAlertEmailChips();
+}
+function removeAlertEmail(email) {
+  alertEmailsList = alertEmailsList.filter(e => e !== email);
+  renderAlertEmailChips();
+}
 
 // Reordenar con flechas ▲▼ (mismo patrón que Analytics Layout), guarda como
 // statusRank1..5 (rank = posición) para reusar el esquema genérico Key|Value de Settings.
