@@ -604,7 +604,7 @@
 
   <!-- ACCESS CHOOSER (cuentas con 2+ permisos) -->
   <div class="screen" id="screen-access-chooser">
-    <div class="top-bar"><span></span><button class="btn-back" onclick="confirmSignOut()">Sign out</button></div>
+    <div class="top-bar"><span></span><button class="btn-back" onclick="goRol()">Sign out</button></div>
     <p class="page-title" style="text-align:center;">Where to?</p>
     <div class="role-grid" id="access-chooser-grid" style="margin-top:16px;"></div>
   </div>
@@ -898,7 +898,7 @@
   <div class="screen" id="screen-admin">
     <div class="top-bar">
       <p class="top-bar-title">Admin</p>
-      <button class="btn-back" onclick="confirmSignOut()">Sign out</button>
+      <button class="btn-back" onclick="goRol()">Sign out</button>
     </div>
     <div class="admin-tabs">
       <button class="admin-tab-btn active" data-tab="users" onclick="showAdminTab('users')"><i class="ti ti-users"></i>Users</button>
@@ -1679,15 +1679,6 @@ function isSessionExpiredError(result) {
 function handleSessionExpired() {
   showToast('Your session expired — please sign in again');
   goRol();
-}
-// Solo para el botón explícito de "Sign out" — goRol() por su cuenta NO pide
-// confirmación porque también la usan shippingBack()/analyticsBack() (cuando la cuenta
-// solo tiene un permiso, "Back" es lo mismo que cerrar sesión) y handleSessionExpired(),
-// casos donde interrumpir con un confirm() sería raro o redundante. "Sign out" vive junto
-// a Refresh/Upload con el mismo estilo de botón — un toque de más ahí cerraba la sesión
-// al instante, sin aviso.
-function confirmSignOut() {
-  if (confirm('Sign out?')) goRol();
 }
 function goRol() {
   // Invalida la sesión en el servidor de inmediato (no solo la olvida aquí) — así un
@@ -3979,20 +3970,34 @@ async function submitCancelOrder(orden) {
   const key = String(orden);
   if (pendingCancelRestore.has(key)) return;
   pendingCancelRestore.add(key);
-  try {
-    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'cancelOrder', orden }) });
-    const result = await res.json();
-    if (result.error) { showToast(result.error, 'error'); return; }
-    expandedOrders.delete(String(orden));
-    ordenes = ordenes.filter(x => String(x.orden) !== String(orden));
-    showToast('Order cancelled');
+  // Optimista, igual que los botones de estatus — antes esto esperaba la respuesta del
+  // servidor (2-3s) antes de mover un dedo, y se sentía tardado comparado con el resto
+  // de la app. Se quita de la lista y se repinta AL INSTANTE; si el servidor la rechaza,
+  // se regresa a su mismo lugar (prevIndex) y se avisa del error.
+  const o = ordenes.find(x => String(x.orden) === key);
+  const prevIndex = o ? ordenes.indexOf(o) : -1;
+  function applyLocalRemoval() {
+    expandedOrders.delete(key);
+    delete cancelFlowStep[key];
+    ordenes = ordenes.filter(x => String(x.orden) !== key);
     if (searchActive) {
       const raw = document.getElementById('enc-search').value.trim();
       if (raw) { renderSearchResults(raw); return; }
       searchActive = false;
     }
     renderOrdenes();
-  } catch (e) { showToast('Connection error.'); }
+  }
+  function revertLocalRemoval() {
+    if (!o || prevIndex === -1 || ordenes.some(x => String(x.orden) === key)) return;
+    ordenes.splice(Math.min(prevIndex, ordenes.length), 0, o);
+    renderOrdenes();
+  }
+  if (o) { applyLocalRemoval(); showToast('Order cancelled'); }
+  try {
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'cancelOrder', orden }) });
+    const result = await res.json();
+    if (result.error) { revertLocalRemoval(); showToast(result.error, 'error'); }
+  } catch (e) { revertLocalRemoval(); showToast('Connection error — the order was not cancelled, try again.', 'error'); }
   finally { pendingCancelRestore.delete(key); }
 }
 
