@@ -4184,6 +4184,10 @@ function setProductStatus(orden, idx, status) {
   if (!productState[orden]) return;
   const o = ordenes.find(x => String(x.orden) === String(orden));
   if (!o) return;
+  // Sin esto, tocar dos veces rápido el mismo círculo (o el que ya estaba activo)
+  // mandaba 2 peticiones idénticas de updateStatus — cada una disparaba su propio aviso
+  // push, así que a los choferes suscritos les llegaba la misma notificación doble.
+  if (productState[orden][idx] === status) return;
   const prevSnapshot = { estatus: o.estatus, hora: o.hora, actualizado: o.actualizado, productState: productState[orden].slice() };
   productState[orden][idx] = status;
   const currentEst = parseInt(o.estatus) || 1;
@@ -4209,6 +4213,10 @@ function setProductStatus(orden, idx, status) {
 function setOrderStatus(orden, status) {
   const o = ordenes.find(x => String(x.orden) === String(orden));
   if (!o) return;
+  // Mismo motivo que en setProductStatus() — tocar dos veces rápido el mismo botón (o
+  // el estatus que ya estaba seleccionado) mandaba 2 updateStatus idénticos, cada uno
+  // con su propio aviso push duplicado.
+  if ((parseInt(o.estatus) || 1) === status) return;
   const prevSnapshot = { estatus: o.estatus, hora: o.hora, actualizado: o.actualizado, productState: productState[orden] ? productState[orden].slice() : null };
   o.estatus = status;
 
