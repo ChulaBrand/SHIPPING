@@ -22,7 +22,7 @@ try {
   });
 } catch (e) { /* sin avisos en segundo plano, pero el resto del Service Worker sigue igual */ }
 
-const CACHE_NAME = 'chula-embarques-v6';
+const CACHE_NAME = 'chula-embarques-v7';
 const urlsToCache = [
   './index.html',
   './manifest.json',
@@ -78,7 +78,13 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
           return response;
         })
-        .catch(() => caches.match(event.request))
+        // caches.match() puede regresar undefined (primera vez en este celular, o iOS ya
+        // había borrado la caché por no usarse varios días) — pasarle undefined a
+        // respondWith() tronaba la carga entera en vez de intentar algo más. Con datos
+        // celulares de señal débil, la red SÍ suele responder, solo tarda más de los 5s
+        // del timeout de arriba — así que sin caché de respaldo, se reintenta con un
+        // fetch normal (sin límite de tiempo) en vez de darse por vencido.
+        .catch(() => caches.match(event.request).then((cached) => cached || fetch(event.request)))
     );
     return;
   }
