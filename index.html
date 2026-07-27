@@ -3563,14 +3563,45 @@ function maybeResubscribePush(nuevasOrdenes) {
   fetch(API, { method: 'POST', body: JSON.stringify({ action: 'subscribePush', token, ordenes: nuevasOrdenes }) }).catch(() => {});
 }
 let pushSubscribing = false;
+// El botón ahora es un interruptor de verdad (antes solo prendía — la única forma de
+// "apagarlo" era borrar datos del navegador a mano). Enciende/apaga según lo que ya
+// diga PUSH_SUBSCRIBED_KEY.
 async function onNotifyMeClick() {
   if (pushSubscribing) return;
   let alreadySubscribed = false;
   try { alreadySubscribed = localStorage.getItem(PUSH_SUBSCRIBED_KEY) === '1'; } catch (e) { /* localStorage bloqueado — se deja seguir e intentar suscribir */ }
-  if (alreadySubscribed) {
-    showToast('Notifications are already on for this device.');
-    return;
+  if (alreadySubscribed) { await disablePushNotifications(); return; }
+  await enablePushNotifications();
+}
+async function disablePushNotifications() {
+  pushSubscribing = true;
+  const btn = document.getElementById('notifyMeBtn');
+  document.getElementById('notifyMeLabel').textContent = 'Turning off…'; btn.disabled = true;
+  let token = null;
+  try { token = localStorage.getItem(PUSH_TOKEN_KEY); } catch (e) { /* localStorage bloqueado */ }
+  try {
+    // Sin token guardado (localStorage se limpió a medias) no hay a quién avisarle en
+    // el servidor — se apaga nomás localmente, mejor eso a dejar el botón trabado en
+    // "on" sin ninguna forma de apagarlo desde aquí.
+    if (token) {
+      const res = await fetch(API, { method: 'POST', body: JSON.stringify({ action: 'unsubscribePush', token }) });
+      const result = await res.json();
+      if (result && result.error) { showToast(result.error, 'error'); return; }
+    }
+    try {
+      localStorage.removeItem(PUSH_TOKEN_KEY);
+      localStorage.removeItem(PUSH_SUBSCRIBED_KEY);
+    } catch (e) { /* si tronó, el servidor ya se limpió igual — solo no queda registrado localmente */ }
+    showToast('Notifications turned off for this device.');
+  } catch (e) {
+    showToast('Could not turn off notifications — try again.');
+  } finally {
+    pushSubscribing = false;
+    btn.disabled = false;
+    updateNotifyButtonUI();
   }
+}
+async function enablePushNotifications() {
   if (!('Notification' in window) || !('serviceWorker' in navigator) || !firebaseMessaging) {
     showToast('Notifications are not supported on this browser.');
     return;
