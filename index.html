@@ -224,6 +224,10 @@
   .orders-list { display:flex; flex-direction:column; gap:10px; }
   .results-list { display:flex; flex-direction:column; gap:10px; margin-top:4px; }
   .saved-orders-section { margin-top:1.75rem; padding-top:1.5rem; border-top:1px solid var(--border); }
+  .notify-btn { display:flex; align-items:center; gap:5px; background:none; border:1px solid var(--border-strong); border-radius:99px; padding:5px 11px; font-size:11.5px; font-weight:600; color:var(--text-muted); cursor:pointer; white-space:nowrap; font-family:'Inter',sans-serif; }
+  .notify-btn:active { transform:scale(.97); }
+  .notify-btn:disabled { opacity:.55; cursor:not-allowed; }
+  .notify-btn.on { border-color:var(--pink); color:var(--pink); }
   .saved-chip-row { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
   .saved-chip { display:flex; align-items:center; gap:6px; font-family:'IBM Plex Mono',monospace; font-size:11.5px; background:var(--white); border:1px solid var(--border-strong); border-radius:99px; padding:6px 6px 6px 12px; color:var(--text); }
   .saved-chip button { border:none; background:var(--border); color:var(--text-muted); width:16px; height:16px; border-radius:50%; font-size:9px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; flex-shrink:0; }
@@ -1054,7 +1058,7 @@
          órdenes) van hasta el final, después del resultado de la búsqueda. -->
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">
       <p class="section-label" style="margin-bottom:0;">My saved orders</p>
-      <button id="notifyMeBtn" onclick="onNotifyMeClick()" title="Get notified when these orders update" aria-label="Get notified when these orders update" style="display:flex;align-items:center;gap:5px;background:none;border:1px solid var(--border-strong);border-radius:99px;padding:5px 11px;font-size:11.5px;font-weight:600;color:var(--text-muted);cursor:pointer;white-space:nowrap;font-family:'Inter',sans-serif;">🔔 Notify me</button>
+      <button id="notifyMeBtn" class="notify-btn" onclick="onNotifyMeClick()" title="Get notified when these orders update" aria-label="Get notified when these orders update"><i class="ti ti-bell" id="notifyMeIcon"></i><span id="notifyMeLabel">Notify me</span></button>
     </div>
     <p class="saved-orders-hint" id="saved-orders-hint">Carrying more than one order on this trip? Type an order number above and tap "+ Add" to see them all together here, without searching one at a time. This list only lives on this device, and clears itself automatically after a while.</p>
     <div class="saved-chip-row" id="saved-chip-row" style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);"></div>
@@ -2339,11 +2343,23 @@ async function loadSettingsFields(fields, storeRef) {
       else el.value = s[f.key];
       storeRef[f.key] = f.format ? f.format(s[f.key]) : s[f.key];
     });
+    storeRef.__loaded = true;
     return s;
   } catch (e) { showToast('Connection error loading settings.'); return null; }
 }
 async function saveSettingsFields(fields, storeRef, statusElId) {
   const statusEl = document.getElementById(statusElId);
+  // En una conexión lenta, si se le da Save justo después de abrir la pestaña, los
+  // campos del formulario todavía traen sus valores de fábrica del HTML (loadSettingsFields
+  // ni siquiera ha regresado) — eso se mandaba tal cual y pisaba la configuración real
+  // en el servidor. __loaded solo se prende cuando loadSettingsFields ya aplicó los
+  // valores actuales a los campos.
+  if (!storeRef.__loaded) {
+    statusEl.style.display = 'block';
+    statusEl.textContent = 'Still loading current settings — try again in a moment.';
+    statusEl.className = 'upload-status show err';
+    return;
+  }
   const payload = {}, displayNew = {}, labels = {};
   fields.forEach(f => {
     const el = document.getElementById(f.elId);
@@ -2818,11 +2834,21 @@ async function fetchRange(r, force) {
   }
   return rangeCache[key];
 }
+const panelSeq = {};
+// Cambiar de rango rápido (Day -> Week -> Month) dispara un refreshPanel por cada
+// click, todos en vuelo a la vez — sin esto, si el de "Day" (el más viejo) tarda más
+// en regresar que el de "Month" (el más nuevo), su respuesta llegaba último y pisaba
+// panelData/el render con datos de un rango que ya no es el seleccionado. Mismo patrón
+// que loadOrdenes/buscar/loadCancelledOrders: un contador por panel, y si ya hay una
+// petición más nueva de ESE panel en vuelo (o que ya aplicó su resultado), esta se
+// calla en vez de aplicar algo obsoleto.
 async function refreshPanel(panelKey, force) {
   const r = effectiveRangeFor(panelKey);
   if (!r) return; // "Custom" general sin fechas aplicadas todavía
+  const seq = (panelSeq[panelKey] = (panelSeq[panelKey] || 0) + 1);
   try {
     const data = await fetchRange(r, force);
+    if (seq !== panelSeq[panelKey]) return;
     if (data.error) return;
     panelData[panelKey] = data;
     // Para los paneles con KPIs comparables, se pide también el período anterior
@@ -2835,13 +2861,14 @@ async function refreshPanel(panelKey, force) {
       try {
         const prevRange = shiftRangeToPrevious(r.start, r.end);
         const prevData = await fetchRange(prevRange, force);
+        if (seq !== panelSeq[panelKey]) return;
         // Si falla, se borra lo que hubiera antes en vez de dejarlo — si no, un rango
         // nuevo podía terminar comparándose contra datos de OTRO rango anterior sin
         // ningún aviso (ej. cambias de Week a Month, falla el fetch del "mes anterior",
         // y el delta se queda mostrando la comparación vieja de Week como si aplicara).
         if (!prevData.error) prevPanelData[panelKey] = prevData;
         else delete prevPanelData[panelKey];
-      } catch (e) { delete prevPanelData[panelKey]; /* sin comparación si falla, el panel se ve igual sin el delta */ }
+      } catch (e) { if (seq === panelSeq[panelKey]) delete prevPanelData[panelKey]; /* sin comparación si falla, el panel se ve igual sin el delta */ }
     } else {
       delete prevPanelData[panelKey];
     }
@@ -3465,7 +3492,9 @@ function updateNotifyButtonUI() {
   if (!btn) return;
   let subscribed = false;
   try { subscribed = localStorage.getItem(PUSH_SUBSCRIBED_KEY) === '1'; } catch (e) { /* localStorage bloqueado (ej. Safari privado) — se asume que no está suscrito */ }
-  btn.textContent = subscribed ? '🔔 Notifications on' : '🔔 Notify me';
+  btn.classList.toggle('on', subscribed);
+  document.getElementById('notifyMeIcon').className = subscribed ? 'ti ti-bell-ringing' : 'ti ti-bell';
+  document.getElementById('notifyMeLabel').textContent = subscribed ? 'Notifications on' : 'Notify me';
 }
 // Ya estaba suscrito y agregó una orden nueva a su lista — se manda de una vez para que
 // también le avise a esa, sin que tenga que volver a tocar "Notify me". No bloquea nada
@@ -3497,14 +3526,22 @@ async function onNotifyMeClick() {
   }
   pushSubscribing = true;
   const btn = document.getElementById('notifyMeBtn');
-  btn.textContent = 'Enabling…'; btn.disabled = true;
+  document.getElementById('notifyMeLabel').textContent = 'Enabling…'; btn.disabled = true;
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
       showToast('Notifications blocked — you can enable them later in your browser settings.');
       return;
     }
-    const registration = swRegistration || await navigator.serviceWorker.ready;
+    // navigator.serviceWorker.ready nunca rechaza — si el Service Worker se queda a
+    // medio instalar (o nunca corre), este await se quedaba esperando para siempre y el
+    // botón se quedaba pegado en "Enabling…" el resto de la sesión, sin error ni forma
+    // de reintentar sin recargar la página. El timeout fuerza a que esto SIEMPRE
+    // termine, con o sin Service Worker listo.
+    const registration = swRegistration || await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Service worker not ready')), 10000))
+    ]);
     const token = await firebaseMessaging.getToken({ vapidKey: FIREBASE_VAPID_KEY, serviceWorkerRegistration: registration });
     if (!token) { showToast('Could not enable notifications — try again.'); return; }
     const res = await fetch(API, { method: 'POST', body: JSON.stringify({ action: 'subscribePush', token, ordenes: entries.map(e => e.orden) }) });
@@ -4308,7 +4345,10 @@ function renderSearchResults(raw) {
   // "exact" (coincidencia exacta de número de orden) sigue sin filtrarse — si buscas
   // un número exacto, quieres verlo aunque no calce con el filtro puesto.
   const filtered = exact ? [exact] : ordenes
-    .filter(o=>!isOlderThan48h(o.actualizado) && (String(o.orden).toLowerCase().includes(val.toLowerCase())||o.cliente.toLowerCase().includes(val.toLowerCase())))
+    // String(o.cliente || '') — una fila de datos incompleta (sin cliente) hacía que
+    // .toLowerCase() directo sobre undefined tronara sin aviso, tumbando la búsqueda
+    // completa en silencio.
+    .filter(o=>!isOlderThan48h(o.actualizado) && (String(o.orden).toLowerCase().includes(val.toLowerCase())||String(o.cliente || '').toLowerCase().includes(val.toLowerCase())))
     .filter(o => !statusFilter.size || statusFilter.has(parseInt(o.estatus) || 1))
     .filter(orderMatchesProductFilter);
   if(!filtered.length){ list.innerHTML='<div class="empty-state"><i class="ti ti-search-off"></i>No match found</div>'; restoreScrollAnchor(savedAnchor); return; }
@@ -5188,11 +5228,16 @@ async function sendAndSyncDraft() {
     papayaSendDraftBtn.textContent = 'Sending to Draft...';
     const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'writeDraft', rows: papayaLastDraftRows }) });
     const result = await res.json();
+    // El resto de las acciones que escriben datos revisan esto y regresan solas al
+    // login — esta se había quedado fuera, y una sesión que expira a media subida solo
+    // mostraba el error crudo "Session expired" en vez de mandar a iniciar sesión de nuevo.
+    if (isSessionExpiredError(result)) { handleSessionExpired(); return; }
     if (result.error) { showToast('Error: ' + result.error); return; }
 
     papayaSendDraftBtn.textContent = 'Syncing...';
     const res2 = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'syncDraft' }) });
     const result2 = await res2.json();
+    if (isSessionExpiredError(result2)) { handleSessionExpired(); return; }
     if (result2.error) { showToast(`Draft was saved, but sync failed: ${result2.error}`); return; }
 
     showToast(`${result.count} orders sent, synced, and Draft cleared ✓`);
