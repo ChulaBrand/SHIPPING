@@ -3564,6 +3564,17 @@ async function onNotifyMeClick() {
     showToast('Notifications are not supported on this browser.');
     return;
   }
+  // En iPhone, Apple SOLO entrega avisos push si la página se abrió desde el ícono en
+  // la Pantalla de Inicio (no desde Safari normal) — la suscripción puede "funcionar"
+  // (el navegador da permiso, el token se genera) pero los avisos nunca llegan, o
+  // llegan de forma inconsistente. Mejor avisar esto de una vez que dejar que alguien
+  // se suscriba pensando que ya quedó, cuando en realidad Apple no va a entregar nada.
+  const isIOS = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+  if (isIOS && !isStandalone) {
+    showToast('On iPhone, notifications only work after adding this page to your Home Screen: tap Share, then "Add to Home Screen", then open it from there and try again.', 'error');
+    return;
+  }
   const entries = pruneSavedOrders();
   if (!entries.length) {
     showToast('Add at least one order to your list first.');
