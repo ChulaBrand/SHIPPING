@@ -990,6 +990,11 @@
           <div class="settings-row"><label>Hours before archiving cancelled orders</label><input type="number" id="setting-cancelledArchiveHours"></div>
           <p class="settings-caption">The Cancelled screen is for undoing a recent mistake, not a long history — anything older than this moves out automatically and can no longer be restored from there.</p>
         </div>
+        <p class="section-label" style="margin-top:1.25rem;">Alerts</p>
+        <div class="settings-group">
+          <div class="settings-row"><label>Email me if no PDF was uploaded by 11am</label><label class="toggle-switch"><input type="checkbox" id="setting-uploadAlertEnabled"><span class="toggle-slider"></span></label></div>
+          <p class="settings-caption">Checks once a day — if there's still no order for today by then, sends an email so someone knows to upload it.</p>
+        </div>
         <button class="btn-primary" style="margin-top:14px;" onclick="saveAdminSettings()">Save changes</button>
         <p class="upload-status show" id="admin-settings-status" role="status" aria-live="polite" style="display:none;"></p>
       </div>
@@ -2263,7 +2268,8 @@ const GENERAL_SETTINGS_FIELDS = [
   { key: 'stalledHours', elId: 'setting-stalledHours', type: 'number', default: 6, label: 'Hours "Stalled"' },
   { key: 'soonHours', elId: 'setting-soonHours', type: 'number', default: 1, label: 'Hours "Soon"' },
   { key: 'lockHours', elId: 'setting-lockHours', type: 'number', default: 48, label: 'Hours before locking edits' },
-  { key: 'cancelledArchiveHours', elId: 'setting-cancelledArchiveHours', type: 'number', default: 48, label: 'Hours before archiving cancelled orders' }
+  { key: 'cancelledArchiveHours', elId: 'setting-cancelledArchiveHours', type: 'number', default: 48, label: 'Hours before archiving cancelled orders' },
+  { key: 'uploadAlertEnabled', elId: 'setting-uploadAlertEnabled', type: 'checkbox', label: 'Email if no PDF by 11am', format: v => (v !== 0 ? 'On' : 'Off') }
 ];
 let loadedGeneralSettings = {};
 // Las 5 secciones de "Today's orders" (Departed/estatus 6 nunca entra aquí, siempre va aparte).
