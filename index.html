@@ -3483,6 +3483,17 @@ async function buscar(overrideVal, silent) {
   }
 }
 document.getElementById('orden-input').addEventListener('keydown',e=>{if(e.key==='Enter')buscar();});
+// Antes, borrar el número a mano dejaba el resultado de la última búsqueda pegado en
+// pantalla (con su badge "Your order" y todo) para siempre — nada limpiaba resultsList
+// cuando el input se quedaba vacío. lastChoferSearch también se limpia aquí: si no, el
+// refresh de fondo (scheduleChoferRefresh) seguía volviendo a buscar esa misma orden
+// vieja cada ~30s y la traía de vuelta sola, aunque el input ya estuviera vacío.
+document.getElementById('orden-input').addEventListener('input', () => {
+  if (document.getElementById('orden-input').value.trim()) return;
+  document.getElementById('results-list').innerHTML = '';
+  document.getElementById('error-msg').style.display = 'none';
+  lastChoferSearch = '';
+});
 
 // ── "Mis órdenes guardadas" ──────────────────────────────────────────────
 // Para un chofer que trae varias cargas en el mismo viaje: una lista de números de
