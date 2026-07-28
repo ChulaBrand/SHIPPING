@@ -3706,7 +3706,7 @@ async function enablePushNotifications() {
 function renderSavedOrdersChips(entries) {
   document.getElementById('saved-orders-hint').style.display = entries.length ? 'none' : 'block';
   document.getElementById('saved-chip-row').innerHTML = entries.map(e =>
-    `<span class="saved-chip">${escapeHtml(e.orden)}<button onclick="removeSavedOrder('${escapeHtml(e.orden)}')" title="Remove" aria-label="Remove ${escapeHtml(e.orden)}">✕</button></span>`
+    `<span class="saved-chip">${escapeHtml(e.orden)}<button onclick="removeSavedOrder('${escapeForJsAttr(e.orden)}')" title="Remove" aria-label="Remove ${escapeHtml(e.orden)}">✕</button></span>`
   ).join('');
 }
 
@@ -3732,7 +3732,7 @@ async function renderSavedOrders() {
   }));
   if (seq !== savedOrdersSeq) return; // una vuelta más nueva ya está en camino
   list.innerHTML = results.map(o => o.__missing
-    ? `<div class="order-card"><p class="order-num" style="margin-bottom:6px;">Order #${escapeHtml(o.orden)}</p><p style="font-size:12.5px;color:var(--text-faint);">Not found — <a href="javascript:void(0)" onclick="removeSavedOrder('${escapeHtml(o.orden)}')" style="color:var(--pink);">remove from list</a></p></div>`
+    ? `<div class="order-card"><p class="order-num" style="margin-bottom:6px;">Order #${escapeHtml(o.orden)}</p><p style="font-size:12.5px;color:var(--text-faint);">Not found — <a href="javascript:void(0)" onclick="removeSavedOrder('${escapeForJsAttr(o.orden)}')" style="color:var(--pink);">remove from list</a></p></div>`
     : renderDriverCard(o, false)
   ).join('');
 }
@@ -3846,13 +3846,20 @@ function buildClerkCard(o) {
   const canEdit = !locked && !SHIPPING_READ_ONLY;
   const est = parseInt(o.estatus) || 1;
   const isExpanded = globalViewMode === 'expanded' || expandedOrders.has(String(o.orden));
+  // o.orden viene del Sheet (normalmente del PDF parseado) — antes se metía crudo en
+  // onclick/id sin ningún escape. Si un pedido llega alguna vez con una comilla en el
+  // número (typo al capturar, un parseo raro), eso rompía el atributo/inyectaba script
+  // para CUALQUIERA que abriera esa tarjeta. safeOrden es para dentro de onclick="...('...')"
+  // (JS-string + atributo), safeOrdenHtml para atributos planos como id="card-...".
+  const safeOrden = escapeForJsAttr(o.orden);
+  const safeOrdenHtml = escapeHtml(o.orden);
 
   if (!isExpanded) {
     const state = attentionState(o);
     const badge = state ? ' · ' + attentionBadgeHtml(state) : '';
     const driverBadge = o.driverArrived ? ' · <span class="driver-here-badge">🚗 Driver Here' + (o.driverArrived.rampa ? ' — ' + escapeHtml(o.driverArrived.rampa) : '') + '</span>' : '';
     const dateBadge = dateBadgeIfNotToday(o.fecha);
-    return `<div class="order-card-compact${locked ? ' locked' : ''}${state ? ' ' + state : ''}" id="card-${o.orden}" tabindex="0" role="button" aria-label="Order #${escapeHtml(o.orden)}, ${escapeHtml(o.cliente)} — tap to expand" onclick="toggleCardExpand('${o.orden}', event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCardExpand('${o.orden}', event);}">
+    return `<div class="order-card-compact${locked ? ' locked' : ''}${state ? ' ' + state : ''}" id="card-${safeOrdenHtml}" tabindex="0" role="button" aria-label="Order #${escapeHtml(o.orden)}, ${escapeHtml(o.cliente)} — tap to expand" onclick="toggleCardExpand('${safeOrden}', event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCardExpand('${safeOrden}', event);}">
       <div class="oc-left">
         <p class="oc-num">Order #${escapeHtml(o.orden)}${locked ? ' · <span class="locked-badge">Locked</span>' : ''}${dateBadge}${badge}${driverBadge}</p>
         <p class="oc-cliente">${escapeHtml(o.cliente)}</p>
@@ -3879,7 +3886,7 @@ function buildClerkCard(o) {
       const circles = LETTERS.slice(0, 3).map((letter, ci) => {
         const idx = ci + 1;
         const activeCls = pStat === idx ? ` active p${idx}` : '';
-        const clickAttr = canEdit ? `onclick="event.stopPropagation();setProductStatus('${o.orden}',${i},${idx})"` : '';
+        const clickAttr = canEdit ? `onclick="event.stopPropagation();setProductStatus('${safeOrden}',${i},${idx})"` : '';
         return `<button type="button" class="pcircle${activeCls}${!canEdit ? ' disabled' : ''}" ${!canEdit ? 'disabled' : ''} aria-label="${escapeHtml(p)} — status ${letter}" ${clickAttr}>${letter}</button>`;
       }).join('');
       return `<div class="product-item"><span class="product-name">${escapeHtml(p)}</span><div class="pcircle-row">${circles}</div></div>`;
@@ -3900,13 +3907,13 @@ function buildClerkCard(o) {
   // exacto, sin importar el navegador, y más rápido de tocar en el celular.
   const currentHHMM = o.expectedReady && o.expectedReady.length >= 16 ? roundToHalfHour(o.expectedReady.slice(11, 16)) : '';
   const expectedReadyRow = est < 3 ? `<div class="expected-ready-row" onclick="event.stopPropagation();">
-    <label for="er-${o.orden}">Expected ready (today)</label>
-    <select id="er-${o.orden}" ${!canEdit ? 'disabled' : ''} onchange="setExpectedReadyTime('${o.orden}', this.value)">${timeSlotOptions(currentHHMM)}</select>
+    <label for="er-${safeOrdenHtml}">Expected ready (today)</label>
+    <select id="er-${safeOrdenHtml}" ${!canEdit ? 'disabled' : ''} onchange="setExpectedReadyTime('${safeOrden}', this.value)">${timeSlotOptions(currentHHMM)}</select>
   </div>` : '';
 
   const btns = LABELS.map((l, i) => {
     const idx = i + 1;
-    return `<button class="sbtn${est === idx ? ' ' + SEL[i] : ''}" onclick="event.stopPropagation();setOrderStatus('${o.orden}',${idx})" ${!canEdit ? 'disabled' : ''}><span class="sbtn-letter">${LETTERS[i]}</span><span class="sbtn-text">${l}</span></button>`;
+    return `<button class="sbtn${est === idx ? ' ' + SEL[i] : ''}" onclick="event.stopPropagation();setOrderStatus('${safeOrden}',${idx})" ${!canEdit ? 'disabled' : ''}><span class="sbtn-letter">${LETTERS[i]}</span><span class="sbtn-text">${l}</span></button>`;
   }).join('');
 
   // Cancelar solo tiene caso antes de Departed — una vez que ya salió, no hay nada
@@ -3914,8 +3921,8 @@ function buildClerkCard(o) {
   // metido chiquito hasta abajo, para que nadie lo toque sin querer.
   const cancelBtn = (canEdit && est < 6) ? cancelFlowHtml(o) : '';
 
-  return `<div class="order-card${locked ? ' locked' : ''}${state ? ' ' + state + '-expanded' : ''}" id="card-${o.orden}">
-    <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;cursor:pointer;" tabindex="0" role="button" aria-label="Order #${escapeHtml(o.orden)}, ${escapeHtml(o.cliente)} — tap to collapse" onclick="toggleCardExpand('${o.orden}', event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCardExpand('${o.orden}', event);}">
+  return `<div class="order-card${locked ? ' locked' : ''}${state ? ' ' + state + '-expanded' : ''}" id="card-${safeOrdenHtml}">
+    <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;cursor:pointer;" tabindex="0" role="button" aria-label="Order #${escapeHtml(o.orden)}, ${escapeHtml(o.cliente)} — tap to collapse" onclick="toggleCardExpand('${safeOrden}', event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCardExpand('${safeOrden}', event);}">
       <div>
         <p class="order-num">Order #${escapeHtml(o.orden)}${locked ? '<span class="locked-badge">Locked</span>' : ''}${dateBadgeIfNotToday(o.fecha)}${badgeExpanded}${driverBadgeExpanded}</p>
         <p class="order-cliente">${escapeHtml(o.cliente)}</p>
@@ -3926,7 +3933,7 @@ function buildClerkCard(o) {
     ${expectedReadyRow}
     ${warnHtml}
     <div class="status-btns">${btns}</div>
-    <p class="status-desc-lbl" id="desc-${o.orden}">${DESCS[est - 1]}</p>
+    <p class="status-desc-lbl" id="desc-${safeOrdenHtml}">${DESCS[est - 1]}</p>
     ${cancelBtn}
   </div>`;
 }
@@ -3937,20 +3944,21 @@ function buildClerkCard(o) {
 const cancelFlowStep = {}; // orden -> 0 (escondido) | 1 (menú) | 2 (confirmando)
 function cancelFlowHtml(o) {
   const step = cancelFlowStep[o.orden] || 0;
+  const safeOrden = escapeForJsAttr(o.orden);
   if (step === 0) {
-    return `<div style="text-align:right;"><button class="btn-cancel-dots" onclick="event.stopPropagation();setCancelFlowStep('${o.orden}',1,event)" title="More options" aria-label="More options">⋯</button></div>`;
+    return `<div style="text-align:right;"><button class="btn-cancel-dots" onclick="event.stopPropagation();setCancelFlowStep('${safeOrden}',1,event)" title="More options" aria-label="More options">⋯</button></div>`;
   }
   if (step === 1) {
     return `<div class="cancel-flow-row" onclick="event.stopPropagation();">
-      <button type="button" class="cancel-flow-link" onclick="setCancelFlowStep('${o.orden}',2,event)">🗑 Cancel this order</button>
-      <button type="button" class="cancel-flow-back" onclick="setCancelFlowStep('${o.orden}',0,event)" aria-label="Close">✕</button>
+      <button type="button" class="cancel-flow-link" onclick="setCancelFlowStep('${safeOrden}',2,event)">🗑 Cancel this order</button>
+      <button type="button" class="cancel-flow-back" onclick="setCancelFlowStep('${safeOrden}',0,event)" aria-label="Close">✕</button>
     </div>`;
   }
   return `<div class="cancel-flow-confirm" onclick="event.stopPropagation();">
     <p>Cancel order #${escapeHtml(o.orden)} — ${escapeHtml(o.cliente)}? This can't be undone from the app.</p>
     <div style="display:flex;gap:8px;">
-      <button class="btn-cancel-final" onclick="submitCancelOrder('${o.orden}')">Yes, cancel it</button>
-      <button class="btn-cancel-back" onclick="setCancelFlowStep('${o.orden}',0,event)">No, keep it</button>
+      <button class="btn-cancel-final" onclick="submitCancelOrder('${safeOrden}')">Yes, cancel it</button>
+      <button class="btn-cancel-back" onclick="setCancelFlowStep('${safeOrden}',0,event)">No, keep it</button>
     </div>
   </div>`;
 }
@@ -4119,7 +4127,7 @@ function renderCancelledOrders() {
 
 function buildCancelledCard(o) {
   const cancelledAtStr = o.cancelledAt ? new Date(o.cancelledAt).toLocaleString() : '';
-  return `<div class="order-card-compact" id="cancelled-card-${o.orden}" style="flex-direction:column;align-items:stretch;">
+  return `<div class="order-card-compact" id="cancelled-card-${escapeHtml(o.orden)}" style="flex-direction:column;align-items:stretch;">
     <div class="oc-left" style="margin-bottom:6px;">
       <p class="oc-num">Order #${escapeHtml(o.orden)} · cancelled by ${escapeHtml(o.cancelledBy || '?')}${cancelledAtStr ? ' · ' + escapeHtml(cancelledAtStr) : ''}</p>
       <p class="oc-cliente">${escapeHtml(o.cliente)}</p>
@@ -4130,20 +4138,21 @@ function buildCancelledCard(o) {
 
 function restoreFlowHtml(o) {
   const step = restoreFlowStep[o.orden] || 0;
+  const safeOrden = escapeForJsAttr(o.orden);
   if (step === 0) {
-    return `<div style="text-align:right;"><button class="btn-cancel-dots" onclick="setRestoreFlowStep('${o.orden}',1,event)" title="More options" aria-label="More options">⋯</button></div>`;
+    return `<div style="text-align:right;"><button class="btn-cancel-dots" onclick="setRestoreFlowStep('${safeOrden}',1,event)" title="More options" aria-label="More options">⋯</button></div>`;
   }
   if (step === 1) {
     return `<div class="cancel-flow-row success">
-      <button type="button" class="cancel-flow-link success" onclick="setRestoreFlowStep('${o.orden}',2,event)">↩ Restore this order</button>
-      <button type="button" class="cancel-flow-back" onclick="setRestoreFlowStep('${o.orden}',0,event)" aria-label="Close">✕</button>
+      <button type="button" class="cancel-flow-link success" onclick="setRestoreFlowStep('${safeOrden}',2,event)">↩ Restore this order</button>
+      <button type="button" class="cancel-flow-back" onclick="setRestoreFlowStep('${safeOrden}',0,event)" aria-label="Close">✕</button>
     </div>`;
   }
   return `<div class="cancel-flow-confirm success">
     <p style="color:var(--success-text);">Restore order #${escapeHtml(o.orden)} — ${escapeHtml(o.cliente)}? It goes back to today's orders.</p>
     <div style="display:flex;gap:8px;">
-      <button class="btn-cancel-final success" onclick="submitRestoreOrder('${o.orden}')">Yes, restore it</button>
-      <button class="btn-cancel-back" onclick="setRestoreFlowStep('${o.orden}',0,event)">No, keep cancelled</button>
+      <button class="btn-cancel-final success" onclick="submitRestoreOrder('${safeOrden}')">Yes, restore it</button>
+      <button class="btn-cancel-back" onclick="setRestoreFlowStep('${safeOrden}',0,event)">No, keep cancelled</button>
     </div>
   </div>`;
 }
