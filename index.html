@@ -402,11 +402,16 @@
   .driver-product-badge.not-shipped { background:var(--danger-bg); color:var(--danger-text); }
   .status-desc-lbl { font-size:11px; color:var(--text-faint); font-style:italic; text-align:center; min-height:16px; }
   .btn-cancel-dots { display:block; margin-top:8px; margin-left:auto; background:none; border:none; color:var(--text-faint); font-size:15px; letter-spacing:1px; cursor:pointer; padding:4px 10px; line-height:1; }
-  .cancel-flow-row { display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding:7px 10px; background:var(--danger-bg); border-radius:var(--radius-sm); }
-  .cancel-flow-row.success { background:var(--success-bg); }
-  .cancel-flow-link { background:none; border:none; font-family:'Inter',sans-serif; color:var(--danger-text); font-size:12px; font-weight:600; cursor:pointer; padding:0; }
+  .cancel-flow-row { display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding:6px 6px 6px 10px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); }
+  .cancel-flow-row.success { background:var(--bg); }
+  .cancel-flow-links { display:flex; flex-wrap:wrap; gap:2px; }
+  .cancel-flow-link { background:none; border:none; font-family:'Inter',sans-serif; font-size:12px; font-weight:600; cursor:pointer; padding:9px 10px; min-height:40px; border-radius:6px; display:inline-flex; align-items:center; gap:5px; color:var(--danger-text); }
+  .cancel-flow-link:hover { background:var(--danger-bg); }
+  .cancel-flow-link.history { color:var(--text-muted); }
+  .cancel-flow-link.history:hover { background:var(--accent-tint-bg); color:var(--pink); }
   .cancel-flow-link.success { color:var(--success-text); }
-  .cancel-flow-back { background:none; border:none; font-family:'Inter',sans-serif; color:var(--text-faint); cursor:pointer; font-size:14px; padding:0 4px; }
+  .cancel-flow-link.success:hover { background:var(--success-bg); }
+  .cancel-flow-back { background:none; border:none; font-family:'Inter',sans-serif; color:var(--text-faint); cursor:pointer; font-size:14px; padding:0 4px; min-height:40px; min-width:32px; }
   .cancel-flow-confirm { margin-top:8px; padding:10px; background:var(--danger-bg); border:1px solid var(--danger-border); border-radius:var(--radius-sm); }
   .cancel-flow-confirm.success { background:var(--success-bg); border-color:var(--success-border); }
   .cancel-flow-confirm p { font-size:11.5px; color:var(--danger-text-strong); margin-bottom:8px; }
@@ -1344,10 +1349,10 @@ async function loadClientsConfig() {
   } catch (e) { /* se queda vacío -> divisorFor cae al estándar */ }
 }
 
-const LABELS = ["Order Received","Processing","Ready","Waiting for dock","Loading","Departed"];
+const LABELS = ["Order Confirmed","Processing","Ready","Waiting for dock","Loading","Departed"];
 const DESCS  = [
-  "Order has been received in the system",
-  "Order received, being prepared",
+  "Order has been confirmed in the system",
+  "Order confirmed, being prepared",
   "Order is ready, waiting for driver",
   "Driver arrived, waiting for an available dock",
   "Truck is at the dock, loading in progress",
@@ -3987,7 +3992,12 @@ function buildClerkCard(o) {
 
   const btns = LABELS.map((l, i) => {
     const idx = i + 1;
-    return `<button class="sbtn${est === idx ? ' ' + SEL[i] : ''}" onclick="event.stopPropagation();setOrderStatus('${safeOrden}',${idx})" ${!canEdit ? 'disabled' : ''}><span class="sbtn-letter">${LETTERS[i]}</span><span class="sbtn-text">${l}</span></button>`;
+    // Departed no se puede tocar sin haber pasado por Ready primero — a fuerza tiene
+    // que quedar marcada Ready antes (ver mismo candado en setOrderStatus/updateStatus).
+    const blockedDeparted = idx === 6 && est < 3;
+    const disabled = !canEdit || blockedDeparted;
+    const title = blockedDeparted ? ' title="Mark the order Ready first"' : '';
+    return `<button class="sbtn${est === idx ? ' ' + SEL[i] : ''}" onclick="event.stopPropagation();setOrderStatus('${safeOrden}',${idx})" ${disabled ? 'disabled' : ''}${title}><span class="sbtn-letter">${LETTERS[i]}</span><span class="sbtn-text">${l}</span></button>`;
   }).join('');
 
   // El menú "⋯" ahora siempre se dibuja (antes solo si se podía cancelar) — "History"
@@ -4032,8 +4042,8 @@ function cancelFlowHtml(o, canCancel) {
   }
   if (step === 1) {
     return `<div class="cancel-flow-row" onclick="event.stopPropagation();">
-      <div style="display:flex;flex-wrap:wrap;">
-        <button type="button" class="cancel-flow-link" onclick="toggleOrderHistory('${safeOrden}',event)">🕐 History</button>
+      <div class="cancel-flow-links">
+        <button type="button" class="cancel-flow-link history" onclick="toggleOrderHistory('${safeOrden}',event)">🕐 History</button>
         ${canCancel ? `<button type="button" class="cancel-flow-link" onclick="setCancelFlowStep('${safeOrden}',2,event)">🗑 Cancel this order</button>` : ''}
       </div>
       <button type="button" class="cancel-flow-back" onclick="setCancelFlowStep('${safeOrden}',0,event)" aria-label="Close">✕</button>
@@ -4213,7 +4223,12 @@ function captureScrollAnchor() {
 function restoreScrollAnchor(saved) {
   if (!saved) return;
   const el = document.getElementById('card-' + saved.orden);
-  if (!el) return; // esa orden ya no está en la lista (se archivó/despachó de verdad) — no hay a qué anclar
+  // La tarjeta ancla ya no está (se archivó/despachó, o un filtro que se acaba de tocar
+  // la dejó fuera) — dejar el scrollY tal cual quedó era lo que causaba el "salto a la
+  // mitad de la hoja": el navegador conserva el mismo número de píxeles aunque la lista
+  // ahora sea mucho más corta, y eso deja la vista en cualquier parte sin nada que ver
+  // ahí. Mejor regresar arriba, como si la lista filtrada empezara de cero.
+  if (!el) { window.scrollTo(0, 0); return; }
   const rect = el.getBoundingClientRect();
   window.scrollBy(0, rect.top - saved.top);
 }
@@ -4302,8 +4317,8 @@ function restoreFlowHtml(o) {
   }
   if (step === 1) {
     return `<div class="cancel-flow-row success">
-      <div style="display:flex;flex-wrap:wrap;">
-        <button type="button" class="cancel-flow-link success" onclick="toggleOrderHistory('${safeOrden}',event)">🕐 History</button>
+      <div class="cancel-flow-links">
+        <button type="button" class="cancel-flow-link history" onclick="toggleOrderHistory('${safeOrden}',event)">🕐 History</button>
         <button type="button" class="cancel-flow-link success" onclick="setRestoreFlowStep('${safeOrden}',2,event)">↩ Restore this order</button>
       </div>
       <button type="button" class="cancel-flow-back" onclick="setRestoreFlowStep('${safeOrden}',0,event)" aria-label="Close">✕</button>
@@ -4460,7 +4475,7 @@ function setProductStatus(orden, idx, status) {
 
 // Order-level button click. Antes esto no tocaba los círculos de producto (había que
 // marcarlos aparte); ahora:
-//  - Si el estatus general se mueve a Order Received/Processing/Ready (1-3), todos los
+//  - Si el estatus general se mueve a Order Confirmed/Processing/Ready (1-3), todos los
 //    círculos de producto se sincronizan a ese mismo nivel — ya no hay que marcarlos aparte.
 //  - Si se salta directo a Waiting/Loading/Departed (4-6) y la orden es de UN SOLO
 //    producto, ese producto se marca Ready automáticamente (no tiene sentido que haya
@@ -4474,6 +4489,10 @@ function setOrderStatus(orden, status) {
   // el estatus que ya estaba seleccionado) mandaba 2 updateStatus idénticos, cada uno
   // con su propio aviso push duplicado.
   if ((parseInt(o.estatus) || 1) === status) return;
+  // No se puede saltar directo a Departed sin haber pasado por Ready — el botón ya se
+  // dibuja disabled para este caso (ver buildClerkCard), esto es nomás el respaldo por
+  // si algo lo llega a disparar de todos modos.
+  if (status === 6 && (parseInt(o.estatus) || 1) < 3) { showToast('Mark the order Ready before Departed', 'error'); return; }
   const prevSnapshot = { estatus: o.estatus, hora: o.hora, actualizado: o.actualizado, productState: productState[orden] ? productState[orden].slice() : null };
   o.estatus = status;
 
