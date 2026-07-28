@@ -1685,7 +1685,20 @@ function goRol() {
   // token viejo no sigue sirviendo hasta que expire solo a las 10 horas.
   const tokenToKill = SESSION_TOKEN || ADMIN_SESSION_TOKEN;
   if (tokenToKill) fetch(API, { method:'POST', body: JSON.stringify({ action:'logout', sessionToken: tokenToKill }) }).catch(()=>{});
-  pinVal=""; updateDots(); currentUser=null; selectedUser=null; SESSION_TOKEN=null; ADMIN_SESSION_TOKEN=null; pendingUploadAfterLogin=false; SHIPPING_READ_ONLY=false; show('screen-rol'); prefetchUsers();
+  pinVal=""; updateDots(); currentUser=null; selectedUser=null; SESSION_TOKEN=null; ADMIN_SESSION_TOKEN=null; pendingUploadAfterLogin=false; SHIPPING_READ_ONLY=false;
+  // En un aparato compartido, sin esto el siguiente que iniciara sesión (Admin u otro
+  // clerk) veía la configuración/filtros de la persona anterior — las pestañas de Admin
+  // se daban por "ya cargadas" con datos viejos (con riesgo de que el diálogo de
+  // confirmar cambios comparara contra esa base vieja y guardara encima sin darse
+  // cuenta), y los filtros/búsqueda del Shipping Panel se quedaban puestos sin ninguna
+  // razón visible para la nueva persona.
+  adminClientsLoaded = false; adminSettingsLoaded = false; adminDriverLoaded = false;
+  analyticsLayoutLoaded = false; clientsConfigLoaded = false;
+  statusFilter.clear(); productFilter.clear(); incompleteFilterActive = false;
+  searchActive = false;
+  const searchInput = document.getElementById('enc-search');
+  if (searchInput) searchInput.value = '';
+  show('screen-rol'); prefetchUsers();
 }
 async function goChofer() {
   document.getElementById('error-msg').style.display='none';
@@ -2451,7 +2464,14 @@ async function saveSettingsFields(fields, storeRef, statusElId) {
     let raw;
     if (f.type === 'checkbox') raw = el.checked ? 1 : 0;
     else if (f.type === 'text') raw = String(el.value || '').trim();
-    else { raw = parseInt(el.value, 10); if (!raw) raw = f.default; if (f.min !== undefined) raw = Math.max(f.min, raw); }
+    else {
+      raw = parseInt(el.value, 10);
+      // isNaN, no !raw — !raw también es true para un 0 de verdad, y "Alert hour" (min:0)
+      // trata 0 como un valor válido a propósito (medianoche). Antes esto lo regresaba
+      // al default sin avisar, sin importar que el admin lo haya puesto a propósito.
+      if (isNaN(raw)) raw = f.default;
+      if (f.min !== undefined) raw = Math.max(f.min, raw);
+    }
     payload[f.key] = raw;
     displayNew[f.key] = f.format ? f.format(raw) : raw;
     labels[f.key] = f.label;
@@ -2600,7 +2620,13 @@ async function saveAdminAnalyticsConfig() {
 let analyticsRange = 'day';       // filtro general de fecha
 let customRangeValue = null;      // rango exacto cuando el filtro general está en "Custom"
 let analyticsCharts = {};         // instancias de Chart.js, para destruirlas al recargar
-let rangeCache = {};              // "start|end" -> Promise con la respuesta del servidor (evita pedir 2 veces lo mismo)
+// "start|end" -> Promise con la respuesta del servidor (evita pedir 2 veces lo mismo).
+// Map en vez de objeto plano para poder llevar un tope simple (ver fetchRange) — sin
+// esto, cada rango de fecha nuevo que alguien mirara en Data Analysis se quedaba en
+// memoria para siempre mientras la pestaña siguiera abierta, el uso normal de varios
+// días seguidos.
+let rangeCache = new Map();
+const RANGE_CACHE_MAX = 24;
 let panelOverride = {};           // panelKey -> 'day'|'week'|'month' | null (sigue el filtro general)
 let panelData = {};               // panelKey -> último dato usado por ese panel (para re-filtrar por fruta sin re-pedir)
 let prevPanelData = {};            // panelKey -> dato del período anterior de igual duración (solo paneles con KPI comparable)
@@ -2910,15 +2936,19 @@ function kpiCardsHtml(kpis) {
 // deja usar el cache, que es justo lo que hace que cargue mucho más rápido.
 async function fetchRange(r, force) {
   const key = r.start + '|' + r.end;
-  if (force || !rangeCache[key]) {
+  if (force || !rangeCache.has(key)) {
     // Si el fetch falla, se borra su propio lugar en el cache — si no, la petición
     // fallida se queda "cacheada" para siempre y ese rango de fechas nunca se vuelve a
     // intentar solo (se queda roto hasta un Refresh manual o cambiar de rango).
-    rangeCache[key] = fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getAnalytics', start: r.start, end: r.end, force: !!force }) })
+    rangeCache.set(key, fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getAnalytics', start: r.start, end: r.end, force: !!force }) })
       .then(res => res.json())
-      .catch(err => { delete rangeCache[key]; throw err; });
+      .catch(err => { rangeCache.delete(key); throw err; }));
+    // Tope simple — Map mantiene el orden de inserción, así que la primera llave sigue
+    // siendo la más vieja. Sin esto, rangeCache crecía sin límite (ver comentario junto
+    // a su declaración).
+    if (rangeCache.size > RANGE_CACHE_MAX) rangeCache.delete(rangeCache.keys().next().value);
   }
-  return rangeCache[key];
+  return rangeCache.get(key);
 }
 const panelSeq = {};
 // Cambiar de rango rápido (Day -> Week -> Month) dispara un refreshPanel por cada
@@ -2935,6 +2965,10 @@ async function refreshPanel(panelKey, force) {
   try {
     const data = await fetchRange(r, force);
     if (seq !== panelSeq[panelKey]) return;
+    // Antes esto se tragaba CUALQUIER error genérico, incluyendo "Session expired" — en
+    // una pestaña de Data Analysis dejada abierta mucho tiempo, los paneles simplemente
+    // dejaban de actualizarse para siempre, sin ningún aviso de por qué.
+    if (isSessionExpiredError(data)) { handleSessionExpired(); return; }
     if (data.error) return;
     panelData[panelKey] = data;
     // Para los paneles con KPIs comparables, se pide también el período anterior
@@ -2973,7 +3007,7 @@ async function refreshPanel(panelKey, force) {
 // cada apertura de Data Analysis volvía a escanear todo desde cero. Esa era la causa
 // real de que se sintiera lento.
 async function refreshAllPanels(force) {
-  if (force) rangeCache = {};
+  if (force) rangeCache.clear();
   const btn = document.getElementById('analyticsRefreshBtn');
   const icon = document.getElementById('analyticsRefreshIcon');
   if (btn) btn.disabled = true;
@@ -3803,6 +3837,7 @@ async function loadOrdenes() {
     pruneOrderState(productState, ordenes);
     pruneOrderState(cancelFlowStep, ordenes);
     pruneOrderState(pendingReorder, ordenes);
+    pruneOrderState(orderStatusSeq, ordenes);
     if (searchActive) {
       const raw = document.getElementById('enc-search').value.trim();
       if (raw) { renderSearchResults(raw); return; }
@@ -4004,6 +4039,11 @@ async function submitCancelOrder(orden) {
   try {
     const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'cancelOrder', orden }) });
     const result = await res.json();
+    // Sin esto, una sesión que expira justo al cancelar mostraba el texto crudo
+    // "Session expired" en vez de mandar a la pantalla de login — y con la tarjeta ya
+    // quitada de la lista (optimista), nadie se daba cuenta de que en realidad no se
+    // procesó nada.
+    if (isSessionExpiredError(result)) { revertLocalRemoval(); handleSessionExpired(); return; }
     if (result.error) { revertLocalRemoval(); showToast(result.error, 'error'); }
   } catch (e) { revertLocalRemoval(); showToast('Connection error — the order was not cancelled, try again.', 'error'); }
   finally { pendingCancelRestore.delete(key); }
@@ -4173,6 +4213,7 @@ async function submitRestoreOrder(orden) {
   try {
     const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'restoreOrder', orden }) });
     const result = await res.json();
+    if (isSessionExpiredError(result)) { handleSessionExpired(); return; }
     if (result.error) { showToast(result.error, 'error'); return; }
     cancelledOrders = cancelledOrders.filter(x => String(x.orden) !== String(orden));
     renderCancelledOrders();
