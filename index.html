@@ -259,6 +259,7 @@
   .stalled-badge { display:inline-block; font-size:10px; font-weight:600; background:#2563EB; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
   .driver-here-badge { display:inline-block; font-size:10px; font-weight:600; background:#0D9488; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
   .pending-sync-badge { display:inline-block; font-size:10px; font-weight:600; background:var(--warn-bg); color:var(--warn-text); border-radius:99px; padding:2px 8px; vertical-align:middle; }
+  .order-flag-badge { display:inline-block; font-size:10px; font-weight:600; background:var(--warn-bg); color:var(--warn-text); border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
   .order-card-compact.overdue { border-color:#DC2626; border-width:1.5px; }
   .order-card-compact.soon { border-color:#CA8A04; border-width:1.5px; }
   .order-card-compact.stalled { border-color:#2563EB; border-width:1.5px; }
@@ -409,6 +410,8 @@
   .cancel-flow-link:hover { background:var(--danger-bg); }
   .cancel-flow-link.history { color:var(--text-muted); }
   .cancel-flow-link.history:hover { background:var(--accent-tint-bg); color:var(--pink); }
+  .cancel-flow-link.flag { color:var(--warn-text); }
+  .cancel-flow-link.flag:hover { background:var(--warn-bg); }
   .cancel-flow-link.success { color:var(--success-text); }
   .cancel-flow-link.success:hover { background:var(--success-bg); }
   .cancel-flow-back { background:none; border:none; font-family:'Inter',sans-serif; color:var(--text-faint); cursor:pointer; font-size:14px; padding:0 4px; min-height:40px; min-width:32px; }
@@ -3863,6 +3866,7 @@ async function loadOrdenes() {
     pruneOrderState(pendingReorder, ordenes);
     pruneOrderState(orderStatusSeq, ordenes);
     pruneOrderState(pendingSync, ordenes);
+    pruneOrderState(flagSeq, ordenes);
     pruneHistoryState();
     if (pendingSync.size) {
       // El fetch que se acaba de completar trae el estatus VIEJO del servidor para
@@ -3938,9 +3942,10 @@ function buildClerkCard(o) {
     const driverBadge = o.driverArrived ? ' · <span class="driver-here-badge">🚗 Driver Here' + (o.driverArrived.rampa ? ' — ' + escapeHtml(o.driverArrived.rampa) : '') + '</span>' : '';
     const dateBadge = dateBadgeIfNotToday(o.fecha);
     const pendingBadge = pendingSync.has(String(o.orden)) ? ' · <span class="pending-sync-badge">⏳ Pending sync</span>' : '';
+    const flagBadge = o.flagged ? ' · <span class="order-flag-badge">🚩 Issue</span>' : '';
     return `<div class="order-card-compact${locked ? ' locked' : ''}${state ? ' ' + state : ''}" id="card-${safeOrdenHtml}" tabindex="0" role="button" aria-label="Order #${escapeHtml(o.orden)}, ${escapeHtml(o.cliente)} — tap to expand" onclick="toggleCardExpand('${safeOrden}', event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCardExpand('${safeOrden}', event);}">
       <div class="oc-left">
-        <p class="oc-num">Order #${escapeHtml(o.orden)}${locked ? ' · <span class="locked-badge">Locked</span>' : ''}${dateBadge}${badge}${driverBadge}${pendingBadge}</p>
+        <p class="oc-num">Order #${escapeHtml(o.orden)}${locked ? ' · <span class="locked-badge">Locked</span>' : ''}${dateBadge}${badge}${driverBadge}${flagBadge}${pendingBadge}</p>
         <p class="oc-cliente">${escapeHtml(o.cliente)}</p>
       </div>
       <span class="status-pill ${BANNER_CLS[est - 1]}">${BANNER_ICONS[est - 1]} ${LABELS[est - 1]}</span>
@@ -4005,13 +4010,14 @@ function buildClerkCard(o) {
   // quiere ver "quién hizo qué"). "Cancel this order" adentro del menú sigue solo
   // disponible antes de Departed, 3 pasos a propósito (⋯ -> "Cancel this order" ->
   // confirmar), metido chiquito hasta abajo para que nadie lo toque sin querer.
-  const cancelBtn = cancelFlowHtml(o, canEdit && est < 6);
+  const cancelBtn = cancelFlowHtml(o, canEdit && est < 6, canEdit);
   const pendingSyncNote = pendingSync.has(String(o.orden)) ? `<p class="pending-sync-note">⏳ No connection — this change will sync automatically once you're back online</p>` : '';
+  const flagBadgeExpanded = o.flagged ? `<span class="order-flag-badge">🚩 Issue</span>` : '';
 
   return `<div class="order-card${locked ? ' locked' : ''}${state ? ' ' + state + '-expanded' : ''}" id="card-${safeOrdenHtml}">
     <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;cursor:pointer;" tabindex="0" role="button" aria-label="Order #${escapeHtml(o.orden)}, ${escapeHtml(o.cliente)} — tap to collapse" onclick="toggleCardExpand('${safeOrden}', event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCardExpand('${safeOrden}', event);}">
       <div>
-        <p class="order-num">Order #${escapeHtml(o.orden)}${locked ? '<span class="locked-badge">Locked</span>' : ''}${dateBadgeIfNotToday(o.fecha)}${badgeExpanded}${driverBadgeExpanded}</p>
+        <p class="order-num">Order #${escapeHtml(o.orden)}${locked ? '<span class="locked-badge">Locked</span>' : ''}${dateBadgeIfNotToday(o.fecha)}${badgeExpanded}${driverBadgeExpanded}${flagBadgeExpanded}</p>
         <p class="order-cliente">${escapeHtml(o.cliente)}</p>
       </div>
       <i class="ti ti-chevron-up" style="color:var(--text-faint);font-size:18px;flex-shrink:0;"></i>
@@ -4031,9 +4037,11 @@ function buildClerkCard(o) {
 // Paso 3: confirmación final con el número de orden y cliente antes de tocar el servidor.
 // canCancel: si "Cancel this order" aplica a esta orden ahorita (antes de Departed, con
 // permiso de editar) — "History" siempre aplica, así que el menú ya no depende de esto
-// para dibujarse, solo esta ÚNICA opción de adentro.
+// para dibujarse, solo esta ÚNICA opción de adentro. canEdit: por separado de canCancel —
+// "Flag this order" aplica aunque ya esté Departed (un problema se puede descubrir
+// después de que salió el camión), solo se apaga si el pedido está locked/solo-lectura.
 const cancelFlowStep = {}; // orden -> 0 (escondido) | 1 (menú) | 2 (confirmando)
-function cancelFlowHtml(o, canCancel) {
+function cancelFlowHtml(o, canCancel, canEdit) {
   const step = cancelFlowStep[o.orden] || 0;
   const safeOrden = escapeForJsAttr(o.orden);
   const historyHtml = historyPanelHtml(o);
@@ -4041,9 +4049,11 @@ function cancelFlowHtml(o, canCancel) {
     return `<div style="text-align:right;"><button class="btn-cancel-dots" onclick="event.stopPropagation();setCancelFlowStep('${safeOrden}',1,event)" title="More options" aria-label="More options">⋯</button></div>${historyHtml}`;
   }
   if (step === 1) {
+    const flagLabel = o.flagged ? '✓ Clear flag' : '🚩 Flag this order';
     return `<div class="cancel-flow-row" onclick="event.stopPropagation();">
       <div class="cancel-flow-links">
         <button type="button" class="cancel-flow-link history" onclick="toggleOrderHistory('${safeOrden}',event)">🕐 History</button>
+        ${canEdit ? `<button type="button" class="cancel-flow-link flag" onclick="toggleOrderFlag('${safeOrden}',event)">${flagLabel}</button>` : ''}
         ${canCancel ? `<button type="button" class="cancel-flow-link" onclick="setCancelFlowStep('${safeOrden}',2,event)">🗑 Cancel this order</button>` : ''}
       </div>
       <button type="button" class="cancel-flow-back" onclick="setCancelFlowStep('${safeOrden}',0,event)" aria-label="Close">✕</button>
@@ -4122,6 +4132,34 @@ function pruneHistoryState() {
   const combined = ordenes.concat(Array.isArray(cancelledOrders) ? cancelledOrders : []);
   pruneOrderState(historyOpen, combined);
   pruneOrderState(orderHistoryCache, combined);
+}
+
+// ── "🚩 Flag this order" — aviso manual de que algo anda mal con el pedido, aparte
+// (y sin relación) del filtro automático "Incomplete" que ya existía (ese es por
+// productos sin llegar a Ready). Optimista igual que setOrderStatus, con su propio
+// candado de secuencia para que una respuesta tardía no le pise un toggle más nuevo.
+const flagSeq = {};
+async function toggleOrderFlag(orden, evt) {
+  const key = String(orden);
+  const o = ordenes.find(x => String(x.orden) === key);
+  if (!o) return;
+  const seq = (flagSeq[key] = (flagSeq[key] || 0) + 1);
+  const prevFlagged = !!o.flagged;
+  o.flagged = !prevFlagged;
+  applyOrderCardUpdate(key);
+  showToast(o.flagged ? 'Order flagged 🚩' : 'Flag cleared');
+  try {
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'toggleOrderFlag', orden: key }) });
+    const result = await res.json();
+    if (flagSeq[key] !== seq) return; // ya hay un toggle más nuevo para esta misma orden
+    if (isSessionExpiredError(result)) { o.flagged = prevFlagged; applyOrderCardUpdate(key); handleSessionExpired(); return; }
+    if (result.error) { o.flagged = prevFlagged; applyOrderCardUpdate(key); showToast(result.error, 'error'); }
+  } catch (e) {
+    if (flagSeq[key] !== seq) return;
+    o.flagged = prevFlagged;
+    applyOrderCardUpdate(key);
+    showToast('Sync error — check connection', 'error');
+  }
 }
 // Igual que toggleCardExpand: usa el elemento que de verdad disparó el click en vez de
 // document.getElementById('card-'+orden), que siempre agarra la PRIMERA tarjeta con ese
