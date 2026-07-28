@@ -412,6 +412,23 @@
   .btn-cancel-final { flex:1; padding:8px; background:#DC2626; color:#fff; border:none; border-radius:var(--radius-sm); font-size:12px; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer; }
   .btn-cancel-final.success { background:var(--green-dark); }
   .btn-cancel-back { flex:1; padding:8px; background:none; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px; font-family:'Inter',sans-serif; cursor:pointer; color:var(--text-muted); }
+  /* Panel de "🕐 History" — mismo lenguaje visual que .checklist (fondo var(--bg) para
+     separarse de la tarjeta blanca que lo contiene). */
+  .history-panel { margin-top: 8px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+  .history-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .history-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-faint); }
+  .history-close { background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 12px; font-family: 'Inter',sans-serif; padding: 4px 6px; min-height: 32px; }
+  .history-item { display: flex; gap: 9px; padding: 7px 0; border-top: 1px solid var(--border); }
+  .history-item:first-child { border-top: none; padding-top: 0; }
+  .history-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .history-dot.sel-1 { background: var(--s1-border); } .history-dot.sel-2 { background: var(--s2-border); }
+  .history-dot.sel-3 { background: var(--s3-border); } .history-dot.sel-4 { background: var(--s4-border); }
+  .history-dot.sel-5 { background: var(--s5-border); } .history-dot.sel-6 { background: var(--s6-border); }
+  .history-body { flex: 1; min-width: 0; }
+  .history-status { font-size: 12.5px; font-weight: 600; color: var(--text); }
+  .history-meta { font-size: 11px; color: var(--text-faint); margin-top: 1px; }
+  .history-meta .who { color: var(--text-muted); font-weight: 500; }
+  .history-empty-note { font-size: 11.5px; color: var(--text-faint); text-align: center; padding: 4px 0; }
   .warn-note { font-size:11px; color:var(--warn-text); background:var(--warn-bg); border:1px solid var(--warn-border); border-radius:var(--radius-sm); padding:6px 10px; text-align:center; margin-bottom:8px; }
   .user-select-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:1.75rem 1rem; background:var(--white); border:1.5px solid var(--border); border-radius:16px; cursor:pointer; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; color:var(--text); text-align:center; transition:border-color .15s,transform .1s,box-shadow .15s; }
   .user-select-btn:hover { border-color:var(--purple); box-shadow:0 6px 16px rgba(91,42,134,.10); }
@@ -3838,6 +3855,7 @@ async function loadOrdenes() {
     pruneOrderState(cancelFlowStep, ordenes);
     pruneOrderState(pendingReorder, ordenes);
     pruneOrderState(orderStatusSeq, ordenes);
+    pruneHistoryState();
     if (searchActive) {
       const raw = document.getElementById('enc-search').value.trim();
       if (raw) { renderSearchResults(raw); return; }
@@ -3951,10 +3969,12 @@ function buildClerkCard(o) {
     return `<button class="sbtn${est === idx ? ' ' + SEL[i] : ''}" onclick="event.stopPropagation();setOrderStatus('${safeOrden}',${idx})" ${!canEdit ? 'disabled' : ''}><span class="sbtn-letter">${LETTERS[i]}</span><span class="sbtn-text">${l}</span></button>`;
   }).join('');
 
-  // Cancelar solo tiene caso antes de Departed — una vez que ya salió, no hay nada
-  // que "cancelar". 3 pasos a propósito (⋯ -> "Cancel this order" -> confirmar) y
-  // metido chiquito hasta abajo, para que nadie lo toque sin querer.
-  const cancelBtn = (canEdit && est < 6) ? cancelFlowHtml(o) : '';
+  // El menú "⋯" ahora siempre se dibuja (antes solo si se podía cancelar) — "History"
+  // aplica a cualquier orden, incluso ya Departed/locked (de hecho es cuando más se
+  // quiere ver "quién hizo qué"). "Cancel this order" adentro del menú sigue solo
+  // disponible antes de Departed, 3 pasos a propósito (⋯ -> "Cancel this order" ->
+  // confirmar), metido chiquito hasta abajo para que nadie lo toque sin querer.
+  const cancelBtn = cancelFlowHtml(o, canEdit && est < 6);
 
   return `<div class="order-card${locked ? ' locked' : ''}${state ? ' ' + state + '-expanded' : ''}" id="card-${safeOrdenHtml}">
     <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;cursor:pointer;" tabindex="0" role="button" aria-label="Order #${escapeHtml(o.orden)}, ${escapeHtml(o.cliente)} — tap to collapse" onclick="toggleCardExpand('${safeOrden}', event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCardExpand('${safeOrden}', event);}">
@@ -3976,18 +3996,25 @@ function buildClerkCard(o) {
 // Paso 1: solo un "⋯" chiquito y gris, casi invisible entre los demás controles.
 // Paso 2: se abre una franja con la opción real de cancelar (y una X para cerrarla).
 // Paso 3: confirmación final con el número de orden y cliente antes de tocar el servidor.
+// canCancel: si "Cancel this order" aplica a esta orden ahorita (antes de Departed, con
+// permiso de editar) — "History" siempre aplica, así que el menú ya no depende de esto
+// para dibujarse, solo esta ÚNICA opción de adentro.
 const cancelFlowStep = {}; // orden -> 0 (escondido) | 1 (menú) | 2 (confirmando)
-function cancelFlowHtml(o) {
+function cancelFlowHtml(o, canCancel) {
   const step = cancelFlowStep[o.orden] || 0;
   const safeOrden = escapeForJsAttr(o.orden);
+  const historyHtml = historyPanelHtml(o);
   if (step === 0) {
-    return `<div style="text-align:right;"><button class="btn-cancel-dots" onclick="event.stopPropagation();setCancelFlowStep('${safeOrden}',1,event)" title="More options" aria-label="More options">⋯</button></div>`;
+    return `<div style="text-align:right;"><button class="btn-cancel-dots" onclick="event.stopPropagation();setCancelFlowStep('${safeOrden}',1,event)" title="More options" aria-label="More options">⋯</button></div>${historyHtml}`;
   }
   if (step === 1) {
     return `<div class="cancel-flow-row" onclick="event.stopPropagation();">
-      <button type="button" class="cancel-flow-link" onclick="setCancelFlowStep('${safeOrden}',2,event)">🗑 Cancel this order</button>
+      <div style="display:flex;flex-wrap:wrap;">
+        <button type="button" class="cancel-flow-link" onclick="toggleOrderHistory('${safeOrden}',event)">🕐 History</button>
+        ${canCancel ? `<button type="button" class="cancel-flow-link" onclick="setCancelFlowStep('${safeOrden}',2,event)">🗑 Cancel this order</button>` : ''}
+      </div>
       <button type="button" class="cancel-flow-back" onclick="setCancelFlowStep('${safeOrden}',0,event)" aria-label="Close">✕</button>
-    </div>`;
+    </div>${historyHtml}`;
   }
   return `<div class="cancel-flow-confirm" onclick="event.stopPropagation();">
     <p>Cancel order #${escapeHtml(o.orden)} — ${escapeHtml(o.cliente)}? This can't be undone from the app.</p>
@@ -3995,7 +4022,73 @@ function cancelFlowHtml(o) {
       <button class="btn-cancel-final" onclick="submitCancelOrder('${safeOrden}')">Yes, cancel it</button>
       <button class="btn-cancel-back" onclick="setCancelFlowStep('${safeOrden}',0,event)">No, keep it</button>
     </div>
+  </div>${historyHtml}`;
+}
+
+// ── Historial de la orden ("🕐 History") ─────────────────────────────────
+// historyOpen (Set) recuerda qué órdenes tienen el panel abierto ahorita mismo.
+// orderHistoryCache guarda el último resultado pedido por orden ({loading, entries,
+// error}) — así reabrir un panel que ya se cerró no vuelve a pedir nada al servidor.
+// Compartido entre Shipping Panel y Cancelled (un número de orden es el mismo en las
+// dos pantallas) — se poda contra la UNIÓN de ambas listas, ver pruneHistoryState().
+const historyOpen = new Set();
+const orderHistoryCache = {};
+function historyPanelHtml(o) {
+  if (!historyOpen.has(String(o.orden))) return '';
+  const cached = orderHistoryCache[o.orden];
+  let bodyHtml;
+  if (!cached || cached.loading) {
+    bodyHtml = `<p class="history-empty-note">Loading…</p>`;
+  } else if (cached.error) {
+    bodyHtml = `<p class="history-empty-note">${escapeHtml(cached.error)}</p>`;
+  } else if (!cached.entries.length) {
+    bodyHtml = `<p class="history-empty-note">No history yet.</p>`;
+  } else {
+    bodyHtml = cached.entries.map(e => {
+      const est = parseInt(e.estatus, 10) || 1;
+      const label = LABELS[est - 1] || ('Status ' + e.estatus);
+      const who = e.usuario === 'System' ? 'System (auto)' : (e.usuario || '—');
+      return `<div class="history-item"><span class="history-dot ${SEL[est - 1]}"></span><div class="history-body"><p class="history-status">${escapeHtml(label)}</p><p class="history-meta"><span class="who">${escapeHtml(who)}</span> · ${escapeHtml(e.fecha)} ${escapeHtml(e.hora)}</p></div></div>`;
+    }).join('');
+  }
+  return `<div class="history-panel" onclick="event.stopPropagation();">
+    <div class="history-head"><span class="history-title">History</span><button type="button" class="history-close" onclick="toggleOrderHistory('${escapeForJsAttr(o.orden)}',event)">✕ Close</button></div>
+    ${bodyHtml}
   </div>`;
+}
+async function toggleOrderHistory(orden, evt) {
+  const key = String(orden);
+  const wasOpen = historyOpen.has(key);
+  if (wasOpen) historyOpen.delete(key); else historyOpen.add(key);
+  const o = ordenes.find(x => String(x.orden) === key) || (cancelledOrders || []).find(x => String(x.orden) === key);
+  const rerenderCard = () => {
+    const card = evt && evt.currentTarget ? evt.currentTarget.closest('[id^="card-"],[id^="cancelled-card-"]') : null;
+    if (!card || !o) { renderOrdenes(); return; }
+    card.outerHTML = card.id.indexOf('cancelled-card-') === 0 ? buildCancelledCard(o) : buildClerkCard(o);
+  };
+  if (!wasOpen && !orderHistoryCache[key]) {
+    orderHistoryCache[key] = { loading: true, entries: null, error: null };
+    rerenderCard();
+    try {
+      const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getOrderHistory', orden: key, fecha: o ? o.fecha : '' }) });
+      const result = await res.json();
+      if (isSessionExpiredError(result)) { handleSessionExpired(); return; }
+      orderHistoryCache[key] = result.error
+        ? { loading: false, entries: null, error: result.error }
+        : { loading: false, entries: result, error: null };
+    } catch (e) {
+      orderHistoryCache[key] = { loading: false, entries: null, error: 'Connection error.' };
+    }
+  }
+  rerenderCard();
+}
+// Se llama después de cada loadOrdenes()/loadCancelledOrders() — se poda contra las
+// DOS listas juntas (no una sola, como pruneOrderState de por sí asume) porque esta
+// caché es la misma para ambas pantallas.
+function pruneHistoryState() {
+  const combined = ordenes.concat(Array.isArray(cancelledOrders) ? cancelledOrders : []);
+  pruneOrderState(historyOpen, combined);
+  pruneOrderState(orderHistoryCache, combined);
 }
 // Igual que toggleCardExpand: usa el elemento que de verdad disparó el click en vez de
 // document.getElementById('card-'+orden), que siempre agarra la PRIMERA tarjeta con ese
@@ -4152,6 +4245,7 @@ async function loadCancelledOrders() {
     if (seq !== loadCancelledOrdersSeq) return; // una llamada más nueva ya está en vuelo o ya aplicó su resultado
     cancelledOrders = result;
     pruneOrderState(restoreFlowStep, cancelledOrders);
+    pruneHistoryState();
     renderCancelledOrders();
   } catch (e) { if (seq === loadCancelledOrdersSeq) list.innerHTML = '<div class="empty-state">Connection error</div>'; }
 }
@@ -4179,14 +4273,18 @@ function buildCancelledCard(o) {
 function restoreFlowHtml(o) {
   const step = restoreFlowStep[o.orden] || 0;
   const safeOrden = escapeForJsAttr(o.orden);
+  const historyHtml = historyPanelHtml(o);
   if (step === 0) {
-    return `<div style="text-align:right;"><button class="btn-cancel-dots" onclick="setRestoreFlowStep('${safeOrden}',1,event)" title="More options" aria-label="More options">⋯</button></div>`;
+    return `<div style="text-align:right;"><button class="btn-cancel-dots" onclick="setRestoreFlowStep('${safeOrden}',1,event)" title="More options" aria-label="More options">⋯</button></div>${historyHtml}`;
   }
   if (step === 1) {
     return `<div class="cancel-flow-row success">
-      <button type="button" class="cancel-flow-link success" onclick="setRestoreFlowStep('${safeOrden}',2,event)">↩ Restore this order</button>
+      <div style="display:flex;flex-wrap:wrap;">
+        <button type="button" class="cancel-flow-link success" onclick="toggleOrderHistory('${safeOrden}',event)">🕐 History</button>
+        <button type="button" class="cancel-flow-link success" onclick="setRestoreFlowStep('${safeOrden}',2,event)">↩ Restore this order</button>
+      </div>
       <button type="button" class="cancel-flow-back" onclick="setRestoreFlowStep('${safeOrden}',0,event)" aria-label="Close">✕</button>
-    </div>`;
+    </div>${historyHtml}`;
   }
   return `<div class="cancel-flow-confirm success">
     <p style="color:var(--success-text);">Restore order #${escapeHtml(o.orden)} — ${escapeHtml(o.cliente)}? It goes back to today's orders.</p>
@@ -4194,7 +4292,7 @@ function restoreFlowHtml(o) {
       <button class="btn-cancel-final success" onclick="submitRestoreOrder('${safeOrden}')">Yes, restore it</button>
       <button class="btn-cancel-back" onclick="setRestoreFlowStep('${safeOrden}',0,event)">No, keep cancelled</button>
     </div>
-  </div>`;
+  </div>${historyHtml}`;
 }
 
 // Mismo fix que setCancelFlowStep/toggleCardExpand: targetea el elemento que disparó el
