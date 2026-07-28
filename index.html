@@ -258,6 +258,7 @@
   .soon-badge { display:inline-block; font-size:10px; font-weight:600; background:#CA8A04; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
   .stalled-badge { display:inline-block; font-size:10px; font-weight:600; background:#2563EB; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
   .driver-here-badge { display:inline-block; font-size:10px; font-weight:600; background:#0D9488; color:#fff; border-radius:99px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
+  .pending-sync-badge { display:inline-block; font-size:10px; font-weight:600; background:var(--warn-bg); color:var(--warn-text); border-radius:99px; padding:2px 8px; vertical-align:middle; }
   .order-card-compact.overdue { border-color:#DC2626; border-width:1.5px; }
   .order-card-compact.soon { border-color:#CA8A04; border-width:1.5px; }
   .order-card-compact.stalled { border-color:#2563EB; border-width:1.5px; }
@@ -430,6 +431,7 @@
   .history-meta .who { color: var(--text-muted); font-weight: 500; }
   .history-empty-note { font-size: 11.5px; color: var(--text-faint); text-align: center; padding: 4px 0; }
   .warn-note { font-size:11px; color:var(--warn-text); background:var(--warn-bg); border:1px solid var(--warn-border); border-radius:var(--radius-sm); padding:6px 10px; text-align:center; margin-bottom:8px; }
+  .pending-sync-note { font-size:11px; color:var(--warn-text); background:var(--warn-bg); border:1px solid var(--warn-border); border-radius:var(--radius-sm); padding:6px 10px; text-align:center; margin-bottom:8px; }
   .user-select-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:1.75rem 1rem; background:var(--white); border:1.5px solid var(--border); border-radius:16px; cursor:pointer; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; color:var(--text); text-align:center; transition:border-color .15s,transform .1s,box-shadow .15s; }
   .user-select-btn:hover { border-color:var(--purple); box-shadow:0 6px 16px rgba(91,42,134,.10); }
   .user-select-btn:active { transform:scale(.97); }
@@ -3855,7 +3857,25 @@ async function loadOrdenes() {
     pruneOrderState(cancelFlowStep, ordenes);
     pruneOrderState(pendingReorder, ordenes);
     pruneOrderState(orderStatusSeq, ordenes);
+    pruneOrderState(pendingSync, ordenes);
     pruneHistoryState();
+    if (pendingSync.size) {
+      // El fetch que se acaba de completar trae el estatus VIEJO del servidor para
+      // cualquier pedido que siga en pendingSync (su cambio nunca llegó a guardarse) —
+      // se reaplica encima para no perder el valor optimista mientras se reintenta.
+      pendingSync.forEach((entry, key) => {
+        const o = ordenes.find(x => String(x.orden) === key);
+        if (!o) return;
+        o.estatus = entry.estatus;
+        if (entry.hora) o.hora = entry.hora;
+        if (entry.actualizado) o.actualizado = entry.actualizado;
+        if (entry.productEstatus) productState[key] = entry.productEstatus.slice();
+      });
+      // Por si el navegador nunca disparó 'online' (ej. la pestaña estaba dormida
+      // cuando volvió la señal) — cualquier refresh normal que sí llegó a buen puerto
+      // es también prueba de que ya hay conexión, así que aprovecha para reintentar.
+      flushPendingSync();
+    }
     if (searchActive) {
       const raw = document.getElementById('enc-search').value.trim();
       if (raw) { renderSearchResults(raw); return; }
@@ -3912,9 +3932,10 @@ function buildClerkCard(o) {
     const badge = state ? ' · ' + attentionBadgeHtml(state) : '';
     const driverBadge = o.driverArrived ? ' · <span class="driver-here-badge">🚗 Driver Here' + (o.driverArrived.rampa ? ' — ' + escapeHtml(o.driverArrived.rampa) : '') + '</span>' : '';
     const dateBadge = dateBadgeIfNotToday(o.fecha);
+    const pendingBadge = pendingSync.has(String(o.orden)) ? ' · <span class="pending-sync-badge">⏳ Pending sync</span>' : '';
     return `<div class="order-card-compact${locked ? ' locked' : ''}${state ? ' ' + state : ''}" id="card-${safeOrdenHtml}" tabindex="0" role="button" aria-label="Order #${escapeHtml(o.orden)}, ${escapeHtml(o.cliente)} — tap to expand" onclick="toggleCardExpand('${safeOrden}', event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCardExpand('${safeOrden}', event);}">
       <div class="oc-left">
-        <p class="oc-num">Order #${escapeHtml(o.orden)}${locked ? ' · <span class="locked-badge">Locked</span>' : ''}${dateBadge}${badge}${driverBadge}</p>
+        <p class="oc-num">Order #${escapeHtml(o.orden)}${locked ? ' · <span class="locked-badge">Locked</span>' : ''}${dateBadge}${badge}${driverBadge}${pendingBadge}</p>
         <p class="oc-cliente">${escapeHtml(o.cliente)}</p>
       </div>
       <span class="status-pill ${BANNER_CLS[est - 1]}">${BANNER_ICONS[est - 1]} ${LABELS[est - 1]}</span>
@@ -3975,6 +3996,7 @@ function buildClerkCard(o) {
   // disponible antes de Departed, 3 pasos a propósito (⋯ -> "Cancel this order" ->
   // confirmar), metido chiquito hasta abajo para que nadie lo toque sin querer.
   const cancelBtn = cancelFlowHtml(o, canEdit && est < 6);
+  const pendingSyncNote = pendingSync.has(String(o.orden)) ? `<p class="pending-sync-note">⏳ No connection — this change will sync automatically once you're back online</p>` : '';
 
   return `<div class="order-card${locked ? ' locked' : ''}${state ? ' ' + state + '-expanded' : ''}" id="card-${safeOrdenHtml}">
     <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;cursor:pointer;" tabindex="0" role="button" aria-label="Order #${escapeHtml(o.orden)}, ${escapeHtml(o.cliente)} — tap to collapse" onclick="toggleCardExpand('${safeOrden}', event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCardExpand('${safeOrden}', event);}">
@@ -3987,6 +4009,7 @@ function buildClerkCard(o) {
     ${checklistHtml}
     ${expectedReadyRow}
     ${warnHtml}
+    ${pendingSyncNote}
     <div class="status-btns">${btns}</div>
     <p class="status-desc-lbl" id="desc-${safeOrdenHtml}">${DESCS[est - 1]}</p>
     ${cancelBtn}
@@ -4497,6 +4520,14 @@ const orderStatusSeq = {};
 // tocar un botón de estatus, la tarjeta se quedaba viendo el valor nuevo aunque el
 // servidor se hubiera quedado con el viejo — hasta el próximo refresh, cuando "se
 // regresaba sola" sin ninguna explicación para quien la estaba usando.
+// orden -> {estatus, productEstatus, prevSnapshot, seq} para cambios que no pudieron
+// SIQUIERA salir a la red (offline, sin señal) — a diferencia de un rechazo real del
+// servidor, aquí NO se revierte la tarjeta: ya se aplicó optimista y se queda tal cual,
+// mostrando un avisito de "pending sync", hasta que el navegador dispare el evento
+// 'online' y flushPendingSync() la reintente sola.
+const pendingSync = new Map();
+let pendingSyncListenerAdded = false;
+
 async function pushOrderStatus(orden, estatus, prevSnapshot) {
   const seq = (orderStatusSeq[orden] = (orderStatusSeq[orden] || 0) + 1);
   const o = ordenes.find(x => String(x.orden) === String(orden));
@@ -4504,39 +4535,86 @@ async function pushOrderStatus(orden, estatus, prevSnapshot) {
   // Code.gs) — se refleja aquí también, si no la tarjeta se sigue viendo "Stalled" hasta
   // el próximo refresh automático (2 min) porque la copia local del navegador no sabía
   // que el estatus acababa de cambiar.
-  if (o) { o.hora = clientNowTime(); o.actualizado = todayStr(); }
+  let hora, actualizado;
+  if (o) { hora = o.hora = clientNowTime(); actualizado = o.actualizado = todayStr(); }
   applyOrderCardUpdate(orden);
   showToast('Status updated ✓');
-  const body = { sessionToken: SESSION_TOKEN, action: 'updateStatus', orden, estatus, usuario: currentUser };
-  if (productState[orden]) body.productEstatus = productState[orden]; // persiste el detalle por producto
+  const productEstatus = productState[orden] ? productState[orden].slice() : undefined;
+  await sendOrderStatus(String(orden), estatus, productEstatus, prevSnapshot, seq, hora, actualizado);
+}
+
+// Manda el cambio de estatus al servidor. Separado de pushOrderStatus para que
+// flushPendingSync() pueda reintentar exactamente el mismo envío sin repetir la parte
+// optimista (que ya se aplicó cuando se tocó el botón la primera vez).
+async function sendOrderStatus(key, estatus, productEstatus, prevSnapshot, seq, hora, actualizado) {
+  const body = { sessionToken: SESSION_TOKEN, action: 'updateStatus', orden: key, estatus, usuario: currentUser };
+  if (productEstatus) body.productEstatus = productEstatus; // persiste el detalle por producto
+  let res;
   try {
-    const res = await fetch(API, { method: 'POST', body: JSON.stringify(body) });
-    const result = await res.json();
-    if (isSessionExpiredError(result)) {
-      if (o && prevSnapshot && orderStatusSeq[orden] === seq) {
-        o.estatus = prevSnapshot.estatus;
-        o.hora = prevSnapshot.hora;
-        o.actualizado = prevSnapshot.actualizado;
-        if (prevSnapshot.productState) productState[orden] = prevSnapshot.productState;
-        pendingReorder.delete(String(orden)); // el renderOrdenes() de abajo ya deja todo en su lugar correcto
-        renderOrdenes();
-      }
-      handleSessionExpired();
-      return;
-    }
-    if (result.error) throw new Error(result.error);
+    res = await fetch(API, { method: 'POST', body: JSON.stringify(body) });
   } catch (e) {
-    // Si ya hay una petición más nueva para este mismo pedido en vuelo (o ya resuelta),
-    // esta respuesta llegó tarde — no hay que revertir sobre un cambio ya confirmado.
-    if (o && prevSnapshot && orderStatusSeq[orden] === seq) {
-      o.estatus = prevSnapshot.estatus;
-      o.hora = prevSnapshot.hora;
-      o.actualizado = prevSnapshot.actualizado;
-      if (prevSnapshot.productState) productState[orden] = prevSnapshot.productState;
-      pendingReorder.delete(String(orden));
-      renderOrdenes();
-    }
+    // fetch() solo truena así cuando ni siquiera pudo salir a la red (offline, DNS,
+    // etc.) — un rechazo real del servidor siempre llega a una respuesta, aunque sea
+    // con result.error.
+    queuePendingSync(key, estatus, productEstatus, prevSnapshot, seq, hora, actualizado);
+    return;
+  }
+  let result;
+  try {
+    result = await res.json();
+  } catch (e) {
+    revertOrderStatus(key, prevSnapshot, seq);
     showToast('Sync error — check connection');
+    return;
+  }
+  if (isSessionExpiredError(result)) {
+    revertOrderStatus(key, prevSnapshot, seq);
+    handleSessionExpired();
+    return;
+  }
+  if (result.error) {
+    revertOrderStatus(key, prevSnapshot, seq);
+    showToast(result.error, 'error');
+    return;
+  }
+  // Confirmado por el servidor — si había quedado encolada una versión de un intento
+  // previo (ej. se reintentó a mano antes de que 'online' disparara), ya no aplica.
+  if (pendingSync.has(key)) { pendingSync.delete(key); applyOrderCardUpdate(key); }
+}
+
+function revertOrderStatus(key, prevSnapshot, seq) {
+  // Si ya hay una petición más nueva para este mismo pedido en vuelo (o ya resuelta),
+  // esta respuesta llegó tarde — no hay que revertir sobre un cambio ya confirmado.
+  if (orderStatusSeq[key] !== seq) return;
+  const o = ordenes.find(x => String(x.orden) === key);
+  if (!o || !prevSnapshot) return;
+  o.estatus = prevSnapshot.estatus;
+  o.hora = prevSnapshot.hora;
+  o.actualizado = prevSnapshot.actualizado;
+  if (prevSnapshot.productState) productState[key] = prevSnapshot.productState;
+  pendingReorder.delete(key);
+  pendingSync.delete(key);
+  renderOrdenes();
+}
+
+function queuePendingSync(key, estatus, productEstatus, prevSnapshot, seq, hora, actualizado) {
+  pendingSync.set(key, { estatus, productEstatus, prevSnapshot, seq, hora, actualizado });
+  applyOrderCardUpdate(key);
+  showToast("No connection — will sync automatically when you're back online");
+  if (!pendingSyncListenerAdded) {
+    pendingSyncListenerAdded = true;
+    window.addEventListener('online', flushPendingSync);
+  }
+}
+
+// Reintenta todo lo encolado en pendingSync — se dispara sola con el evento 'online'
+// del navegador, y también se llama de refilón al arrancar loadOrdenes() por si el
+// evento no disparó (ej. la pestaña estaba dormida cuando volvió la señal).
+async function flushPendingSync() {
+  if (!pendingSync.size) return;
+  for (const [key, entry] of Array.from(pendingSync.entries())) {
+    if (orderStatusSeq[key] !== entry.seq) { pendingSync.delete(key); continue; } // ya hay un cambio más nuevo para este pedido
+    await sendOrderStatus(key, entry.estatus, entry.productEstatus, entry.prevSnapshot, entry.seq, entry.hora, entry.actualizado);
   }
 }
 
