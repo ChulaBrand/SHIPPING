@@ -150,10 +150,11 @@
   @media (min-width:640px) {
     .container { max-width:600px; }
     body { font-size:16px; }
-    .role-icon-wrap { width:74px; height:74px; }
-    .role-icon { font-size:34px; }
-    .role-title { font-size:18px; }
-    .role-desc { font-size:14px; }
+    .role-btn { padding:2.5rem 1.25rem 2.25rem; }
+    .role-icon-wrap { width:68px; height:68px; }
+    .role-icon { font-size:32px; }
+    .role-title { font-size:17px; }
+    .role-desc { font-size:13.5px; }
     .user-select-btn { padding:2.25rem 1.25rem; font-size:16.5px; }
     .user-select-btn i { font-size:30px; }
     .page-title { font-size:28px; }
@@ -173,18 +174,12 @@
   .page-title { font-size:24px; font-weight:500; margin-bottom:4px; }
   .page-sub { font-size:15px; color:var(--text-muted); margin-bottom:2rem; }
   .role-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; }
-  .role-btn {
-    background:var(--white); border:none; border-radius:16px; padding:1.6rem 1.5rem; cursor:pointer;
-    display:flex; align-items:center; gap:18px; text-align:left;
-    box-shadow:0 1px 2px rgba(0,0,0,.04), 0 8px 20px -12px rgba(0,0,0,.18);
-    transition:box-shadow .15s,transform .1s;
-  }
-  .role-btn.recommended { box-shadow:0 1px 2px rgba(0,0,0,.04), 0 8px 20px -12px rgba(0,0,0,.18), inset 3px 0 0 var(--pink); }
-  .role-btn:hover { box-shadow:0 1px 2px rgba(0,0,0,.04), 0 10px 24px -10px rgba(91,42,134,.22); } .role-btn:active { transform:scale(.98); }
-  .role-icon-wrap { width:66px; height:66px; border-radius:50%; background:var(--pink-tint-bg); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-  .role-icon { font-size:30px; color:var(--pink); margin-bottom:0; display:block; }
-  .role-title { font-size:17px; font-weight:700; margin-bottom:3px; }
-  .role-desc { font-size:13.5px; color:var(--text-faint); line-height:1.4; }
+  .role-btn { background:var(--white); border:1.5px solid var(--border); border-radius:16px; padding:2rem 1rem 1.75rem; cursor:pointer; text-align:center; transition:border-color .15s,transform .1s,box-shadow .15s; }
+  .role-btn:hover { border-color:var(--purple); box-shadow:0 6px 16px rgba(91,42,134,.10); } .role-btn:active { transform:scale(.97); }
+  .role-icon-wrap { width:56px; height:56px; border-radius:50%; background:var(--pink-tint-bg); display:flex; align-items:center; justify-content:center; margin:0 auto 12px; }
+  .role-icon { font-size:26px; color:var(--pink); margin-bottom:0; display:block; }
+  .role-title { font-size:15px; font-weight:700; margin-bottom:4px; }
+  .role-desc { font-size:12.5px; color:var(--text-faint); line-height:1.4; }
   .top-bar { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:1.5rem; }
   .top-bar-title { font-size:20px; font-weight:800; letter-spacing:-0.01em; }
   .btn-back { background:none; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px; color:var(--text-muted); cursor:pointer; padding:5px 12px; font-family:'Inter',sans-serif; min-height:44px; display:inline-flex; align-items:center; justify-content:center; gap:5px; }
@@ -584,13 +579,15 @@
     <p class="page-title">Welcome</p>
     <p class="page-sub">How are you accessing today?</p>
     <div class="role-grid">
-      <div class="role-btn recommended" onclick="goChofer()">
+      <div class="role-btn" onclick="goChofer()">
         <div class="role-icon-wrap"><i class="ti ti-truck role-icon"></i></div>
-        <div><p class="role-title">Driver / Client</p><p class="role-desc">Check order status</p></div>
+        <p class="role-title">Driver / Client</p>
+        <p class="role-desc">Check order status</p>
       </div>
       <div class="role-btn" onclick="goUserSelect()">
         <div class="role-icon-wrap"><i class="ti ti-clipboard-list role-icon"></i></div>
-        <div><p class="role-title">Operations Center</p><p class="role-desc">Update orders</p></div>
+        <p class="role-title">Operations Center</p>
+        <p class="role-desc">Update orders</p>
       </div>
     </div>
     <div style="display:flex;justify-content:center;gap:10px;margin-top:22px;">
@@ -1772,11 +1769,13 @@ function showAccessChooser() {
   grid.innerHTML = `
     <div class="role-btn" onclick="chooseAccess('clerk')">
       <div class="role-icon-wrap"><i class="ti ti-clipboard-list role-icon"></i></div>
-      <div><p class="role-title">Order Coordinator</p><p class="role-desc">Update orders</p></div>
+      <p class="role-title">Order Coordinator</p>
+      <p class="role-desc">Update orders</p>
     </div>
     <div class="role-btn" onclick="chooseAccess('analytics')">
       <div class="role-icon-wrap"><i class="ti ti-chart-bar role-icon"></i></div>
-      <div><p class="role-title">Data Analysis</p><p class="role-desc">View reports</p></div>
+      <p class="role-title">Data Analysis</p>
+      <p class="role-desc">View reports</p>
     </div>`;
   show('screen-access-chooser');
 }
