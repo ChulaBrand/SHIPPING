@@ -1183,6 +1183,7 @@
     <div class="controls-row" style="justify-content:flex-start;margin-top:8px;">
       <div class="controls-actions">
         <button class="view-toggle-btn" id="etaViewBtn" onclick="toggleEtaView()" title="View orders with Expected ready set" aria-label="View orders with Expected ready set"><i class="ti ti-clock"></i><span class="vtb-label">ETA</span></button>
+        <button class="view-toggle-btn" id="tomorrowViewBtn" onclick="toggleTomorrowView()" title="View orders scheduled for tomorrow" aria-label="View orders scheduled for tomorrow"><i class="ti ti-calendar-event"></i><span class="vtb-label">Tomorrow</span></button>
         <button class="view-toggle-btn" id="incompleteFilterBtn" onclick="toggleIncompleteFilter()" title="Show only incomplete orders (moved ahead with products not Ready)" aria-label="Show only incomplete orders"><i class="ti ti-alert-triangle"></i><span class="vtb-label">Incomplete</span></button>
         <div class="dropdown-wrap">
           <button class="view-toggle-btn" id="productDropdownBtn" onclick="toggleDropdown('product')" title="Filter by product" aria-label="Filter by product"><i class="ti ti-filter"></i><span class="vtb-label">Product</span></button>
@@ -1232,6 +1233,10 @@
         <p class="section-label" style="margin-top:1.25rem;">Past Days</p>
         <div class="orders-list" id="eta-past-list"></div>
       </div>
+    </div>
+    <div id="tomorrow-section" style="display:none;">
+      <p class="section-label">📅 Scheduled for tomorrow — not editable until their day</p>
+      <div class="orders-list" id="tomorrow-list"></div>
     </div>
   </div>
 
@@ -4258,14 +4263,16 @@ async function submitCancelOrder(orden) {
 
 // ── Vistas especiales arriba (Cancelled, Expected Ready) — botones aparte, no junto
 // a los filtros de estatus. Solo una a la vez; la vista normal es la de por default. ──
-let currentOrderView = 'normal'; // 'normal' | 'cancelled' | 'eta'
+let currentOrderView = 'normal'; // 'normal' | 'cancelled' | 'eta' | 'tomorrow'
 function showOrderView(view) {
   currentOrderView = view;
   document.getElementById('normal-orders-wrap').style.display = view === 'normal' ? '' : 'none';
   document.getElementById('cancelled-section').style.display = view === 'cancelled' ? 'block' : 'none';
   document.getElementById('eta-section').style.display = view === 'eta' ? 'block' : 'none';
+  document.getElementById('tomorrow-section').style.display = view === 'tomorrow' ? 'block' : 'none';
   document.getElementById('cancelledViewBtn').classList.toggle('active', view === 'cancelled');
   document.getElementById('etaViewBtn').classList.toggle('active-amber', view === 'eta');
+  document.getElementById('tomorrowViewBtn').classList.toggle('active-amber', view === 'tomorrow');
 }
 
 let cancelledOrders = [];
@@ -4386,6 +4393,49 @@ function buildCancelledCard(o) {
       <p class="oc-cliente">${escapeHtml(o.cliente)}</p>
     </div>
     ${restoreFlowHtml(o)}
+  </div>`;
+}
+
+// ── ÓRDENES PROGRAMADAS PARA MAÑANA (botón "Tomorrow") ──────────────────────────────
+// Vista de solo lectura de lo que un PDF adelantado ya cargó pero readOrdersList()
+// esconde a propósito (fecha = mañana) — sirve para confirmar que la subida sí
+// funcionó, no para trabajar sobre esas órdenes: no traen botones de estatus ni
+// acciones, esas siguen bloqueadas hasta que les toque su día de negocio de verdad.
+let tomorrowOrders = [];
+let loadTomorrowOrdersSeq = 0;
+async function toggleTomorrowView() {
+  const goingTo = currentOrderView === 'tomorrow' ? 'normal' : 'tomorrow';
+  showOrderView(goingTo);
+  if (goingTo === 'tomorrow') loadTomorrowOrders();
+  else renderOrdenes(); // normal-orders-wrap no se actualizó mientras estaba escondido
+}
+async function loadTomorrowOrders() {
+  const seq = ++loadTomorrowOrdersSeq;
+  const list = document.getElementById('tomorrow-list');
+  list.innerHTML = '<div class="empty-state"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i>Loading...</div>';
+  try {
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getScheduledOrders' }) });
+    const result = await res.json();
+    if (seq !== loadTomorrowOrdersSeq) return; // una llamada más nueva ya está en vuelo o ya aplicó su resultado
+    tomorrowOrders = Array.isArray(result) ? result : [];
+    renderTomorrowOrders();
+  } catch (e) { if (seq === loadTomorrowOrdersSeq) list.innerHTML = '<div class="empty-state">Connection error</div>'; }
+}
+function renderTomorrowOrders() {
+  const list = document.getElementById('tomorrow-list');
+  if (!tomorrowOrders.length) {
+    list.innerHTML = '<div class="empty-state"><i class="ti ti-calendar-event"></i>No orders scheduled for tomorrow yet</div>';
+    return;
+  }
+  list.innerHTML = tomorrowOrders.map(buildTomorrowCard).join('');
+}
+function buildTomorrowCard(o) {
+  return `<div class="order-card-compact" style="flex-direction:column;align-items:stretch;">
+    <div class="oc-left" style="margin-bottom:6px;">
+      <p class="oc-num">Order #${escapeHtml(o.orden)}${o.vendedor ? ' · ' + escapeHtml(o.vendedor) : ''}</p>
+      <p class="oc-cliente">${escapeHtml(o.cliente)}</p>
+      <p class="oc-cliente" style="color:var(--text-faint);">${escapeHtml(o.productos)}</p>
+    </div>
   </div>`;
 }
 
@@ -5038,6 +5088,19 @@ function pdfDateToIso(mmddyy) {
   return `20${yy}-${mm}-${dd}`;
 }
 
+// La fecha del reporte de pallets (título + nombre de archivo del Excel/Word) se saca
+// de las órdenes de adentro del PDF, no del nombre del archivo subido — antes usaba
+// file.name tal cual, así que un PDF de mañana guardado con el nombre de ayer (o
+// cualquier nombre) le heredaba una fecha que no tenía nada que ver con las órdenes
+// reales. Si el PDF trae más de una fecha mezclada, se usa la que más se repite.
+function modeOrderDate(orders) {
+  const counts = new Map();
+  for (const o of orders) counts.set(o.date, (counts.get(o.date) || 0) + 1);
+  let best = '', bestCount = -1;
+  for (const [d, c] of counts) { if (c > bestCount) { best = d; bestCount = c; } }
+  return best;
+}
+
 function parseOrders(lines) {
   const orders = [];
   let current = null;
@@ -5662,6 +5725,8 @@ async function handlePapayaFile(file) {
     return;
   }
   papayaProcessing = true;
+  // Nombre de respaldo por si el PDF no trae ninguna orden reconocible (ver abajo, se
+  // reemplaza por la fecha real de las órdenes en cuanto se parsean).
   papayaLastFileName = file.name.replace(/\.pdf$/i, "");
   papayaStatusEl.textContent = "Reading PDF...";
   papayaResultsCard.style.display = "none";
@@ -5673,6 +5738,11 @@ async function handlePapayaFile(file) {
       papayaStatusEl.textContent = "No orders found in this PDF.";
       return;
     }
+    // El título/nombre del reporte de pallets ahora refleja la fecha real de las
+    // órdenes (ej. "07-31-26" si es el PDF de mañana), no el nombre que traía el
+    // archivo subido.
+    const reportDateMmDdYy = modeOrderDate(orders);
+    if (reportDateMmDdYy) papayaLastFileName = reportDateMmDdYy.replace(/\//g, "-");
 
     // Filas para el Draft (orden/cliente/productos) — de TODAS las órdenes del PDF,
     // tengan o no papaya, para que "Send + Sync" no dependa del reporte de pallets.
