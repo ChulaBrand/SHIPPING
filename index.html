@@ -1180,19 +1180,19 @@
       <div class="filter-chips" id="statusFilterChips"></div>
       <div class="controls-actions">
         <button class="view-toggle-btn" id="viewToggleBtn" onclick="toggleGlobalView()" title="View all" aria-label="View all"><i class="ti ti-arrows-maximize"></i><span class="vtb-label">All</span></button>
-        <button class="view-toggle-btn" id="dailySummaryBtn" onclick="goDailySummary()" title="Download today's summary" aria-label="Download today's summary"><i class="ti ti-file-spreadsheet"></i><span class="vtb-label">Summary</span></button>
-        <button class="view-toggle-btn" id="cancelledViewBtn" onclick="toggleCancelledView()" title="View cancelled orders" aria-label="View cancelled orders"><i class="ti ti-trash"></i><span class="vtb-label">Cancelled</span></button>
+        <div class="dropdown-wrap">
+          <button class="view-toggle-btn" id="moreDropdownBtn" onclick="toggleDropdown('more')" title="More" aria-label="More options"><i class="ti ti-dots"></i><span class="vtb-label">More</span></button>
+          <div class="dropdown-panel" id="moreDropdownPanel" style="right:0;left:auto;">
+            <button class="dropdown-option" id="dailySummaryBtn" onclick="closeAllDropdowns(); goDailySummary();" title="Download today's summary" aria-label="Download today's summary">🧾 Summary</button>
+            <button class="dropdown-option" id="cancelledViewBtn" onclick="toggleCancelledView()" title="View cancelled orders" aria-label="View cancelled orders">🗑 Cancelled orders</button>
+            <button class="dropdown-option" onclick="toggleTomorrowView()">📅 Tomorrow's orders</button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="controls-row" style="justify-content:flex-start;margin-top:8px;">
       <div class="controls-actions">
         <button class="view-toggle-btn" id="etaViewBtn" onclick="toggleEtaView()" title="View orders with Expected ready set" aria-label="View orders with Expected ready set"><i class="ti ti-clock"></i><span class="vtb-label">ETA</span></button>
-        <div class="dropdown-wrap">
-          <button class="view-toggle-btn" id="moreDropdownBtn" onclick="toggleDropdown('more')" title="More" aria-label="More options"><i class="ti ti-dots"></i><span class="vtb-label">More</span></button>
-          <div class="dropdown-panel" id="moreDropdownPanel" style="right:0;left:auto;">
-            <button class="dropdown-option" onclick="toggleTomorrowView()">📅 Tomorrow's orders</button>
-          </div>
-        </div>
         <button class="view-toggle-btn" id="incompleteFilterBtn" onclick="toggleIncompleteFilter()" title="Show only incomplete orders (moved ahead with products not Ready)" aria-label="Show only incomplete orders"><i class="ti ti-alert-triangle"></i><span class="vtb-label">Incomplete</span></button>
         <div class="dropdown-wrap">
           <button class="view-toggle-btn" id="productDropdownBtn" onclick="toggleDropdown('product')" title="Filter by product" aria-label="Filter by product"><i class="ti ti-filter"></i><span class="vtb-label">Product</span></button>
@@ -4291,17 +4291,18 @@ function showOrderView(view) {
   document.getElementById('tomorrow-section').style.display = view === 'tomorrow' ? 'block' : 'none';
   document.getElementById('cancelledViewBtn').classList.toggle('active', view === 'cancelled');
   document.getElementById('etaViewBtn').classList.toggle('active-amber', view === 'eta');
-  // El botón "Tomorrow" ahora vive escondido dentro del menú "⋯ More" (ver
-  // toggleTomorrowView) — se ilumina el botón del menú mismo, no un botón propio, para
-  // que quede alguna señal visible de que esa vista sigue abierta aunque el panel del
-  // menú ya esté cerrado.
-  document.getElementById('moreDropdownBtn').classList.toggle('active-amber', view === 'tomorrow');
+  // Cancelled y Tomorrow ahora viven escondidos dentro del menú "⋯ More" (ver
+  // toggleCancelledView/toggleTomorrowView) — se ilumina el botón del menú mismo, no un
+  // botón propio, para que quede alguna señal visible de que esa vista sigue abierta
+  // aunque el panel del menú ya esté cerrado.
+  document.getElementById('moreDropdownBtn').classList.toggle('active-amber', view === 'cancelled' || view === 'tomorrow');
 }
 
 let cancelledOrders = [];
 const restoreFlowStep = {}; // orden -> 0 (escondido) | 1 (menú) | 2 (confirmando)
 
 async function toggleCancelledView() {
+  closeAllDropdowns(); // el botón que dispara esto vive dentro del menú "⋯ More"
   const goingTo = currentOrderView === 'cancelled' ? 'normal' : 'cancelled';
   showOrderView(goingTo);
   if (goingTo === 'cancelled') loadCancelledOrders();
