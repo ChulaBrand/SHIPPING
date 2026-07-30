@@ -1187,7 +1187,12 @@
     <div class="controls-row" style="justify-content:flex-start;margin-top:8px;">
       <div class="controls-actions">
         <button class="view-toggle-btn" id="etaViewBtn" onclick="toggleEtaView()" title="View orders with Expected ready set" aria-label="View orders with Expected ready set"><i class="ti ti-clock"></i><span class="vtb-label">ETA</span></button>
-        <button class="view-toggle-btn" id="tomorrowViewBtn" onclick="toggleTomorrowView()" title="View orders scheduled for tomorrow" aria-label="View orders scheduled for tomorrow"><i class="ti ti-calendar-event"></i><span class="vtb-label">Tomorrow</span></button>
+        <div class="dropdown-wrap">
+          <button class="view-toggle-btn" id="moreDropdownBtn" onclick="toggleDropdown('more')" title="More" aria-label="More options"><i class="ti ti-dots"></i><span class="vtb-label">More</span></button>
+          <div class="dropdown-panel" id="moreDropdownPanel" style="right:0;left:auto;">
+            <button class="dropdown-option" onclick="toggleTomorrowView()">📅 Tomorrow's orders</button>
+          </div>
+        </div>
         <button class="view-toggle-btn" id="incompleteFilterBtn" onclick="toggleIncompleteFilter()" title="Show only incomplete orders (moved ahead with products not Ready)" aria-label="Show only incomplete orders"><i class="ti ti-alert-triangle"></i><span class="vtb-label">Incomplete</span></button>
         <div class="dropdown-wrap">
           <button class="view-toggle-btn" id="productDropdownBtn" onclick="toggleDropdown('product')" title="Filter by product" aria-label="Filter by product"><i class="ti ti-filter"></i><span class="vtb-label">Product</span></button>
@@ -4286,7 +4291,11 @@ function showOrderView(view) {
   document.getElementById('tomorrow-section').style.display = view === 'tomorrow' ? 'block' : 'none';
   document.getElementById('cancelledViewBtn').classList.toggle('active', view === 'cancelled');
   document.getElementById('etaViewBtn').classList.toggle('active-amber', view === 'eta');
-  document.getElementById('tomorrowViewBtn').classList.toggle('active-amber', view === 'tomorrow');
+  // El botón "Tomorrow" ahora vive escondido dentro del menú "⋯ More" (ver
+  // toggleTomorrowView) — se ilumina el botón del menú mismo, no un botón propio, para
+  // que quede alguna señal visible de que esa vista sigue abierta aunque el panel del
+  // menú ya esté cerrado.
+  document.getElementById('moreDropdownBtn').classList.toggle('active-amber', view === 'tomorrow');
 }
 
 let cancelledOrders = [];
@@ -4418,6 +4427,7 @@ function buildCancelledCard(o) {
 let tomorrowOrders = [];
 let loadTomorrowOrdersSeq = 0;
 async function toggleTomorrowView() {
+  closeAllDropdowns(); // el botón que dispara esto vive dentro del menú "⋯ More"
   const goingTo = currentOrderView === 'tomorrow' ? 'normal' : 'tomorrow';
   showOrderView(goingTo);
   if (goingTo === 'tomorrow') loadTomorrowOrders();
