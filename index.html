@@ -1055,6 +1055,10 @@
         </div>
         <p class="section-label" style="margin-top:1.25rem;">Thresholds</p>
         <div class="settings-group"><div class="settings-row"><label>Hours to mark "Stalled"</label><input type="number" id="setting-stalledHours"></div></div>
+        <div class="settings-group">
+          <div class="settings-row"><label>"Stalled" floor hour (24h, e.g. 10 = 10am)</label><input type="number" id="setting-stalledFloorHour" min="0" max="23"></div>
+          <p class="settings-caption">The "Stalled" clock never starts counting before this hour of the order's own day — so an order pre-loaded the day before (or uploaded very early) doesn't show as Stalled before anyone's had a chance to touch it.</p>
+        </div>
         <div class="settings-group"><div class="settings-row"><label>Hours to mark "Soon"</label><input type="number" id="setting-soonHours"></div></div>
         <div class="settings-group"><div class="settings-row"><label>Hours before locking edits</label><input type="number" id="setting-lockHours"></div></div>
         <div class="settings-group">
@@ -1357,7 +1361,7 @@ function escapeForJsAttr(str) {
 
 // Valores editables desde Admin → Settings. Estos son el "de fábrica" mientras se
 // cargan de verdad (justo después del login); ver loadAppSettings()/loadClientsConfig().
-let APP_SETTINGS = { standardDivisor: 48, hebDivisor: 60, stalledHours: 6, soonHours: 1, lockHours: 48, chofRefreshSeconds: 30, chofShowClientName: 1, chofShowProducts: 1, chofGroupClientOrders: 1, shipRefreshSeconds: 120, analyticsRefreshSeconds: 0, savedOrdersHours: 24, statusRank1: 1, statusRank2: 2, statusRank3: 3, statusRank4: 4, statusRank5: 5 };
+let APP_SETTINGS = { standardDivisor: 48, hebDivisor: 60, stalledHours: 6, stalledFloorHour: 10, soonHours: 1, lockHours: 48, chofRefreshSeconds: 30, chofShowClientName: 1, chofShowProducts: 1, chofGroupClientOrders: 1, shipRefreshSeconds: 120, analyticsRefreshSeconds: 0, savedOrdersHours: 24, statusRank1: 1, statusRank2: 2, statusRank3: 3, statusRank4: 4, statusRank5: 5 };
 let CLIENTS_CONFIG = []; // [{ nombrePatron, nombreCorto, cajasPorTarima, activo }], desde Admin → Clients
 let clientsConfigLoaded = false;
 async function loadAppSettings() {
@@ -1599,8 +1603,17 @@ function getLastChangeDate(o) {
 function isStalled(o) {
   const est = parseInt(o.estatus) || 1;
   if (est >= 6) return false;
-  const last = getLastChangeDate(o);
+  let last = getLastChangeDate(o);
   if (!last) return false;
+  // El reloj de "Stalled" nunca arranca antes de esta hora del día de negocio de la
+  // orden (Admin → Settings, "Stalled floor hour") — sin esto, una orden precargada un
+  // día antes (ver PDF de mañana) o subida muy temprano aparecía "Stalled" apenas
+  // amanecía su día, antes de que alguien tuviera chance de tocarla.
+  if (o.fecha) {
+    const floor = new Date(o.fecha + 'T00:00:00');
+    floor.setHours(APP_SETTINGS.stalledFloorHour || 0, 0, 0, 0);
+    if (last < floor) last = floor;
+  }
   return (new Date() - last) / 3600000 >= APP_SETTINGS.stalledHours;
 }
 
@@ -2392,6 +2405,7 @@ async function adminToggleClientDisplay(nombrePatron, field, value) {
 const GENERAL_SETTINGS_FIELDS = [
   { key: 'shipRefreshSeconds', elId: 'setting-shipRefreshSeconds', type: 'number', default: 120, min: 20, label: 'Refresh Order Coordinator (sec.)' },
   { key: 'stalledHours', elId: 'setting-stalledHours', type: 'number', default: 6, label: 'Hours "Stalled"' },
+  { key: 'stalledFloorHour', elId: 'setting-stalledFloorHour', type: 'number', default: 10, min: 0, label: '"Stalled" floor hour' },
   { key: 'soonHours', elId: 'setting-soonHours', type: 'number', default: 1, label: 'Hours "Soon"' },
   { key: 'lockHours', elId: 'setting-lockHours', type: 'number', default: 48, label: 'Hours before locking edits' },
   { key: 'cancelledArchiveHours', elId: 'setting-cancelledArchiveHours', type: 'number', default: 48, label: 'Hours before archiving cancelled orders' },
