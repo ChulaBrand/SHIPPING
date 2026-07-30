@@ -5026,6 +5026,18 @@ async function extractLines(arrayBuffer) {
 const ORDER_HEADER_RE = /^(\d{2}\/\d{2}\/\d{2})\s+(?:\d{1,2}:\d{2}\s+)?(.+?)\s+(\d+)\s+(SP\d+)\s+([DF])\s+([A-Z]+)\s+([\d,]+)(.*)$/;
 const QTY_PRODUCT_RE = /^([\d,]+)?\s*(.+)$/;
 
+// "MM/DD/YY" (como sale del encabezado del PDF) -> "yyyy-MM-dd" (como lo espera el
+// backend). Permite precargar el PDF de mañana sin que el servidor lo trate como si
+// fuera de hoy — ver normalizeIncomingFecha en Code.gs, que de todos modos ignora
+// cualquier fecha que no sea exactamente hoy o mañana, así que un PDF mal parseado
+// nunca puede mandar una orden a un limbo lejano, a lo más cae de vuelta a "hoy".
+function pdfDateToIso(mmddyy) {
+  const m = String(mmddyy || '').match(/^(\d{2})\/(\d{2})\/(\d{2})$/);
+  if (!m) return '';
+  const [, mm, dd, yy] = m;
+  return `20${yy}-${mm}-${dd}`;
+}
+
 function parseOrders(lines) {
   const orders = [];
   let current = null;
@@ -5674,7 +5686,7 @@ async function handlePapayaFile(file) {
         combined.set(key, (combined.get(key) || 0) + qty);
       }
       const productos = [...combined.entries()].map(([desc, qty]) => `${qty} ${desc}`).join(', ');
-      return { orden: o.sp, cliente: shortenClientName(o.name, o.note, o.sp), productos, vendedor: o.spn || '' };
+      return { orden: o.sp, cliente: shortenClientName(o.name, o.note, o.sp), productos, vendedor: o.spn || '', fecha: pdfDateToIso(o.date) };
     }).filter(r => r.productos);
 
     const [rows, flags] = buildReportRows(orders);
