@@ -446,6 +446,7 @@
   .history-empty-note { font-size: 11.5px; color: var(--text-faint); text-align: center; padding: 4px 0; }
   .warn-note { font-size:11px; color:var(--warn-text); background:var(--warn-bg); border:1px solid var(--warn-border); border-radius:var(--radius-sm); padding:6px 10px; text-align:center; margin-bottom:8px; }
   .pending-sync-note { font-size:11px; color:var(--warn-text); background:var(--warn-bg); border:1px solid var(--warn-border); border-radius:var(--radius-sm); padding:6px 10px; text-align:center; margin-bottom:8px; }
+  .driver-times-row { display:flex; flex-direction:column; gap:2px; font-size:11.5px; color:var(--text-muted); background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; margin-bottom:8px; }
   .user-select-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:1.75rem 1rem; background:var(--white); border:1.5px solid var(--border); border-radius:16px; cursor:pointer; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; color:var(--text); text-align:center; transition:border-color .15s,transform .1s,box-shadow .15s; }
   .user-select-btn:hover { border-color:var(--purple); box-shadow:0 6px 16px rgba(91,42,134,.10); }
   .user-select-btn:active { transform:scale(.97); }
@@ -955,6 +956,7 @@
           </div>
           <div style="display:flex;gap:14px;padding:4px 2px;font-size:13px;color:var(--text-muted);flex-wrap:wrap;">
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-analytics" onchange="updateNewUserPinField()"> Data Analysis</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-driver-times" onchange="updateNewUserPinField()"> Driver times</label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-admin" onchange="updateNewUserPinField()"> Admin</label>
           </div>
           <p style="font-size:11px;color:var(--text-faint);margin:-2px 0 0;">Admin uses a password (min. 6 characters) instead of a 4-digit PIN.</p>
@@ -1899,6 +1901,11 @@ function updateDots() { for(let i=0;i<4;i++) document.getElementById('pd'+i).cla
 // completa) — el server ya rechaza updateStatus/setExpectedReady/syncDraft/writeDraft
 // para estas cuentas; esto solo controla que los botones ni se vean como clickeables.
 let SHIPPING_READ_ONLY = false;
+// true si la cuenta tiene el permiso "driver_times" — controla si al expandir una
+// tarjeta se le muestra la hora de llegada/salida del chofer (dato que ya viaja en
+// o.driverArrived para TODOS, esto solo lo enseña en pantalla a quien sí lo pidió; no
+// es información sensible, nomás que no todos los clerks la necesitan ver siempre).
+let SHOW_DRIVER_TIMES = false;
 async function completeLogin(result) {
   currentUser = selectedUser;
   SESSION_TOKEN = result.sessionToken;
@@ -1908,6 +1915,7 @@ async function completeLogin(result) {
   cachedLoginOrders = Array.isArray(result.orders) ? result.orders : null;
   const hasClerk = perms.includes('clerk'), hasShippingView = perms.includes('shipping_view');
   SHIPPING_READ_ONLY = hasShippingView && !hasClerk;
+  SHOW_DRIVER_TIMES = perms.includes('driver_times');
   if (pendingUploadAfterLogin) {
     pendingUploadAfterLogin = false;
     goPapayaUpload('screen-enc');
@@ -2025,6 +2033,7 @@ async function loadAdminUsers() {
               </select>
             </label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="analytics" ${perms.includes('analytics')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"> Data Analysis</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="driver_times" ${perms.includes('driver_times')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"> Driver times</label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="admin" ${perms.includes('admin')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"> Admin</label>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -2141,6 +2150,7 @@ async function adminAddUser() {
   const shippingAccess = document.getElementById('admin-new-perm-shipping').value; // '', 'clerk', o 'shipping_view'
   if (shippingAccess) perms.push(shippingAccess);
   if (document.getElementById('admin-new-perm-analytics').checked) perms.push('analytics');
+  if (document.getElementById('admin-new-perm-driver-times').checked) perms.push('driver_times');
   const isAdmin = document.getElementById('admin-new-perm-admin').checked;
   if (isAdmin) perms.push('admin');
   statusEl.style.display = 'block';
@@ -2161,6 +2171,7 @@ async function adminAddUser() {
     nameEl.value = ''; pinEl.value = '';
     document.getElementById('admin-new-perm-shipping').value = 'clerk';
     document.getElementById('admin-new-perm-analytics').checked = false;
+    document.getElementById('admin-new-perm-driver-times').checked = false;
     document.getElementById('admin-new-perm-admin').checked = false;
     updateNewUserPinField();
     statusEl.textContent = '✓ User added.'; statusEl.className = 'upload-status show ok';
@@ -4024,6 +4035,15 @@ function buildClerkCard(o) {
   // Departed (un problema se puede descubrir después de que salió el camión); solo se
   // apaga si el pedido está locked/solo-lectura.
   const incompleteToggleBtn = canEdit ? `<button type="button" class="btn-incomplete-toggle${o.incomplete ? ' active' : ''}" onclick="event.stopPropagation();toggleOrderIncomplete('${safeOrden}',event)">${o.incomplete ? '✓ Mark Complete' : '⚠️ Mark Incomplete'}</button>` : '';
+  // Solo para cuentas con el permiso "driver_times" — el dato (o.driverArrived.time/
+  // departedTime) ya viaja para TODOS en el mismo objeto que usa el badge "Driver
+  // Here", esto nomás lo enseña en pantalla a quien de verdad lo pidió, para no
+  // ensuciarle la tarjeta a los clerks que solo actualizan estatus. Aparece de una vez
+  // al expandir, sin tener que abrir History.
+  const driverTimesRow = (SHOW_DRIVER_TIMES && o.driverArrived) ? `<div class="driver-times-row">
+    <span>🚗 Arrived${o.driverArrived.time ? ': ' + escapeHtml(o.driverArrived.time) : ''}${o.driverArrived.driver ? ' — ' + escapeHtml(o.driverArrived.driver) : ''}</span>
+    ${o.driverArrived.departed ? `<span>🚛 Departed${o.driverArrived.departedTime ? ': ' + escapeHtml(o.driverArrived.departedTime) : ''}</span>` : ''}
+  </div>` : '';
 
   return `<div class="order-card${locked ? ' locked' : ''}${state ? ' ' + state + '-expanded' : ''}" id="card-${safeOrdenHtml}">
     <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;cursor:pointer;" tabindex="0" role="button" aria-label="Order #${escapeHtml(o.orden)}, ${escapeHtml(o.cliente)} — tap to collapse" onclick="toggleCardExpand('${safeOrden}', event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCardExpand('${safeOrden}', event);}">
@@ -4033,6 +4053,7 @@ function buildClerkCard(o) {
       </div>
       <i class="ti ti-chevron-up" style="color:var(--text-faint);font-size:18px;flex-shrink:0;"></i>
     </div>
+    ${driverTimesRow}
     ${checklistHtml}
     ${expectedReadyRow}
     ${warnHtml}
