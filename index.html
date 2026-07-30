@@ -582,8 +582,8 @@
 
   <!-- ROL -->
   <div class="screen active" id="screen-rol">
-    <p class="page-title">Welcome</p>
-    <p class="page-sub">How are you accessing today?</p>
+    <p class="page-title" style="text-align:center;">Welcome</p>
+    <p class="page-sub" style="text-align:center;">How are you accessing today?</p>
     <div class="role-grid">
       <div class="role-btn recommended" onclick="goChofer()">
         <div class="role-icon-wrap"><i class="ti ti-truck role-icon"></i></div>
@@ -946,20 +946,32 @@
         <form style="display:flex;flex-direction:column;gap:8px;" onsubmit="event.preventDefault(); adminAddUser();">
           <input id="admin-new-name" type="text" placeholder="Name" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'Inter',sans-serif;font-size:14px;">
           <input id="admin-new-pin" type="text" inputmode="numeric" maxlength="4" enterkeyhint="go" autocomplete="off" placeholder="4-digit PIN" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;">
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <label style="font-size:12px;color:var(--text-muted);">Shipping access</label>
-            <select id="admin-new-perm-shipping" onchange="updateNewUserPinField()" style="height:38px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 8px;font-family:'Inter',sans-serif;font-size:13px;">
-              <option value="clerk" selected>Full edit (Clerk)</option>
-              <option value="shipping_view">View only</option>
-              <option value="">No access</option>
-            </select>
+          <div class="checklist" style="background:var(--bg);margin:2px 0;">
+            <p class="checklist-title">Permissions</p>
+            <div class="settings-group" style="padding-top:2px;">
+              <div class="settings-row">
+                <label>Shipping access</label>
+                <select id="admin-new-perm-shipping" onchange="updateNewUserPinField()" style="height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 8px;font-family:'Inter',sans-serif;font-size:13px;">
+                  <option value="clerk" selected>Full edit (Clerk)</option>
+                  <option value="shipping_view">View only</option>
+                  <option value="">No access</option>
+                </select>
+              </div>
+              <p class="settings-caption">Whether they can open the Shipping Panel, and if they can change order status ("Full edit") or only look ("View only").</p>
+            </div>
+            <div class="settings-group">
+              <div class="settings-row"><label>Data Analysis</label><label class="toggle-switch"><input type="checkbox" id="admin-new-perm-analytics" onchange="updateNewUserPinField()"><span class="toggle-slider"></span></label></div>
+              <p class="settings-caption">Can view the reports screen (Data Analysis).</p>
+            </div>
+            <div class="settings-group">
+              <div class="settings-row"><label>Driver times</label><label class="toggle-switch"><input type="checkbox" id="admin-new-perm-driver-times" onchange="updateNewUserPinField()"><span class="toggle-slider"></span></label></div>
+              <p class="settings-caption">Sees the driver's arrival/departure time when they expand an order in Shipping.</p>
+            </div>
+            <div class="settings-group" style="border-bottom:none;padding-bottom:0;">
+              <div class="settings-row"><label>Admin</label><label class="toggle-switch"><input type="checkbox" id="admin-new-perm-admin" onchange="updateNewUserPinField()"><span class="toggle-slider"></span></label></div>
+              <p class="settings-caption">Full control of this panel — users, settings, clients. Uses a password instead of a PIN.</p>
+            </div>
           </div>
-          <div style="display:flex;gap:14px;padding:4px 2px;font-size:13px;color:var(--text-muted);flex-wrap:wrap;">
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-analytics" onchange="updateNewUserPinField()"> Data Analysis</label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-driver-times" onchange="updateNewUserPinField()"> Driver times</label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="admin-new-perm-admin" onchange="updateNewUserPinField()"> Admin</label>
-          </div>
-          <p style="font-size:11px;color:var(--text-faint);margin:-2px 0 0;">Admin uses a password (min. 6 characters) instead of a 4-digit PIN.</p>
           <button type="submit" class="btn-primary" id="admin-add-user-btn">Add user</button>
         </form>
         <p class="upload-status show" id="admin-add-status" role="status" aria-live="polite" style="display:none;"></p>
@@ -2023,19 +2035,18 @@ async function loadAdminUsers() {
             <button class="mini-filter-btn" style="opacity:1;border:1px solid var(--border);width:30px;height:30px;" onclick="toggleUserEditPanel(this)" title="Edit" aria-label="Edit"><i class="ti ti-pencil"></i></button>
           </div>
         </div>
-        <div class="user-edit-panel" style="display:none;flex-direction:column;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
-          <div style="display:flex;gap:14px;align-items:center;font-size:12.5px;color:var(--text-muted);flex-wrap:wrap;">
-            <label style="display:flex;align-items:center;gap:6px;">Shipping:
-              <select data-perm-shipping onchange="adminEditPermissions('${safeName}', this)" style="height:30px;border:1px solid var(--border);border-radius:6px;padding:0 6px;font-family:'Inter',sans-serif;font-size:12.5px;">
-                <option value="clerk" ${perms.includes('clerk')?'selected':''}>Full edit</option>
-                <option value="shipping_view" ${perms.includes('shipping_view')?'selected':''}>View only</option>
-                <option value="" ${!perms.includes('clerk') && !perms.includes('shipping_view')?'selected':''}>No access</option>
-              </select>
-            </label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="analytics" ${perms.includes('analytics')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"> Data Analysis</label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="driver_times" ${perms.includes('driver_times')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"> Driver times</label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="admin" ${perms.includes('admin')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"> Admin</label>
+        <div class="user-edit-panel" style="display:none;flex-direction:column;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--text-muted);">
+            <span>Shipping access</span>
+            <select data-perm-shipping onchange="adminEditPermissions('${safeName}', this)" style="height:32px;border:1px solid var(--border);border-radius:6px;padding:0 6px;font-family:'Inter',sans-serif;font-size:12.5px;">
+              <option value="clerk" ${perms.includes('clerk')?'selected':''}>Full edit</option>
+              <option value="shipping_view" ${perms.includes('shipping_view')?'selected':''}>View only</option>
+              <option value="" ${!perms.includes('clerk') && !perms.includes('shipping_view')?'selected':''}>No access</option>
+            </select>
           </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--text-muted);"><span>Data Analysis</span><label class="toggle-switch"><input type="checkbox" data-perm="analytics" ${perms.includes('analytics')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"><span class="toggle-slider"></span></label></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--text-muted);"><span>Driver times</span><label class="toggle-switch"><input type="checkbox" data-perm="driver_times" ${perms.includes('driver_times')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"><span class="toggle-slider"></span></label></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--text-muted);"><span>Admin</span><label class="toggle-switch"><input type="checkbox" data-perm="admin" ${perms.includes('admin')?'checked':''} onchange="adminEditPermissions('${safeName}', this)"><span class="toggle-slider"></span></label></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button type="button" class="admin-toggle-btn" onclick="toggleResetPinPanel(this)">Reset PIN</button>
             <button type="button" class="admin-danger-link" style="margin-left:auto;" onclick="confirmDeleteUser('${safeName}')">Delete user</button>
