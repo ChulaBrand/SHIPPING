@@ -172,7 +172,7 @@
   .screen { display:none; } .screen.active { display:block; }
   .page-title { font-size:24px; font-weight:500; margin-bottom:4px; }
   .page-sub { font-size:15px; color:var(--text-muted); margin-bottom:2rem; }
-  .role-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,320px)); gap:14px; justify-content:center; }
+  .role-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,360px)); gap:14px; justify-content:center; }
   .role-btn {
     background:var(--white); border:none; border-radius:16px; padding:1.9rem 1.25rem; cursor:pointer;
     display:flex; align-items:center; gap:14px; text-align:left;
@@ -582,8 +582,8 @@
 
   <!-- ROL -->
   <div class="screen active" id="screen-rol">
-    <p class="page-title" style="text-align:center;">Welcome</p>
-    <p class="page-sub" style="text-align:center;">How are you accessing today?</p>
+    <p class="page-title" style="margin-left:1.75rem;">Welcome</p>
+    <p class="page-sub" style="margin-left:1.75rem;">How are you accessing today?</p>
     <div class="role-grid">
       <div class="role-btn recommended" onclick="goChofer()">
         <div class="role-icon-wrap"><i class="ti ti-truck role-icon"></i></div>
