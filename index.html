@@ -4472,7 +4472,18 @@ function renderTomorrowOrders() {
     list.innerHTML = '<div class="empty-state"><i class="ti ti-calendar-event"></i>No orders scheduled for tomorrow yet</div>';
     return;
   }
-  list.innerHTML = tomorrowOrders.map(buildTomorrowCard).join('');
+  // Mismos filtros de estatus (círculos O/P/R/W/L/D) y Product que ya usa la lista
+  // normal — statusFilter/productFilter son los mismos Sets compartidos, así que
+  // togglear cualquiera de los dos mientras se ve esta pantalla también la actualiza
+  // (ver el dispatch a renderTomorrowOrders() en renderOrdenes()).
+  const filtered = tomorrowOrders
+    .filter(o => !statusFilter.size || statusFilter.has(parseInt(o.estatus) || 1))
+    .filter(orderMatchesProductFilter);
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty-state"><i class="ti ti-filter-off"></i>No orders scheduled for tomorrow match the current filters</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(buildTomorrowCard).join('');
 }
 function buildTomorrowCard(o) {
   return `<div class="order-card-compact" style="flex-direction:column;align-items:stretch;">
@@ -4945,6 +4956,7 @@ function renderOrdenes() {
   if (currentOrderView === 'eta') { renderEtaView(); return; }
   if (currentOrderView === 'cancelled') { return; }
   if (currentOrderView === 'unmatched') { renderUnmatchedProducts(); return; }
+  if (currentOrderView === 'tomorrow') { renderTomorrowOrders(); return; }
   // Igual que "Search results" en encBuscar() — si no se avisa con texto que la lista
   // está filtrada, parece que "Incomplete orders" son TODAS las órdenes de hoy.
   document.getElementById('orders-list-label').textContent = incompleteFilterActive ? '⚠️ Incomplete orders' : "Today's orders";
