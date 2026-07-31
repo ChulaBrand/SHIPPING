@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Chula Brand — Check-in</title>
+
+<!-- PWA: manifest propio de /check-in (independiente del de la raíz) -->
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#3B0F1A" />
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png" />
+
+<style>
+  body {
+    font-family: system-ui, sans-serif;
+    background: #F7F5F0;
+    color: #3B0F1A;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+    text-align: center;
+    padding: 24px;
+  }
+</style>
+</head>
+<body>
+  <div>
+    <h1>Check-in — Chula Brand</h1>
+    <p>Placeholder listo para el contenido real de check-in-shipping.</p>
+  </div>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch((err) => {
+        console.error('Error registrando el Service Worker de /check-in:', err);
+      });
+    });
+  }
+</script>
+</body>
+</html>
