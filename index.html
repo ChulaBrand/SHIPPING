@@ -1180,13 +1180,13 @@
       <div class="filter-chips" id="statusFilterChips"></div>
       <div class="controls-actions">
         <button class="view-toggle-btn" id="viewToggleBtn" onclick="toggleGlobalView()" title="View all" aria-label="View all"><i class="ti ti-arrows-maximize"></i><span class="vtb-label">All</span></button>
+        <button class="view-toggle-btn" id="unmatchedViewBtn" onclick="toggleUnmatchedView()" title="Products the Citrus feed isn't reporting on" aria-label="Products the Citrus feed isn't reporting on"><i class="ti ti-help-circle"></i><span class="vtb-label">Unmatched</span></button>
         <div class="dropdown-wrap">
           <button class="view-toggle-btn" id="moreDropdownBtn" onclick="toggleDropdown('more')" title="More" aria-label="More options"><i class="ti ti-dots"></i><span class="vtb-label">More</span></button>
           <div class="dropdown-panel" id="moreDropdownPanel" style="right:0;left:auto;">
             <button class="dropdown-option" id="dailySummaryBtn" onclick="closeAllDropdowns(); goDailySummary();" title="Download today's summary" aria-label="Download today's summary"><i class="ti ti-file-spreadsheet"></i> Summary</button>
             <button class="dropdown-option" id="cancelledViewBtn" onclick="toggleCancelledView()" title="View cancelled orders" aria-label="View cancelled orders"><i class="ti ti-trash"></i> Cancelled orders</button>
             <button class="dropdown-option" onclick="toggleTomorrowView()"><i class="ti ti-calendar-event"></i> Tomorrow's orders</button>
-            <button class="dropdown-option" onclick="toggleUnmatchedView()"><i class="ti ti-help-circle"></i> Unmatched products</button>
           </div>
         </div>
       </div>
@@ -1249,7 +1249,7 @@
       <div class="orders-list" id="tomorrow-list"></div>
     </div>
     <div id="unmatched-section" style="display:none;">
-      <p class="section-label">❓ Products the Citrus feed doesn't recognize</p>
+      <p class="section-label">❓ Orders with a section the Citrus feed isn't reporting on</p>
       <div class="orders-list" id="unmatched-list"></div>
     </div>
   </div>
@@ -4310,11 +4310,12 @@ function showOrderView(view) {
   document.getElementById('unmatched-section').style.display = view === 'unmatched' ? 'block' : 'none';
   document.getElementById('cancelledViewBtn').classList.toggle('active', view === 'cancelled');
   document.getElementById('etaViewBtn').classList.toggle('active-amber', view === 'eta');
-  // Cancelled/Tomorrow/Unmatched viven escondidos dentro del menú "⋯ More" (ver
-  // toggleCancelledView/toggleTomorrowView/toggleUnmatchedView) — se ilumina el botón
-  // del menú mismo, no uno propio, para que quede alguna señal visible de que esa
-  // vista sigue abierta aunque el panel del menú ya esté cerrado.
-  document.getElementById('moreDropdownBtn').classList.toggle('active-amber', view === 'cancelled' || view === 'tomorrow' || view === 'unmatched');
+  document.getElementById('unmatchedViewBtn').classList.toggle('active-amber', view === 'unmatched');
+  // Cancelled/Tomorrow viven escondidos dentro del menú "⋯ More" (ver
+  // toggleCancelledView/toggleTomorrowView) — se ilumina el botón del menú mismo, no
+  // uno propio, para que quede alguna señal visible de que esa vista sigue abierta
+  // aunque el panel del menú ya esté cerrado.
+  document.getElementById('moreDropdownBtn').classList.toggle('active-amber', view === 'cancelled' || view === 'tomorrow');
 }
 
 let cancelledOrders = [];
@@ -4484,15 +4485,15 @@ function buildTomorrowCard(o) {
 }
 
 // ── PRODUCTOS SIN MATCH CON EL FEED DE CITRUS ("Unmatched") ─────────────────────────
-// Vista de solo lectura — junta las líneas de producto de cualquier orden activa que no
-// caigan en ninguna de las 4 secciones que reconoce el feed (Papaya/Citrus/Plantain/
-// Tropicales, ver BUSINESS_UNIT_PRODUCT_RE en Code.gs). Sirve para detectar a tiempo un
-// producto nuevo o escrito distinto a como se esperaba, que si no se quedaría sin avanzar
-// solo para siempre sin que nadie se diera cuenta.
+// Vista de solo lectura — por cada orden activa, ve qué secciones necesita según sus
+// productos (Papaya/Citrus/Plantain/Tropicales) y las cruza contra lo que el feed
+// reportó de verdad en su último push (ver getUnmatchedProducts en Code.gs). No es "el
+// producto se ve raro" — es "esta orden trae papaya, pero el feed no está mandando
+// nada sobre la sección Papaya de esta orden", así se detecta a tiempo en vez de que
+// esa parte se quede sin avanzar sola para siempre sin que nadie se dé cuenta.
 let unmatchedProducts = [];
 let loadUnmatchedProductsSeq = 0;
 async function toggleUnmatchedView() {
-  closeAllDropdowns(); // el botón que dispara esto vive dentro del menú "⋯ More"
   const goingTo = currentOrderView === 'unmatched' ? 'normal' : 'unmatched';
   showOrderView(goingTo);
   if (goingTo === 'unmatched') loadUnmatchedProducts();
@@ -4513,7 +4514,7 @@ async function loadUnmatchedProducts() {
 function renderUnmatchedProducts() {
   const list = document.getElementById('unmatched-list');
   if (!unmatchedProducts.length) {
-    list.innerHTML = '<div class="empty-state"><i class="ti ti-circle-check"></i>Every product matches a Citrus feed section</div>';
+    list.innerHTML = '<div class="empty-state"><i class="ti ti-circle-check"></i>The Citrus feed is reporting on every section of every active order</div>';
     return;
   }
   list.innerHTML = unmatchedProducts.map(buildUnmatchedCard).join('');
@@ -4521,7 +4522,7 @@ function renderUnmatchedProducts() {
 function buildUnmatchedCard(o) {
   return `<div class="order-card-compact" style="flex-direction:column;align-items:stretch;">
     <div class="oc-left" style="margin-bottom:6px;">
-      <p class="oc-num">Order #${escapeHtml(o.orden)}</p>
+      <p class="oc-num">Order #${escapeHtml(o.orden)} · missing: ${escapeHtml(o.secciones || '')}</p>
       <p class="oc-cliente">${escapeHtml(o.cliente)}</p>
       <p class="oc-cliente" style="color:var(--text-faint);">${escapeHtml(o.productos)}</p>
     </div>
