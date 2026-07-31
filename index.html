@@ -4511,13 +4511,31 @@ async function loadUnmatchedProducts() {
     renderUnmatchedProducts();
   } catch (e) { if (seq === loadUnmatchedProductsSeq) list.innerHTML = '<div class="empty-state">Connection error</div>'; }
 }
+// Mismo filtro de "Product" (Papaya/Limes/Pineapples/... — ver productFilter/
+// categorizeProductDesc) que ya usa la lista normal, pero aplicado solo a los
+// productos que de verdad faltan en esta orden (o.productos aquí ya viene recortado a
+// eso desde el servidor), no a todos los productos de la orden completa.
+function unmatchedItemMatchesProductFilter(o) {
+  if (!productFilter.size) return true;
+  const cats = new Set(parseProductos(o.productos).map(line => {
+    const m = line.match(/^(\d+)\s+(.*)$/);
+    return categorizeProductDesc(m ? m[2] : line);
+  }));
+  for (const c of productFilter) { if (cats.has(c)) return true; }
+  return false;
+}
 function renderUnmatchedProducts() {
   const list = document.getElementById('unmatched-list');
   if (!unmatchedProducts.length) {
     list.innerHTML = '<div class="empty-state"><i class="ti ti-circle-check"></i>The Citrus feed is reporting on every section of every active order</div>';
     return;
   }
-  list.innerHTML = unmatchedProducts.map(buildUnmatchedCard).join('');
+  const filtered = unmatchedProducts.filter(unmatchedItemMatchesProductFilter);
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty-state"><i class="ti ti-filter-off"></i>No unmatched products match the current product filter</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(buildUnmatchedCard).join('');
 }
 function buildUnmatchedCard(o) {
   return `<div class="order-card-compact" style="flex-direction:column;align-items:stretch;">
@@ -4926,6 +4944,7 @@ function renderOrdenes() {
   // primera, dejando la otra desincronizada.
   if (currentOrderView === 'eta') { renderEtaView(); return; }
   if (currentOrderView === 'cancelled') { return; }
+  if (currentOrderView === 'unmatched') { renderUnmatchedProducts(); return; }
   // Igual que "Search results" en encBuscar() — si no se avisa con texto que la lista
   // está filtrada, parece que "Incomplete orders" son TODAS las órdenes de hoy.
   document.getElementById('orders-list-label').textContent = incompleteFilterActive ? '⚠️ Incomplete orders' : "Today's orders";
