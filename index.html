@@ -1186,6 +1186,7 @@
             <button class="dropdown-option" id="dailySummaryBtn" onclick="closeAllDropdowns(); goDailySummary();" title="Download today's summary" aria-label="Download today's summary"><i class="ti ti-file-spreadsheet"></i> Summary</button>
             <button class="dropdown-option" id="cancelledViewBtn" onclick="toggleCancelledView()" title="View cancelled orders" aria-label="View cancelled orders"><i class="ti ti-trash"></i> Cancelled orders</button>
             <button class="dropdown-option" onclick="toggleTomorrowView()"><i class="ti ti-calendar-event"></i> Tomorrow's orders</button>
+            <button class="dropdown-option" onclick="toggleUnmatchedView()"><i class="ti ti-help-circle"></i> Unmatched products</button>
           </div>
         </div>
       </div>
@@ -1246,6 +1247,10 @@
     <div id="tomorrow-section" style="display:none;">
       <p class="section-label">📅 Scheduled for tomorrow — not editable until their day</p>
       <div class="orders-list" id="tomorrow-list"></div>
+    </div>
+    <div id="unmatched-section" style="display:none;">
+      <p class="section-label">❓ Products the Citrus feed doesn't recognize</p>
+      <div class="orders-list" id="unmatched-list"></div>
     </div>
   </div>
 
@@ -1421,6 +1426,10 @@ function pruneOrderState(stateMap, currentList) {
 let globalViewMode = 'compact';
 // órdenes abiertas individualmente a mano, sin importar el modo global
 const expandedOrders = new Set();
+// Cuando globalViewMode es 'expanded' (todas abiertas por default), esto guarda las
+// que el usuario cerró a mano una por una — antes no existía ninguna forma de "cerrar"
+// una tarjeta individual mientras "View all" estaba activo, el click no hacía nada.
+const collapsedInGlobalView = new Set();
 // Órdenes cuyo estatus cambió mientras su tarjeta seguía abierta — un cambio de estatus
 // puede mover la orden a otra sección/posición (renderOrdenes() reclasifica todo), pero
 // hacerlo AL INSTANTE se sentía como que la tarjeta se te desaparecía de abajo del dedo
@@ -3942,7 +3951,16 @@ async function loadOrdenes() {
       if (raw) { renderSearchResults(raw); return; }
       searchActive = false;
     }
-    renderOrdenes();
+    // Con algo abierto, no se reacomoda nada solo — evita mover tarjetas o disparar un
+    // click en el lugar equivocado mientras el usuario sigue interactuando (ver
+    // refreshOpenCardsInPlace). Los datos ya quedaron al día en "ordenes"; el resto de
+    // la lista se pone al día en cuanto se cierre lo que está abierto (toggleCardExpand)
+    // o se toque fuera de una tarjeta.
+    if (expandedOrders.size || globalViewMode === 'expanded') {
+      if (globalViewMode !== 'expanded') refreshOpenCardsInPlace();
+    } else {
+      renderOrdenes();
+    }
   } catch(e){
     if (seq === loadOrdenesSeq) {
       if (!list.children.length) list.innerHTML='<div class="empty-state">Connection error</div>';
@@ -3979,7 +3997,7 @@ function buildClerkCard(o) {
   // no tiene badge propio, solo apaga los mismos controles sin decir "esto está viejo".
   const canEdit = !locked && !SHIPPING_READ_ONLY;
   const est = parseInt(o.estatus) || 1;
-  const isExpanded = globalViewMode === 'expanded' || expandedOrders.has(String(o.orden));
+  const isExpanded = isCardExpanded(o.orden);
   // o.orden viene del Sheet (normalmente del PDF parseado) — antes se metía crudo en
   // onclick/id sin ningún escape. Si un pedido llega alguna vez con una comilla en el
   // número (typo al capturar, un parseo raro), eso rompía el atributo/inyectaba script
@@ -4282,20 +4300,21 @@ async function submitCancelOrder(orden) {
 
 // ── Vistas especiales arriba (Cancelled, Expected Ready) — botones aparte, no junto
 // a los filtros de estatus. Solo una a la vez; la vista normal es la de por default. ──
-let currentOrderView = 'normal'; // 'normal' | 'cancelled' | 'eta' | 'tomorrow'
+let currentOrderView = 'normal'; // 'normal' | 'cancelled' | 'eta' | 'tomorrow' | 'unmatched'
 function showOrderView(view) {
   currentOrderView = view;
   document.getElementById('normal-orders-wrap').style.display = view === 'normal' ? '' : 'none';
   document.getElementById('cancelled-section').style.display = view === 'cancelled' ? 'block' : 'none';
   document.getElementById('eta-section').style.display = view === 'eta' ? 'block' : 'none';
   document.getElementById('tomorrow-section').style.display = view === 'tomorrow' ? 'block' : 'none';
+  document.getElementById('unmatched-section').style.display = view === 'unmatched' ? 'block' : 'none';
   document.getElementById('cancelledViewBtn').classList.toggle('active', view === 'cancelled');
   document.getElementById('etaViewBtn').classList.toggle('active-amber', view === 'eta');
-  // Cancelled y Tomorrow ahora viven escondidos dentro del menú "⋯ More" (ver
-  // toggleCancelledView/toggleTomorrowView) — se ilumina el botón del menú mismo, no un
-  // botón propio, para que quede alguna señal visible de que esa vista sigue abierta
-  // aunque el panel del menú ya esté cerrado.
-  document.getElementById('moreDropdownBtn').classList.toggle('active-amber', view === 'cancelled' || view === 'tomorrow');
+  // Cancelled/Tomorrow/Unmatched viven escondidos dentro del menú "⋯ More" (ver
+  // toggleCancelledView/toggleTomorrowView/toggleUnmatchedView) — se ilumina el botón
+  // del menú mismo, no uno propio, para que quede alguna señal visible de que esa
+  // vista sigue abierta aunque el panel del menú ya esté cerrado.
+  document.getElementById('moreDropdownBtn').classList.toggle('active-amber', view === 'cancelled' || view === 'tomorrow' || view === 'unmatched');
 }
 
 let cancelledOrders = [];
@@ -4464,6 +4483,51 @@ function buildTomorrowCard(o) {
   </div>`;
 }
 
+// ── PRODUCTOS SIN MATCH CON EL FEED DE CITRUS ("Unmatched") ─────────────────────────
+// Vista de solo lectura — junta las líneas de producto de cualquier orden activa que no
+// caigan en ninguna de las 4 secciones que reconoce el feed (Papaya/Citrus/Plantain/
+// Tropicales, ver BUSINESS_UNIT_PRODUCT_RE en Code.gs). Sirve para detectar a tiempo un
+// producto nuevo o escrito distinto a como se esperaba, que si no se quedaría sin avanzar
+// solo para siempre sin que nadie se diera cuenta.
+let unmatchedProducts = [];
+let loadUnmatchedProductsSeq = 0;
+async function toggleUnmatchedView() {
+  closeAllDropdowns(); // el botón que dispara esto vive dentro del menú "⋯ More"
+  const goingTo = currentOrderView === 'unmatched' ? 'normal' : 'unmatched';
+  showOrderView(goingTo);
+  if (goingTo === 'unmatched') loadUnmatchedProducts();
+  else renderOrdenes(); // normal-orders-wrap no se actualizó mientras estaba escondido
+}
+async function loadUnmatchedProducts() {
+  const seq = ++loadUnmatchedProductsSeq;
+  const list = document.getElementById('unmatched-list');
+  list.innerHTML = '<div class="empty-state"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i>Loading...</div>';
+  try {
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getUnmatchedProducts' }) });
+    const result = await res.json();
+    if (seq !== loadUnmatchedProductsSeq) return; // una llamada más nueva ya está en vuelo o ya aplicó su resultado
+    unmatchedProducts = Array.isArray(result) ? result : [];
+    renderUnmatchedProducts();
+  } catch (e) { if (seq === loadUnmatchedProductsSeq) list.innerHTML = '<div class="empty-state">Connection error</div>'; }
+}
+function renderUnmatchedProducts() {
+  const list = document.getElementById('unmatched-list');
+  if (!unmatchedProducts.length) {
+    list.innerHTML = '<div class="empty-state"><i class="ti ti-circle-check"></i>Every product matches a Citrus feed section</div>';
+    return;
+  }
+  list.innerHTML = unmatchedProducts.map(buildUnmatchedCard).join('');
+}
+function buildUnmatchedCard(o) {
+  return `<div class="order-card-compact" style="flex-direction:column;align-items:stretch;">
+    <div class="oc-left" style="margin-bottom:6px;">
+      <p class="oc-num">Order #${escapeHtml(o.orden)}</p>
+      <p class="oc-cliente">${escapeHtml(o.cliente)}</p>
+      <p class="oc-cliente" style="color:var(--text-faint);">${escapeHtml(o.productos)}</p>
+    </div>
+  </div>`;
+}
+
 function restoreFlowHtml(o) {
   const step = restoreFlowStep[o.orden] || 0;
   const safeOrden = escapeForJsAttr(o.orden);
@@ -4514,11 +4578,23 @@ async function submitRestoreOrder(orden) {
   finally { pendingCancelRestore.delete(key); }
 }
 
+// Refleja lo que se VE en pantalla ahorita — en 'expanded' (View all), todo empieza
+// abierto salvo lo que el usuario haya cerrado a mano (collapsedInGlobalView); en modo
+// normal, solo lo que está en expandedOrders.
+function isCardExpanded(orden) {
+  const key = String(orden);
+  return globalViewMode === 'expanded' ? !collapsedInGlobalView.has(key) : expandedOrders.has(key);
+}
 function toggleCardExpand(orden, evt) {
   const key = String(orden);
-  const wasOpen = expandedOrders.has(key);
-  if (wasOpen) expandedOrders.delete(key);
-  else expandedOrders.add(key);
+  const wasOpen = isCardExpanded(key);
+  if (globalViewMode === 'expanded') {
+    // En View all, expandedOrders no significa nada (todo ya está abierto) — se
+    // registra la excepción en collapsedInGlobalView en su lugar.
+    if (wasOpen) collapsedInGlobalView.add(key); else collapsedInGlobalView.delete(key);
+  } else {
+    if (wasOpen) expandedOrders.delete(key); else expandedOrders.add(key);
+  }
   if (searchActive) {
     const raw = document.getElementById('enc-search').value.trim();
     if (raw) { renderSearchResults(raw); return; }
@@ -4529,6 +4605,14 @@ function toggleCardExpand(orden, evt) {
   // de verdad: renderOrdenes() completo en vez de solo repintar esta tarjeta en su lugar.
   if (wasOpen && pendingReorder.has(key)) {
     pendingReorder.delete(key);
+    renderOrdenes();
+    return;
+  }
+  // Se cerró la ÚLTIMA tarjeta que quedaba abierta — momento seguro para ponerse al
+  // corriente con lo que el refresco de fondo haya ido dejando pendiente mientras
+  // tanto (ver refreshOpenCardsInPlace/loadOrdenes), sin mover nada bajo el dedo del
+  // usuario mientras seguía interactuando.
+  if (wasOpen && globalViewMode !== 'expanded' && !expandedOrders.size) {
     renderOrdenes();
     return;
   }
@@ -4580,6 +4664,7 @@ document.addEventListener('click', (e) => {
 function toggleGlobalView() {
   globalViewMode = globalViewMode === 'compact' ? 'expanded' : 'compact';
   expandedOrders.clear(); // el toggle general manda: limpia las expansiones manuales
+  collapsedInGlobalView.clear(); // las excepciones de "View all" solo valen mientras siga activo
   pendingReorder.clear(); // el renderOrdenes() de abajo ya deja todo reacomodado
   const btn = document.getElementById('viewToggleBtn');
   btn.innerHTML = globalViewMode === 'compact'
@@ -4664,6 +4749,22 @@ function setOrderStatus(orden, status) {
   pushOrderStatus(orden, status, prevSnapshot);
 }
 
+// Repinta en su lugar cada tarjeta actualmente abierta A MANO (expandedOrders) con los
+// datos frescos que acaban de llegar del refresco automático, sin tocar el resto del
+// DOM. Antes, cada refresco de fondo (cada shipRefreshSeconds, ver loadOrdenes) hacía
+// un renderOrdenes() completo sin importar si el usuario tenía algo abierto o el dedo
+// en la pantalla — de ahí el reacomodo sorpresa, y más grave, un click que caía sobre
+// el elemento equivocado si el refresco pegaba justo a medio toque (ver toggleGlobalView
+// para el caso de "View all", que ni siquiera intenta repintar nada mientras sigue activo).
+function refreshOpenCardsInPlace() {
+  expandedOrders.forEach(key => {
+    const o = ordenes.find(x => String(x.orden) === key);
+    const card = document.getElementById('card-' + key);
+    if (!o || !card) return;
+    try { card.outerHTML = buildClerkCard(o); } catch (e) { /* se deja como estaba — no vale la pena tronar el refresh por esto */ }
+  });
+}
+
 // Repinta SOLO la tarjeta de esta orden si sigue abierta ahorita (sin moverla de lugar
 // en la lista) y deja pendiente el reacomodo de sección/orden para cuando se cierre —
 // ver pendingReorder y toggleCardExpand. Si la tarjeta no está abierta o no se
@@ -4672,7 +4773,7 @@ function setOrderStatus(orden, status) {
 function applyOrderCardUpdate(orden) {
   const key = String(orden);
   const o = ordenes.find(x => String(x.orden) === key);
-  const isOpen = globalViewMode === 'expanded' || expandedOrders.has(key);
+  const isOpen = isCardExpanded(key);
   const card = document.getElementById('card-' + key);
   if (isOpen && card && o) {
     try {
