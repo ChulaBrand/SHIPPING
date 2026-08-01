@@ -937,6 +937,7 @@
       <button class="admin-tab-btn" data-tab="clients" onclick="showAdminTab('clients')"><i class="ti ti-building-store"></i>Clients</button>
       <button class="admin-tab-btn" data-tab="driver" onclick="showAdminTab('driver')"><i class="ti ti-truck"></i>Driver/Client Screen</button>
       <button class="admin-tab-btn" data-tab="settings" onclick="showAdminTab('settings')"><i class="ti ti-clipboard-list"></i>Order Coordinator</button>
+      <button class="admin-tab-btn" data-tab="business" onclick="showAdminTab('business')"><i class="ti ti-category-2"></i>Business Units</button>
       <button class="admin-tab-btn" data-tab="analytics" onclick="showAdminTab('analytics')"><i class="ti ti-chart-bar"></i>Analytics Layout</button>
     </div>
 
@@ -1092,6 +1093,11 @@
         <button class="btn-primary" style="margin-top:10px;" onclick="saveStatusOrder()">Save order</button>
         <p class="upload-status show" id="admin-status-order-status" role="status" aria-live="polite" style="display:none;"></p>
       </div>
+    </div>
+
+    <div class="admin-tab-panel" id="admin-tab-business" style="display:none;">
+      <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:12px;">Controls how the Citrus feed's business_unit sections match your products, and who gets emailed at 4:30pm about orders that section isn't getting status on. See "Unmatched" in the Shipping Panel for the same list, live.</p>
+      <div id="admin-business-units-list"></div>
     </div>
 
     <div class="admin-tab-panel" id="admin-tab-analytics" style="display:none;">
@@ -2238,7 +2244,7 @@ async function adminToggleUser(name, active) {
 }
 
 // ── Navegación de pestañas dentro de Admin ──
-let adminClientsLoaded = false, adminSettingsLoaded = false, adminDriverLoaded = false;
+let adminClientsLoaded = false, adminSettingsLoaded = false, adminDriverLoaded = false, adminBusinessUnitsLoaded = false;
 function showAdminTab(tab) {
   document.querySelectorAll('.admin-tab-panel').forEach(p => p.style.display = 'none');
   document.getElementById('admin-tab-' + tab).style.display = '';
@@ -2246,6 +2252,7 @@ function showAdminTab(tab) {
   if (tab === 'clients' && !adminClientsLoaded) { adminClientsLoaded = true; loadAdminClients(); loadCajasSettings(); }
   if (tab === 'settings' && !adminSettingsLoaded) { adminSettingsLoaded = true; loadAdminSettings(); }
   if (tab === 'driver' && !adminDriverLoaded) { adminDriverLoaded = true; loadDriverScreenSettings(); }
+  if (tab === 'business' && !adminBusinessUnitsLoaded) { adminBusinessUnitsLoaded = true; loadAdminBusinessUnits(); }
 }
 
 // Junta en una sola confirmación TODO lo que va a cambiar (nada de "sí" a ciegas
@@ -2474,6 +2481,100 @@ function addAlertEmail() {
 function removeAlertEmail(email) {
   alertEmailsList = alertEmailsList.filter(e => e !== email);
   renderAlertEmailChips();
+}
+
+// ── BUSINESS UNITS (Admin) ──
+// Papaya/Citrus/Plantain/Tropicales — qué palabras de producto le corresponden a cada
+// una (ver productMatchesBusinessUnit en Code.gs) y a qué correos avisarles a las
+// 4:30pm si algo de su sección se queda sin status del feed de Citrus (ver
+// sendBusinessUnitUnmatchedEmails). businessUnitsData es la fuente de verdad visual —
+// cada add/remove guarda de inmediato (mismo patrón que Clients), no hay botón "Save"
+// aparte.
+let businessUnitsData = [];
+async function loadAdminBusinessUnits() {
+  const list = document.getElementById('admin-business-units-list');
+  list.innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i>Loading...</div>';
+  try {
+    const result = await adminApiCall('getBusinessUnits');
+    if (!result) return;
+    if (result.error) { list.innerHTML = `<div class="empty-state"><i class="ti ti-alert-circle"></i>${result.error}</div>`; return; }
+    businessUnitsData = result;
+    renderAdminBusinessUnits();
+  } catch (e) { list.innerHTML = '<div class="empty-state">Connection error</div>'; }
+}
+function renderAdminBusinessUnits() {
+  const list = document.getElementById('admin-business-units-list');
+  list.innerHTML = businessUnitsData.map(buildBusinessUnitCard).join('');
+}
+function buildBusinessUnitCard(bu) {
+  const safeBu = escapeForJsAttr(bu.businessUnit);
+  return `<div class="admin-section-card">
+    <p class="section-label">${escapeHtml(bu.businessUnit)}</p>
+    <p style="font-size:12px;color:var(--text-muted);font-weight:600;margin:4px 0 6px;">Product keywords</p>
+    <p class="settings-caption" style="margin-top:0;">Matches the START of a product's description (case-insensitive) — e.g. "avocado" matches "Avocados Hass 40 Lbs."</p>
+    <div class="saved-chip-row" style="margin-bottom:8px;">${bu.keywords.map(kw =>
+      `<span class="saved-chip">${escapeHtml(kw)}<button type="button" onclick="removeBusinessUnitKeyword('${safeBu}','${escapeForJsAttr(kw)}')" title="Remove" aria-label="Remove ${escapeHtml(kw)}">✕</button></span>`
+    ).join('') || '<span style="font-size:12.5px;color:var(--text-faint);">No keywords yet — this section will never match any product.</span>'}</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <input type="text" id="bu-keyword-input-${safeBu}" placeholder="e.g. avocado" style="flex:1;min-width:0;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'Inter',sans-serif;font-size:13px;background:var(--bg);color:var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();addBusinessUnitKeyword('${safeBu}');}">
+      <button type="button" class="admin-toggle-btn" style="white-space:nowrap;" onclick="addBusinessUnitKeyword('${safeBu}')">+ Add</button>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);font-weight:600;margin:4px 0 6px;">Emails (4:30pm daily alert)</p>
+    <p class="settings-caption" style="margin-top:0;">Only sent if this section has an order it isn't getting status on that day — silent otherwise.</p>
+    <div class="saved-chip-row" style="margin-bottom:8px;">${bu.emails.map(email =>
+      `<span class="saved-chip">${escapeHtml(email)}<button type="button" onclick="removeBusinessUnitEmail('${safeBu}','${escapeForJsAttr(email)}')" title="Remove" aria-label="Remove ${escapeHtml(email)}">✕</button></span>`
+    ).join('') || '<span style="font-size:12.5px;color:var(--text-faint);">No one gets emailed for this section yet.</span>'}</div>
+    <div style="display:flex;gap:8px;">
+      <input type="email" id="bu-email-input-${safeBu}" placeholder="name@example.com" style="flex:1;min-width:0;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'Inter',sans-serif;font-size:13px;background:var(--bg);color:var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();addBusinessUnitEmail('${safeBu}');}">
+      <button type="button" class="admin-toggle-btn" style="white-space:nowrap;" onclick="addBusinessUnitEmail('${safeBu}')">+ Add</button>
+    </div>
+  </div>`;
+}
+function getBusinessUnitEntry(bu) { return businessUnitsData.find(b => b.businessUnit === bu); }
+async function saveBusinessUnitKeywords(bu) {
+  const entry = getBusinessUnitEntry(bu);
+  const result = await adminApiCall('adminSetBusinessUnitKeywords', { businessUnit: bu, keywords: entry.keywords });
+  if (!result) return;
+  if (result.error) { showToast(result.error, 'error'); return; }
+  renderAdminBusinessUnits();
+}
+async function saveBusinessUnitEmails(bu) {
+  const entry = getBusinessUnitEntry(bu);
+  const result = await adminApiCall('adminSetBusinessUnitEmails', { businessUnit: bu, emails: entry.emails });
+  if (!result) return;
+  if (result.error) { showToast(result.error, 'error'); return; }
+  renderAdminBusinessUnits();
+}
+function addBusinessUnitKeyword(bu) {
+  const input = document.getElementById('bu-keyword-input-' + bu);
+  const kw = input.value.trim().toLowerCase();
+  if (!kw) return;
+  const entry = getBusinessUnitEntry(bu);
+  if (entry.keywords.some(k => k.toLowerCase() === kw)) { showToast('Already in the list.'); input.value = ''; return; }
+  entry.keywords.push(kw);
+  input.value = '';
+  saveBusinessUnitKeywords(bu);
+}
+function removeBusinessUnitKeyword(bu, kw) {
+  const entry = getBusinessUnitEntry(bu);
+  entry.keywords = entry.keywords.filter(k => k !== kw);
+  saveBusinessUnitKeywords(bu);
+}
+function addBusinessUnitEmail(bu) {
+  const input = document.getElementById('bu-email-input-' + bu);
+  const email = input.value.trim();
+  if (!email) return;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast("That doesn't look like a valid email.", 'error'); return; }
+  const entry = getBusinessUnitEntry(bu);
+  if (entry.emails.some(e => e.toLowerCase() === email.toLowerCase())) { showToast('Already in the list.'); input.value = ''; return; }
+  entry.emails.push(email);
+  input.value = '';
+  saveBusinessUnitEmails(bu);
+}
+function removeBusinessUnitEmail(bu, email) {
+  const entry = getBusinessUnitEntry(bu);
+  entry.emails = entry.emails.filter(e => e !== email);
+  saveBusinessUnitEmails(bu);
 }
 
 // Reordenar con flechas ▲▼ (mismo patrón que Analytics Layout), guarda como
