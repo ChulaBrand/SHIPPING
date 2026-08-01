@@ -1142,7 +1142,7 @@
     </div>
 
     <div class="admin-tab-panel" id="admin-tab-business" style="display:none;">
-      <div class="admin-info-box"><i class="ti ti-info-circle"></i><span>Controls how the Citrus feed's business_unit sections match your products, and who gets emailed when a section isn't getting status on an order. See "Unmatched" in the Shipping Panel for the same list, live.</span></div>
+      <div class="admin-info-box"><i class="ti ti-info-circle"></i><span>Controls how the Master Plan feed's business_unit sections match your products, and who gets emailed when a section isn't getting status on an order. See "Unmatched" in the Shipping Panel for the same list, live.</span></div>
 
       <div class="admin-section-card">
         <div class="admin-card-header"><span class="icon"><i class="ti ti-clock"></i></span><div><p class="section-label" style="margin-bottom:0;">Send schedule</p><p class="subtitle">When the unmatched-orders alert emails go out, every day</p></div></div>
@@ -1243,7 +1243,7 @@
       <div class="filter-chips" id="statusFilterChips"></div>
       <div class="controls-actions">
         <button class="view-toggle-btn" id="viewToggleBtn" onclick="toggleGlobalView()" title="View all" aria-label="View all"><i class="ti ti-arrows-maximize"></i><span class="vtb-label">All</span></button>
-        <button class="view-toggle-btn" id="unmatchedViewBtn" onclick="toggleUnmatchedView()" title="Products the Citrus feed isn't reporting on" aria-label="Products the Citrus feed isn't reporting on"><i class="ti ti-help-circle"></i><span class="vtb-label">Unmatched</span></button>
+        <button class="view-toggle-btn" id="unmatchedViewBtn" onclick="toggleUnmatchedView()" title="Products the Master Plan feed isn't reporting on" aria-label="Products the Master Plan feed isn't reporting on"><i class="ti ti-help-circle"></i><span class="vtb-label">Unmatched</span></button>
         <div class="dropdown-wrap">
           <button class="view-toggle-btn" id="moreDropdownBtn" onclick="toggleDropdown('more')" title="More" aria-label="More options"><i class="ti ti-dots"></i><span class="vtb-label">More</span></button>
           <div class="dropdown-panel" id="moreDropdownPanel" style="right:0;left:auto;">
@@ -1312,7 +1312,7 @@
       <div class="orders-list" id="tomorrow-list"></div>
     </div>
     <div id="unmatched-section" style="display:none;">
-      <p class="section-label">❓ Orders with a section the Citrus feed isn't reporting on</p>
+      <p class="section-label">❓ Orders with a section the Master Plan feed isn't reporting on</p>
       <div class="orders-list" id="unmatched-list"></div>
     </div>
   </div>
@@ -4824,7 +4824,7 @@ function unmatchedItemMatchesProductFilter(o) {
 function renderUnmatchedProducts() {
   const list = document.getElementById('unmatched-list');
   if (!unmatchedProducts.length) {
-    list.innerHTML = '<div class="empty-state"><i class="ti ti-circle-check"></i>The Citrus feed is reporting on every section of every active order</div>';
+    list.innerHTML = '<div class="empty-state"><i class="ti ti-circle-check"></i>The Master Plan feed is reporting on every section of every active order</div>';
     return;
   }
   const filtered = unmatchedProducts.filter(unmatchedItemMatchesProductFilter);
