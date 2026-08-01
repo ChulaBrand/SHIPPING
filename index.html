@@ -206,6 +206,23 @@
   .admin-subsection:first-of-type { padding-top:0; margin-top:0; border-top:none; }
   .admin-subsection-title { display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700; color:var(--text); margin-bottom:4px; }
   .admin-subsection-title i { font-size:14px; color:var(--purple); }
+  .settings-layout { display:flex; gap:18px; align-items:flex-start; }
+  .settings-nav { width:172px; flex-shrink:0; display:flex; flex-direction:column; gap:2px; position:sticky; top:16px; }
+  .settings-nav-btn { display:flex; align-items:center; gap:8px; text-align:left; background:none; border:none; border-radius:var(--radius-sm); padding:9px 12px; font-size:12.5px; font-weight:600; color:var(--text-muted); cursor:pointer; font-family:'Inter',sans-serif; width:100%; }
+  .settings-nav-btn:hover { background:var(--bg); color:var(--text); }
+  .settings-nav-btn.active { background:var(--accent-tint-bg); color:var(--purple); }
+  .settings-nav-btn i { font-size:15px; flex-shrink:0; }
+  .settings-content { flex:1; min-width:0; }
+  @media (max-width:680px) {
+    .settings-layout { flex-direction:column; }
+    .settings-nav { width:100%; flex-direction:row; overflow-x:auto; position:static; padding-bottom:2px; }
+    .settings-nav-btn { width:auto; white-space:nowrap; }
+  }
+  .bu-accordion-header { display:flex; align-items:center; gap:9px; cursor:pointer; user-select:none; }
+  .bu-accordion-header .chevron { margin-left:auto; color:var(--text-faint); font-size:16px; transition:transform .15s; flex-shrink:0; }
+  .bu-accordion-header.open .chevron { transform:rotate(180deg); }
+  .bu-accordion-body { display:none; }
+  .bu-accordion-body.open { display:block; }
   .settings-group { padding:12px 0; border-bottom:1px solid var(--border); }
   .settings-group:first-of-type { padding-top:2px; }
   .settings-group:last-of-type { border-bottom:none; padding-bottom:2px; }
@@ -1058,61 +1075,69 @@
     </div>
 
     <div class="admin-tab-panel" id="admin-tab-settings" style="display:none;">
-      <div class="admin-section-card">
-        <div class="admin-card-header"><span class="icon"><i class="ti ti-truck-delivery"></i></span><p class="section-label" style="margin-bottom:0;">Order Coordinator Screen</p></div>
-
-        <div class="admin-subsection">
-          <p class="admin-subsection-title"><i class="ti ti-refresh"></i>Refresh</p>
-          <div class="settings-group">
-            <div class="settings-row"><label>Refresh every (seconds)</label><input type="number" id="setting-shipRefreshSeconds" min="20"></div>
-            <p class="settings-caption">How often the order list refreshes itself while the Order Coordinator has it open (minimum 20s so it doesn't overload the server).</p>
-          </div>
+      <div class="settings-layout">
+        <div class="settings-nav">
+          <button type="button" class="settings-nav-btn active" data-settings-section="refresh" onclick="showSettingsSection('refresh')"><i class="ti ti-refresh"></i>Refresh</button>
+          <button type="button" class="settings-nav-btn" data-settings-section="thresholds" onclick="showSettingsSection('thresholds')"><i class="ti ti-hourglass"></i>Thresholds</button>
+          <button type="button" class="settings-nav-btn" data-settings-section="alerts" onclick="showSettingsSection('alerts')"><i class="ti ti-bell"></i>Alerts</button>
+          <button type="button" class="settings-nav-btn" data-settings-section="order" onclick="showSettingsSection('order')"><i class="ti ti-list-numbers"></i>Status order</button>
         </div>
 
-        <div class="admin-subsection">
-          <p class="admin-subsection-title"><i class="ti ti-hourglass"></i>Thresholds</p>
-          <div class="settings-group"><div class="settings-row"><label>Hours to mark "Stalled"</label><input type="number" id="setting-stalledHours"></div></div>
-          <div class="settings-group">
-            <div class="settings-row"><label>"Stalled" floor hour (24h, e.g. 10 = 10am)</label><input type="number" id="setting-stalledFloorHour" min="0" max="23"></div>
-            <p class="settings-caption">The "Stalled" clock never starts counting before this hour of the order's own day — so an order pre-loaded the day before (or uploaded very early) doesn't show as Stalled before anyone's had a chance to touch it.</p>
-          </div>
-          <div class="settings-group"><div class="settings-row"><label>Hours to mark "Soon"</label><input type="number" id="setting-soonHours"></div></div>
-          <div class="settings-group"><div class="settings-row"><label>Hours before locking edits</label><input type="number" id="setting-lockHours"></div></div>
-          <div class="settings-group">
-            <div class="settings-row"><label>Hours before archiving cancelled orders</label><input type="number" id="setting-cancelledArchiveHours"></div>
-            <p class="settings-caption">The Cancelled screen is for undoing a recent mistake, not a long history — anything older than this moves out automatically and can no longer be restored from there.</p>
-          </div>
-        </div>
-
-        <div class="admin-subsection">
-          <p class="admin-subsection-title"><i class="ti ti-bell"></i>Alerts</p>
-          <div class="settings-group">
-            <div class="settings-row"><label>Email me if no PDF was uploaded</label><label class="toggle-switch"><input type="checkbox" id="setting-uploadAlertEnabled" aria-label="Email me if no PDF was uploaded"><span class="toggle-slider"></span></label></div>
-            <p class="settings-caption">Checks once a day — if there's still no order for today by the hour below, sends an email so someone knows to upload it.</p>
-          </div>
-          <div class="settings-group"><div class="settings-row"><label>Alert hour (24h, e.g. 11 = 11am)</label><input type="number" id="setting-uploadAlertHour" min="0" max="23"></div></div>
-          <div class="settings-group">
-            <p style="font-size:13px;color:var(--text);font-weight:500;margin-bottom:8px;">Alert emails</p>
-            <div class="saved-chip-row" id="alertEmailsChips" style="margin-bottom:8px;"></div>
-            <div style="display:flex;gap:8px;">
-              <input type="email" id="alertEmailInput" placeholder="name@example.com" style="flex:1;min-width:0;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'Inter',sans-serif;font-size:13px;background:var(--bg);color:var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();addAlertEmail();}">
-              <button type="button" class="admin-toggle-btn" style="white-space:nowrap;" onclick="addAlertEmail()">+ Add</button>
+        <div class="settings-content">
+          <div class="admin-section-card settings-pane" id="settings-pane-refresh">
+            <div class="admin-card-header"><span class="icon"><i class="ti ti-refresh"></i></span><p class="section-label" style="margin-bottom:0;">Refresh</p></div>
+            <div class="settings-group">
+              <div class="settings-row"><label>Refresh every (seconds)</label><input type="number" id="setting-shipRefreshSeconds" min="20"></div>
+              <p class="settings-caption">How often the order list refreshes itself while the Order Coordinator has it open (minimum 20s so it doesn't overload the server).</p>
             </div>
-            <input type="hidden" id="setting-alertEmails">
-            <p class="settings-caption">Who gets the "no PDF uploaded" and daily close-of-day summary emails. Leave empty to use the default account email.</p>
+            <button class="btn-primary" style="margin-top:14px;" onclick="saveAdminSettings()">Save changes</button>
+            <p class="upload-status show" id="admin-settings-status" role="status" aria-live="polite" style="display:none;"></p>
+          </div>
+
+          <div class="admin-section-card settings-pane" id="settings-pane-thresholds" style="display:none;">
+            <div class="admin-card-header"><span class="icon"><i class="ti ti-hourglass"></i></span><p class="section-label" style="margin-bottom:0;">Thresholds</p></div>
+            <div class="settings-group"><div class="settings-row"><label>Hours to mark "Stalled"</label><input type="number" id="setting-stalledHours"></div></div>
+            <div class="settings-group">
+              <div class="settings-row"><label>"Stalled" floor hour (24h, e.g. 10 = 10am)</label><input type="number" id="setting-stalledFloorHour" min="0" max="23"></div>
+              <p class="settings-caption">The "Stalled" clock never starts counting before this hour of the order's own day — so an order pre-loaded the day before (or uploaded very early) doesn't show as Stalled before anyone's had a chance to touch it.</p>
+            </div>
+            <div class="settings-group"><div class="settings-row"><label>Hours to mark "Soon"</label><input type="number" id="setting-soonHours"></div></div>
+            <div class="settings-group"><div class="settings-row"><label>Hours before locking edits</label><input type="number" id="setting-lockHours"></div></div>
+            <div class="settings-group">
+              <div class="settings-row"><label>Hours before archiving cancelled orders</label><input type="number" id="setting-cancelledArchiveHours"></div>
+              <p class="settings-caption">The Cancelled screen is for undoing a recent mistake, not a long history — anything older than this moves out automatically and can no longer be restored from there.</p>
+            </div>
+            <button class="btn-primary" style="margin-top:14px;" onclick="saveAdminSettings()">Save changes</button>
+          </div>
+
+          <div class="admin-section-card settings-pane" id="settings-pane-alerts" style="display:none;">
+            <div class="admin-card-header"><span class="icon"><i class="ti ti-bell"></i></span><p class="section-label" style="margin-bottom:0;">Alerts</p></div>
+            <div class="settings-group">
+              <div class="settings-row"><label>Email me if no PDF was uploaded</label><label class="toggle-switch"><input type="checkbox" id="setting-uploadAlertEnabled" aria-label="Email me if no PDF was uploaded"><span class="toggle-slider"></span></label></div>
+              <p class="settings-caption">Checks once a day — if there's still no order for today by the hour below, sends an email so someone knows to upload it.</p>
+            </div>
+            <div class="settings-group"><div class="settings-row"><label>Alert hour (24h, e.g. 11 = 11am)</label><input type="number" id="setting-uploadAlertHour" min="0" max="23"></div></div>
+            <div class="settings-group">
+              <p style="font-size:13px;color:var(--text);font-weight:500;margin-bottom:8px;">Alert emails</p>
+              <div class="saved-chip-row" id="alertEmailsChips" style="margin-bottom:8px;"></div>
+              <div style="display:flex;gap:8px;">
+                <input type="email" id="alertEmailInput" placeholder="name@example.com" style="flex:1;min-width:0;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'Inter',sans-serif;font-size:13px;background:var(--bg);color:var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();addAlertEmail();}">
+                <button type="button" class="admin-toggle-btn" style="white-space:nowrap;" onclick="addAlertEmail()">+ Add</button>
+              </div>
+              <input type="hidden" id="setting-alertEmails">
+              <p class="settings-caption">Who gets the "no PDF uploaded" and daily close-of-day summary emails. Leave empty to use the default account email.</p>
+            </div>
+            <button class="btn-primary" style="margin-top:14px;" onclick="saveAdminSettings()">Save changes</button>
+          </div>
+
+          <div class="admin-section-card settings-pane" id="settings-pane-order" style="display:none;">
+            <div class="admin-card-header"><span class="icon"><i class="ti ti-list-numbers"></i></span><p class="section-label" style="margin-bottom:0;">Status order (Today's orders)</p></div>
+            <p class="settings-caption" style="margin-bottom:10px;">Sets the order statuses are arranged in within "Today's orders" (Departed and Needs Attention always go separately, this doesn't affect them).</p>
+            <div id="admin-status-order-list"></div>
+            <button class="btn-primary" style="margin-top:10px;" onclick="saveStatusOrder()">Save order</button>
+            <p class="upload-status show" id="admin-status-order-status" role="status" aria-live="polite" style="display:none;"></p>
           </div>
         </div>
-
-        <button class="btn-primary" style="margin-top:14px;" onclick="saveAdminSettings()">Save changes</button>
-        <p class="upload-status show" id="admin-settings-status" role="status" aria-live="polite" style="display:none;"></p>
-      </div>
-
-      <div class="admin-section-card">
-        <div class="admin-card-header"><span class="icon"><i class="ti ti-list-numbers"></i></span><p class="section-label" style="margin-bottom:0;">Status order (Today's orders)</p></div>
-        <p class="settings-caption" style="margin-bottom:10px;">Sets the order statuses are arranged in within "Today's orders" (Departed and Needs Attention always go separately, this doesn't affect them).</p>
-        <div id="admin-status-order-list"></div>
-        <button class="btn-primary" style="margin-top:10px;" onclick="saveStatusOrder()">Save order</button>
-        <p class="upload-status show" id="admin-status-order-status" role="status" aria-live="polite" style="display:none;"></p>
       </div>
     </div>
 
@@ -2530,6 +2555,15 @@ async function loadAdminSettings() {
 }
 async function saveAdminSettings() { await saveSettingsFields(GENERAL_SETTINGS_FIELDS, loadedGeneralSettings, 'admin-settings-status'); }
 
+// Nav lateral de Settings (Refresh/Thresholds/Alerts/Status order) — cada pane es su
+// propia tarjeta con su propio botón de guardar, pero "Save changes" en cualquiera de
+// las 3 primeras manda TODOS los campos igual (saveAdminSettings no distingue cuál
+// pane estaba visible), así que no hay guardado parcial aunque estén escondidas.
+function showSettingsSection(section) {
+  document.querySelectorAll('.settings-nav-btn').forEach(b => b.classList.toggle('active', b.dataset.settingsSection === section));
+  document.querySelectorAll('.settings-pane').forEach(p => p.style.display = (p.id === 'settings-pane-' + section) ? '' : 'none');
+}
+
 // alertEmailsList es la fuente de verdad visual (los recuadritos) — cada vez que cambia,
 // se vuelve a juntar en el input escondido setting-alertEmails, que es lo que
 // saveSettingsFields() de verdad lee y manda al guardar (mismo mecanismo de siempre,
@@ -2568,6 +2602,9 @@ function removeAlertEmail(email) {
 // aparte.
 let businessUnitsData = [];
 let businessUnitEmailTimes = [];
+// Qué tarjetas están abiertas (acordeón) — persiste entre renderAdminBusinessUnits()
+// para no cerrar todo solo porque se guardó un cambio.
+let expandedBusinessUnits = new Set();
 async function loadAdminBusinessUnits() {
   const list = document.getElementById('admin-business-units-list');
   list.innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i>Loading...</div>';
@@ -2588,36 +2625,46 @@ function renderAdminBusinessUnits() {
   const list = document.getElementById('admin-business-units-list');
   list.innerHTML = businessUnitsData.map(buildBusinessUnitCard).join('');
 }
-// Emoji nomás para que cada tarjeta se distinga de un vistazo — puramente visual, no
-// afecta el matching (eso sigue siendo por keyword, ver productMatchesBusinessUnit).
-const BUSINESS_UNIT_EMOJI = { PAPAYA: '🧡', CITRUS: '💛', PLANTAIN: '💚', TROPICALES: '🌴' };
+function toggleBusinessUnitAccordion(bu) {
+  if (expandedBusinessUnits.has(bu)) expandedBusinessUnits.delete(bu); else expandedBusinessUnits.add(bu);
+  renderAdminBusinessUnits();
+}
+// Tarjetas colapsadas por default (solo el nombre) — se abren al tocarlas, mismo
+// patrón de acordeón que las tarjetas de pedidos en Shipping Panel.
 function buildBusinessUnitCard(bu) {
   const safeBu = escapeForJsAttr(bu.businessUnit);
-  const emoji = BUSINESS_UNIT_EMOJI[String(bu.businessUnit).toUpperCase()] || '📦';
-  return `<div class="admin-section-card">
-    <div class="admin-card-header"><span class="icon">${emoji}</span><p class="section-label" style="margin-bottom:0;">${escapeHtml(bu.businessUnit)}</p></div>
-
-    <div class="admin-subsection">
-      <p class="admin-subsection-title"><i class="ti ti-tag"></i>Product keywords</p>
-      <p class="settings-caption" style="margin-top:0;">Matches the START of a product's description (case-insensitive) — e.g. "avocado" matches "Avocados Hass 40 Lbs."</p>
-      <div class="saved-chip-row" style="margin-top:10px;margin-bottom:8px;">${bu.keywords.map(kw =>
-        `<span class="saved-chip">${escapeHtml(kw)}<button type="button" onclick="removeBusinessUnitKeyword('${safeBu}','${escapeForJsAttr(kw)}')" title="Remove" aria-label="Remove ${escapeHtml(kw)}">✕</button></span>`
-      ).join('') || '<span style="font-size:12.5px;color:var(--text-faint);">No keywords yet — this section will never match any product.</span>'}</div>
-      <div style="display:flex;gap:8px;">
-        <input type="text" id="bu-keyword-input-${safeBu}" placeholder="e.g. avocado" style="flex:1;min-width:0;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'Inter',sans-serif;font-size:13px;background:var(--bg);color:var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();addBusinessUnitKeyword('${safeBu}');}">
-        <button type="button" class="admin-toggle-btn" style="white-space:nowrap;" onclick="addBusinessUnitKeyword('${safeBu}')">+ Add</button>
-      </div>
+  const isOpen = expandedBusinessUnits.has(bu.businessUnit);
+  const summary = bu.keywords.length + ' keyword' + (bu.keywords.length === 1 ? '' : 's') + ' · ' + bu.emails.length + ' email' + (bu.emails.length === 1 ? '' : 's');
+  return `<div class="admin-section-card" style="padding-bottom:${isOpen ? '16px' : '12px'};">
+    <div class="bu-accordion-header${isOpen ? ' open' : ''}" onclick="toggleBusinessUnitAccordion('${safeBu}')" role="button" tabindex="0" aria-expanded="${isOpen}" aria-label="${escapeHtml(bu.businessUnit)}, tap to ${isOpen ? 'collapse' : 'expand'}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleBusinessUnitAccordion('${safeBu}');}">
+      <span class="icon"><i class="ti ti-package"></i></span>
+      <p class="section-label" style="margin-bottom:0;">${escapeHtml(bu.businessUnit)}</p>
+      <span style="font-size:11px;color:var(--text-faint);font-weight:600;white-space:nowrap;">${summary}</span>
+      <i class="ti ti-chevron-down chevron"></i>
     </div>
+    <div class="bu-accordion-body${isOpen ? ' open' : ''}" style="margin-top:14px;">
+      <div class="admin-subsection">
+        <p class="admin-subsection-title"><i class="ti ti-tag"></i>Product keywords</p>
+        <p class="settings-caption" style="margin-top:0;">Matches the START of a product's description (case-insensitive) — e.g. "avocado" matches "Avocados Hass 40 Lbs."</p>
+        <div class="saved-chip-row" style="margin-top:10px;margin-bottom:8px;">${bu.keywords.map(kw =>
+          `<span class="saved-chip">${escapeHtml(kw)}<button type="button" onclick="removeBusinessUnitKeyword('${safeBu}','${escapeForJsAttr(kw)}')" title="Remove" aria-label="Remove ${escapeHtml(kw)}">✕</button></span>`
+        ).join('') || '<span style="font-size:12.5px;color:var(--text-faint);">No keywords yet — this section will never match any product.</span>'}</div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="bu-keyword-input-${safeBu}" placeholder="e.g. avocado" style="flex:1;min-width:0;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'Inter',sans-serif;font-size:13px;background:var(--bg);color:var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();addBusinessUnitKeyword('${safeBu}');}">
+          <button type="button" class="admin-toggle-btn" style="white-space:nowrap;" onclick="addBusinessUnitKeyword('${safeBu}')">+ Add</button>
+        </div>
+      </div>
 
-    <div class="admin-subsection">
-      <p class="admin-subsection-title"><i class="ti ti-mail"></i>Alert emails</p>
-      <p class="settings-caption" style="margin-top:0;">Only sent if this section has an order it isn't getting status on — silent otherwise.</p>
-      <div class="saved-chip-row" style="margin-top:10px;margin-bottom:8px;">${bu.emails.map(email =>
-        `<span class="saved-chip">${escapeHtml(email)}<button type="button" onclick="removeBusinessUnitEmail('${safeBu}','${escapeForJsAttr(email)}')" title="Remove" aria-label="Remove ${escapeHtml(email)}">✕</button></span>`
-      ).join('') || '<span style="font-size:12.5px;color:var(--text-faint);">No one gets emailed for this section yet.</span>'}</div>
-      <div style="display:flex;gap:8px;">
-        <input type="email" id="bu-email-input-${safeBu}" placeholder="name@example.com" style="flex:1;min-width:0;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'Inter',sans-serif;font-size:13px;background:var(--bg);color:var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();addBusinessUnitEmail('${safeBu}');}">
-        <button type="button" class="admin-toggle-btn" style="white-space:nowrap;" onclick="addBusinessUnitEmail('${safeBu}')">+ Add</button>
+      <div class="admin-subsection">
+        <p class="admin-subsection-title"><i class="ti ti-mail"></i>Alert emails</p>
+        <p class="settings-caption" style="margin-top:0;">Only sent if this section has an order it isn't getting status on — silent otherwise.</p>
+        <div class="saved-chip-row" style="margin-top:10px;margin-bottom:8px;">${bu.emails.map(email =>
+          `<span class="saved-chip">${escapeHtml(email)}<button type="button" onclick="removeBusinessUnitEmail('${safeBu}','${escapeForJsAttr(email)}')" title="Remove" aria-label="Remove ${escapeHtml(email)}">✕</button></span>`
+        ).join('') || '<span style="font-size:12.5px;color:var(--text-faint);">No one gets emailed for this section yet.</span>'}</div>
+        <div style="display:flex;gap:8px;">
+          <input type="email" id="bu-email-input-${safeBu}" placeholder="name@example.com" style="flex:1;min-width:0;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'Inter',sans-serif;font-size:13px;background:var(--bg);color:var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();addBusinessUnitEmail('${safeBu}');}">
+          <button type="button" class="admin-toggle-btn" style="white-space:nowrap;" onclick="addBusinessUnitEmail('${safeBu}')">+ Add</button>
+        </div>
       </div>
     </div>
   </div>`;
@@ -2638,12 +2685,20 @@ function renderBusinessUnitEmailTimeChips() {
     `<span class="saved-chip">${formatTimeSlot12h(t)}<button type="button" onclick="removeBusinessUnitEmailTime('${t}')" title="Remove" aria-label="Remove ${t}">✕</button></span>`
   ).join('') || '<span style="font-size:12.5px;color:var(--text-faint);">No times set — these emails will never send.</span>';
 }
+// Todo lo de abajo (times/keywords/emails) sigue el mismo patrón optimista: se
+// actualiza la pantalla YA, antes de esperar la respuesta del servidor (antes se
+// esperaba a que el guardado terminara para recién ahí pintar el cambio — con la
+// latencia normal de Apps Script, un "+ Add" se sentía tardado o de plano como si no
+// hubiera hecho nada). Si el guardado de verdad falla, se recarga todo del servidor
+// para revertir al estado real y se avisa con un toast.
 async function saveBusinessUnitEmailTimes() {
-  const result = await adminApiCall('adminSetBusinessUnitEmailTimes', { times: businessUnitEmailTimes });
-  if (!result) return;
-  if (result.error) { showToast(result.error, 'error'); return; }
-  businessUnitEmailTimes = result.times;
-  renderBusinessUnitEmailTimeChips();
+  try {
+    const result = await adminApiCall('adminSetBusinessUnitEmailTimes', { times: businessUnitEmailTimes });
+    if (!result) return;
+    if (result.error) { showToast(result.error, 'error'); loadAdminBusinessUnits(); return; }
+    businessUnitEmailTimes = result.times; // por si el server ordenó distinto
+    renderBusinessUnitEmailTimeChips();
+  } catch (e) { showToast('Connection error — change not saved.', 'error'); loadAdminBusinessUnits(); }
 }
 function addBusinessUnitEmailTime() {
   const input = document.getElementById('bu-email-time-input');
@@ -2652,26 +2707,28 @@ function addBusinessUnitEmailTime() {
   if (businessUnitEmailTimes.includes(val)) { showToast('Already in the list.'); return; }
   businessUnitEmailTimes.push(val);
   input.value = '';
+  renderBusinessUnitEmailTimeChips();
   saveBusinessUnitEmailTimes();
 }
 function removeBusinessUnitEmailTime(t) {
   businessUnitEmailTimes = businessUnitEmailTimes.filter(x => x !== t);
+  renderBusinessUnitEmailTimeChips();
   saveBusinessUnitEmailTimes();
 }
 function getBusinessUnitEntry(bu) { return businessUnitsData.find(b => b.businessUnit === bu); }
 async function saveBusinessUnitKeywords(bu) {
-  const entry = getBusinessUnitEntry(bu);
-  const result = await adminApiCall('adminSetBusinessUnitKeywords', { businessUnit: bu, keywords: entry.keywords });
-  if (!result) return;
-  if (result.error) { showToast(result.error, 'error'); return; }
-  renderAdminBusinessUnits();
+  try {
+    const result = await adminApiCall('adminSetBusinessUnitKeywords', { businessUnit: bu, keywords: getBusinessUnitEntry(bu).keywords });
+    if (!result) return;
+    if (result.error) { showToast(result.error, 'error'); loadAdminBusinessUnits(); }
+  } catch (e) { showToast('Connection error — change not saved.', 'error'); loadAdminBusinessUnits(); }
 }
 async function saveBusinessUnitEmails(bu) {
-  const entry = getBusinessUnitEntry(bu);
-  const result = await adminApiCall('adminSetBusinessUnitEmails', { businessUnit: bu, emails: entry.emails });
-  if (!result) return;
-  if (result.error) { showToast(result.error, 'error'); return; }
-  renderAdminBusinessUnits();
+  try {
+    const result = await adminApiCall('adminSetBusinessUnitEmails', { businessUnit: bu, emails: getBusinessUnitEntry(bu).emails });
+    if (!result) return;
+    if (result.error) { showToast(result.error, 'error'); loadAdminBusinessUnits(); }
+  } catch (e) { showToast('Connection error — change not saved.', 'error'); loadAdminBusinessUnits(); }
 }
 function addBusinessUnitKeyword(bu) {
   const input = document.getElementById('bu-keyword-input-' + bu);
@@ -2681,11 +2738,13 @@ function addBusinessUnitKeyword(bu) {
   if (entry.keywords.some(k => k.toLowerCase() === kw)) { showToast('Already in the list.'); input.value = ''; return; }
   entry.keywords.push(kw);
   input.value = '';
+  renderAdminBusinessUnits();
   saveBusinessUnitKeywords(bu);
 }
 function removeBusinessUnitKeyword(bu, kw) {
   const entry = getBusinessUnitEntry(bu);
   entry.keywords = entry.keywords.filter(k => k !== kw);
+  renderAdminBusinessUnits();
   saveBusinessUnitKeywords(bu);
 }
 function addBusinessUnitEmail(bu) {
@@ -2697,11 +2756,13 @@ function addBusinessUnitEmail(bu) {
   if (entry.emails.some(e => e.toLowerCase() === email.toLowerCase())) { showToast('Already in the list.'); input.value = ''; return; }
   entry.emails.push(email);
   input.value = '';
+  renderAdminBusinessUnits();
   saveBusinessUnitEmails(bu);
 }
 function removeBusinessUnitEmail(bu, email) {
   const entry = getBusinessUnitEntry(bu);
   entry.emails = entry.emails.filter(e => e !== email);
+  renderAdminBusinessUnits();
   saveBusinessUnitEmails(bu);
 }
 
