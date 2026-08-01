@@ -1598,6 +1598,19 @@ function formatLastUpdated(hora, fecha) {
   if(parts.length===3) return months[parseInt(parts[1])-1]+' '+parseInt(parts[2])+', '+hora;
   return hora;
 }
+// "Arrived"/"Departed" del chofer pueden ser de un día distinto al de la orden — ej. el
+// camión ya se fue, pero el vendedor le cambia la fecha de negocio a la orden después
+// (normal, no es un error). Sin la fecha, esas horas se veían igual que si hubieran
+// pasado hoy y confundían al clerk. "date" es el día real del check-in (ver
+// getDriverArrivalsMap en Code.gs) — se antepone solo si no es hoy.
+function formatDriverTime(hora, dateKey) {
+  if (!hora) return hora;
+  if (!dateKey || dateKey === todayStr()) return hora;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const parts = String(dateKey).split('-');
+  if (parts.length !== 3) return hora;
+  return months[parseInt(parts[1])-1]+' '+parseInt(parts[2])+', '+hora;
+}
 function isOlderThan48h(fecha) {
   if(!fecha) return false;
   // "T00:00:00" fuerza a que se interprete en hora local en vez de UTC (mismo truco
@@ -4221,8 +4234,8 @@ function buildClerkCard(o) {
   // ensuciarle la tarjeta a los clerks que solo actualizan estatus. Aparece de una vez
   // al expandir, sin tener que abrir History.
   const driverTimesRow = (SHOW_DRIVER_TIMES && o.driverArrived) ? `<div class="driver-times-row">
-    <span>🚗 Arrived${o.driverArrived.time ? ': ' + escapeHtml(o.driverArrived.time) : ''}${o.driverArrived.driver ? ' — ' + escapeHtml(o.driverArrived.driver) : ''}</span>
-    ${o.driverArrived.departed ? `<span>🚛 Departed${o.driverArrived.departedTime ? ': ' + escapeHtml(o.driverArrived.departedTime) : ''}</span>` : ''}
+    <span>🚗 Arrived${o.driverArrived.time ? ': ' + escapeHtml(formatDriverTime(o.driverArrived.time, o.driverArrived.date)) : ''}${o.driverArrived.driver ? ' — ' + escapeHtml(o.driverArrived.driver) : ''}</span>
+    ${o.driverArrived.departed ? `<span>🚛 Departed${o.driverArrived.departedTime ? ': ' + escapeHtml(formatDriverTime(o.driverArrived.departedTime, o.driverArrived.date)) : ''}</span>` : ''}
   </div>` : '';
 
   return `<div class="order-card${locked ? ' locked' : ''}${state ? ' ' + state + '-expanded' : ''}" id="card-${safeOrdenHtml}">
