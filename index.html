@@ -1443,6 +1443,37 @@ const collapsedInGlobalView = new Set();
 // tarjeta sin moverla de lugar; el reacomodo de verdad pasa hasta que se cierra esa
 // tarjeta (ver toggleCardExpand) o en el siguiente refresh normal.
 const pendingReorder = new Set();
+
+// Verdadera causa del "reacomodo raro"/"click cayó en el botón equivocado" (ver
+// loadOrdenes) — no era que hubiera una tarjeta abierta, era que el refresh de fondo
+// reemplazaba el DOM justo a medio toque. Ahora el refresh siempre reacomoda con datos
+// frescos (si no, un cambio real del feed de Citrus se podía quedar sin verse en
+// pantalla mientras cualquier tarjeta siguiera abierta) — lo único que se retrasa es el
+// momento exacto del repintado, hasta que el dedo/mouse se suelta.
+let pointerActive = false;
+document.addEventListener('touchstart', () => { pointerActive = true; }, { passive: true, capture: true });
+document.addEventListener('touchend', () => { pointerActive = false; }, { passive: true, capture: true });
+document.addEventListener('touchcancel', () => { pointerActive = false; }, { passive: true, capture: true });
+document.addEventListener('mousedown', () => { pointerActive = true; }, { capture: true });
+document.addEventListener('mouseup', () => { pointerActive = false; }, { capture: true });
+function renderOrdenesWhenIdle() {
+  if (!pointerActive) { renderOrdenes(); return; }
+  let fired = false;
+  const fire = () => {
+    if (fired) return;
+    fired = true;
+    document.removeEventListener('touchend', fire);
+    document.removeEventListener('mouseup', fire);
+    clearTimeout(fallback);
+    renderOrdenes();
+  };
+  // Respaldo por si el navegador se come el touchend/mouseup (pasa) — 1.2s es de sobra
+  // para el toque más largo normal, sin dejar la pantalla desactualizada mucho rato.
+  const fallback = setTimeout(fire, 1200);
+  document.addEventListener('touchend', fire, { once: true, passive: true });
+  document.addEventListener('mouseup', fire, { once: true });
+}
+
 // filtro por estatus activo (vacío = mostrar todos)
 const statusFilter = new Set();
 // filtro por producto activo (vacío = mostrar todos) — ej. solo Limes, o Limes+Pineapples
@@ -4052,16 +4083,9 @@ async function loadOrdenes() {
       if (raw) { renderSearchResults(raw); return; }
       searchActive = false;
     }
-    // Con algo abierto, no se reacomoda nada solo — evita mover tarjetas o disparar un
-    // click en el lugar equivocado mientras el usuario sigue interactuando (ver
-    // refreshOpenCardsInPlace). Los datos ya quedaron al día en "ordenes"; el resto de
-    // la lista se pone al día en cuanto se cierre lo que está abierto (toggleCardExpand)
-    // o se toque fuera de una tarjeta.
-    if (expandedOrders.size || globalViewMode === 'expanded') {
-      if (globalViewMode !== 'expanded') refreshOpenCardsInPlace();
-    } else {
-      renderOrdenes();
-    }
+    // Siempre repinta con datos frescos (ver renderOrdenesWhenIdle) — solo se retrasa
+    // el momento exacto si hay un toque/click activo en ese instante.
+    renderOrdenesWhenIdle();
   } catch(e){
     if (seq === loadOrdenesSeq) {
       if (!list.children.length) list.innerHTML='<div class="empty-state">Connection error</div>';
@@ -4743,7 +4767,7 @@ function toggleCardExpand(orden, evt) {
   }
   // Se cerró la ÚLTIMA tarjeta que quedaba abierta — momento seguro para ponerse al
   // corriente con lo que el refresco de fondo haya ido dejando pendiente mientras
-  // tanto (ver refreshOpenCardsInPlace/loadOrdenes), sin mover nada bajo el dedo del
+  // tanto (ver loadOrdenes/renderOrdenesWhenIdle), sin mover nada bajo el dedo del
   // usuario mientras seguía interactuando.
   if (wasOpen && globalViewMode !== 'expanded' && !expandedOrders.size) {
     renderOrdenes();
@@ -4880,22 +4904,6 @@ function setOrderStatus(orden, status) {
     productState[orden][0] = 3;
   }
   pushOrderStatus(orden, status, prevSnapshot);
-}
-
-// Repinta en su lugar cada tarjeta actualmente abierta A MANO (expandedOrders) con los
-// datos frescos que acaban de llegar del refresco automático, sin tocar el resto del
-// DOM. Antes, cada refresco de fondo (cada shipRefreshSeconds, ver loadOrdenes) hacía
-// un renderOrdenes() completo sin importar si el usuario tenía algo abierto o el dedo
-// en la pantalla — de ahí el reacomodo sorpresa, y más grave, un click que caía sobre
-// el elemento equivocado si el refresco pegaba justo a medio toque (ver toggleGlobalView
-// para el caso de "View all", que ni siquiera intenta repintar nada mientras sigue activo).
-function refreshOpenCardsInPlace() {
-  expandedOrders.forEach(key => {
-    const o = ordenes.find(x => String(x.orden) === key);
-    const card = document.getElementById('card-' + key);
-    if (!o || !card) return;
-    try { card.outerHTML = buildClerkCard(o); } catch (e) { /* se deja como estaba — no vale la pena tronar el refresh por esto */ }
-  });
 }
 
 // Repinta SOLO la tarjeta de esta orden si sigue abierta ahorita (sin moverla de lugar
