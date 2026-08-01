@@ -196,6 +196,16 @@
   .admin-tab-btn i { font-size:15px; }
   .admin-tab-btn.active { color:var(--pink); background:var(--white); box-shadow:0 1px 3px rgba(0,0,0,.08); }
   .admin-section-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius-sm); padding:16px 18px; margin-bottom:16px; }
+  .admin-card-header { display:flex; align-items:center; gap:9px; margin-bottom:4px; }
+  .admin-card-header .icon { display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:9px; background:var(--accent-tint-bg); color:var(--purple); font-size:15px; flex-shrink:0; }
+  .admin-card-header .section-label { margin-bottom:1px; }
+  .admin-card-header .subtitle { font-size:11.5px; color:var(--text-faint); margin-top:1px; }
+  .admin-info-box { display:flex; gap:9px; align-items:flex-start; background:var(--accent-tint-bg); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:14px; font-size:12px; color:var(--text-muted); line-height:1.45; }
+  .admin-info-box i { color:var(--purple); font-size:15px; margin-top:1px; flex-shrink:0; }
+  .admin-subsection { padding-top:14px; margin-top:14px; border-top:1px solid var(--border); }
+  .admin-subsection:first-of-type { padding-top:0; margin-top:0; border-top:none; }
+  .admin-subsection-title { display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700; color:var(--text); margin-bottom:4px; }
+  .admin-subsection-title i { font-size:14px; color:var(--purple); }
   .settings-group { padding:12px 0; border-bottom:1px solid var(--border); }
   .settings-group:first-of-type { padding-top:2px; }
   .settings-group:last-of-type { border-bottom:none; padding-bottom:2px; }
@@ -1049,46 +1059,57 @@
 
     <div class="admin-tab-panel" id="admin-tab-settings" style="display:none;">
       <div class="admin-section-card">
-        <p class="section-label">Order Coordinator Screen</p>
-        <div class="settings-group">
-          <div class="settings-row"><label>Refresh every (seconds)</label><input type="number" id="setting-shipRefreshSeconds" min="20"></div>
-          <p class="settings-caption">How often the order list refreshes itself while the Order Coordinator has it open (minimum 20s so it doesn't overload the server).</p>
-        </div>
-        <p class="section-label" style="margin-top:1.25rem;">Thresholds</p>
-        <div class="settings-group"><div class="settings-row"><label>Hours to mark "Stalled"</label><input type="number" id="setting-stalledHours"></div></div>
-        <div class="settings-group">
-          <div class="settings-row"><label>"Stalled" floor hour (24h, e.g. 10 = 10am)</label><input type="number" id="setting-stalledFloorHour" min="0" max="23"></div>
-          <p class="settings-caption">The "Stalled" clock never starts counting before this hour of the order's own day — so an order pre-loaded the day before (or uploaded very early) doesn't show as Stalled before anyone's had a chance to touch it.</p>
-        </div>
-        <div class="settings-group"><div class="settings-row"><label>Hours to mark "Soon"</label><input type="number" id="setting-soonHours"></div></div>
-        <div class="settings-group"><div class="settings-row"><label>Hours before locking edits</label><input type="number" id="setting-lockHours"></div></div>
-        <div class="settings-group">
-          <div class="settings-row"><label>Hours before archiving cancelled orders</label><input type="number" id="setting-cancelledArchiveHours"></div>
-          <p class="settings-caption">The Cancelled screen is for undoing a recent mistake, not a long history — anything older than this moves out automatically and can no longer be restored from there.</p>
-        </div>
-        <p class="section-label" style="margin-top:1.25rem;">Alerts</p>
-        <div class="settings-group">
-          <div class="settings-row"><label>Email me if no PDF was uploaded</label><label class="toggle-switch"><input type="checkbox" id="setting-uploadAlertEnabled" aria-label="Email me if no PDF was uploaded"><span class="toggle-slider"></span></label></div>
-          <p class="settings-caption">Checks once a day — if there's still no order for today by the hour below, sends an email so someone knows to upload it.</p>
-        </div>
-        <div class="settings-group"><div class="settings-row"><label>Alert hour (24h, e.g. 11 = 11am)</label><input type="number" id="setting-uploadAlertHour" min="0" max="23"></div></div>
-        <div class="settings-group">
-          <p style="font-size:13px;color:var(--text);font-weight:500;margin-bottom:8px;">Alert emails</p>
-          <div class="saved-chip-row" id="alertEmailsChips" style="margin-bottom:8px;"></div>
-          <div style="display:flex;gap:8px;">
-            <input type="email" id="alertEmailInput" placeholder="name@example.com" style="flex:1;min-width:0;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'Inter',sans-serif;font-size:13px;background:var(--bg);color:var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();addAlertEmail();}">
-            <button type="button" class="admin-toggle-btn" style="white-space:nowrap;" onclick="addAlertEmail()">+ Add</button>
+        <div class="admin-card-header"><span class="icon"><i class="ti ti-truck-delivery"></i></span><p class="section-label" style="margin-bottom:0;">Order Coordinator Screen</p></div>
+
+        <div class="admin-subsection">
+          <p class="admin-subsection-title"><i class="ti ti-refresh"></i>Refresh</p>
+          <div class="settings-group">
+            <div class="settings-row"><label>Refresh every (seconds)</label><input type="number" id="setting-shipRefreshSeconds" min="20"></div>
+            <p class="settings-caption">How often the order list refreshes itself while the Order Coordinator has it open (minimum 20s so it doesn't overload the server).</p>
           </div>
-          <input type="hidden" id="setting-alertEmails">
-          <p class="settings-caption">Who gets the "no PDF uploaded" and daily close-of-day summary emails. Leave empty to use the default account email.</p>
         </div>
+
+        <div class="admin-subsection">
+          <p class="admin-subsection-title"><i class="ti ti-hourglass"></i>Thresholds</p>
+          <div class="settings-group"><div class="settings-row"><label>Hours to mark "Stalled"</label><input type="number" id="setting-stalledHours"></div></div>
+          <div class="settings-group">
+            <div class="settings-row"><label>"Stalled" floor hour (24h, e.g. 10 = 10am)</label><input type="number" id="setting-stalledFloorHour" min="0" max="23"></div>
+            <p class="settings-caption">The "Stalled" clock never starts counting before this hour of the order's own day — so an order pre-loaded the day before (or uploaded very early) doesn't show as Stalled before anyone's had a chance to touch it.</p>
+          </div>
+          <div class="settings-group"><div class="settings-row"><label>Hours to mark "Soon"</label><input type="number" id="setting-soonHours"></div></div>
+          <div class="settings-group"><div class="settings-row"><label>Hours before locking edits</label><input type="number" id="setting-lockHours"></div></div>
+          <div class="settings-group">
+            <div class="settings-row"><label>Hours before archiving cancelled orders</label><input type="number" id="setting-cancelledArchiveHours"></div>
+            <p class="settings-caption">The Cancelled screen is for undoing a recent mistake, not a long history — anything older than this moves out automatically and can no longer be restored from there.</p>
+          </div>
+        </div>
+
+        <div class="admin-subsection">
+          <p class="admin-subsection-title"><i class="ti ti-bell"></i>Alerts</p>
+          <div class="settings-group">
+            <div class="settings-row"><label>Email me if no PDF was uploaded</label><label class="toggle-switch"><input type="checkbox" id="setting-uploadAlertEnabled" aria-label="Email me if no PDF was uploaded"><span class="toggle-slider"></span></label></div>
+            <p class="settings-caption">Checks once a day — if there's still no order for today by the hour below, sends an email so someone knows to upload it.</p>
+          </div>
+          <div class="settings-group"><div class="settings-row"><label>Alert hour (24h, e.g. 11 = 11am)</label><input type="number" id="setting-uploadAlertHour" min="0" max="23"></div></div>
+          <div class="settings-group">
+            <p style="font-size:13px;color:var(--text);font-weight:500;margin-bottom:8px;">Alert emails</p>
+            <div class="saved-chip-row" id="alertEmailsChips" style="margin-bottom:8px;"></div>
+            <div style="display:flex;gap:8px;">
+              <input type="email" id="alertEmailInput" placeholder="name@example.com" style="flex:1;min-width:0;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'Inter',sans-serif;font-size:13px;background:var(--bg);color:var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();addAlertEmail();}">
+              <button type="button" class="admin-toggle-btn" style="white-space:nowrap;" onclick="addAlertEmail()">+ Add</button>
+            </div>
+            <input type="hidden" id="setting-alertEmails">
+            <p class="settings-caption">Who gets the "no PDF uploaded" and daily close-of-day summary emails. Leave empty to use the default account email.</p>
+          </div>
+        </div>
+
         <button class="btn-primary" style="margin-top:14px;" onclick="saveAdminSettings()">Save changes</button>
         <p class="upload-status show" id="admin-settings-status" role="status" aria-live="polite" style="display:none;"></p>
       </div>
 
       <div class="admin-section-card">
-        <p class="section-label">Status order (Today's orders)</p>
-        <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:8px;">Sets the order statuses are arranged in within "Today's orders" (Departed and Needs Attention always go separately, this doesn't affect them).</p>
+        <div class="admin-card-header"><span class="icon"><i class="ti ti-list-numbers"></i></span><p class="section-label" style="margin-bottom:0;">Status order (Today's orders)</p></div>
+        <p class="settings-caption" style="margin-bottom:10px;">Sets the order statuses are arranged in within "Today's orders" (Departed and Needs Attention always go separately, this doesn't affect them).</p>
         <div id="admin-status-order-list"></div>
         <button class="btn-primary" style="margin-top:10px;" onclick="saveStatusOrder()">Save order</button>
         <p class="upload-status show" id="admin-status-order-status" role="status" aria-live="polite" style="display:none;"></p>
@@ -1096,7 +1117,18 @@
     </div>
 
     <div class="admin-tab-panel" id="admin-tab-business" style="display:none;">
-      <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:12px;">Controls how the Citrus feed's business_unit sections match your products, and who gets emailed at 4:30pm about orders that section isn't getting status on. See "Unmatched" in the Shipping Panel for the same list, live.</p>
+      <div class="admin-info-box"><i class="ti ti-info-circle"></i><span>Controls how the Citrus feed's business_unit sections match your products, and who gets emailed when a section isn't getting status on an order. See "Unmatched" in the Shipping Panel for the same list, live.</span></div>
+
+      <div class="admin-section-card">
+        <div class="admin-card-header"><span class="icon"><i class="ti ti-clock"></i></span><div><p class="section-label" style="margin-bottom:0;">Send schedule</p><p class="subtitle">When the unmatched-orders alert emails go out, every day</p></div></div>
+        <div class="saved-chip-row" id="buEmailTimesChips" style="margin-top:12px;"></div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="time" id="bu-email-time-input" style="height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;background:var(--bg);color:var(--text);">
+          <button type="button" class="admin-toggle-btn" style="white-space:nowrap;" onclick="addBusinessUnitEmailTime()">+ Add time</button>
+        </div>
+        <p class="settings-caption">Silent if a section has nothing pending that day. Up to 6 times.</p>
+      </div>
+
       <div id="admin-business-units-list"></div>
     </div>
 
@@ -2535,14 +2567,20 @@ function removeAlertEmail(email) {
 // cada add/remove guarda de inmediato (mismo patrón que Clients), no hay botón "Save"
 // aparte.
 let businessUnitsData = [];
+let businessUnitEmailTimes = [];
 async function loadAdminBusinessUnits() {
   const list = document.getElementById('admin-business-units-list');
   list.innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i>Loading...</div>';
   try {
-    const result = await adminApiCall('getBusinessUnits');
+    const [result, timesResult] = await Promise.all([
+      adminApiCall('getBusinessUnits'),
+      adminApiCall('getBusinessUnitEmailTimes')
+    ]);
     if (!result) return;
     if (result.error) { list.innerHTML = `<div class="empty-state"><i class="ti ti-alert-circle"></i>${result.error}</div>`; return; }
     businessUnitsData = result;
+    businessUnitEmailTimes = (timesResult && !timesResult.error) ? timesResult : ['16:30'];
+    renderBusinessUnitEmailTimeChips();
     renderAdminBusinessUnits();
   } catch (e) { list.innerHTML = '<div class="empty-state">Connection error</div>'; }
 }
@@ -2550,29 +2588,75 @@ function renderAdminBusinessUnits() {
   const list = document.getElementById('admin-business-units-list');
   list.innerHTML = businessUnitsData.map(buildBusinessUnitCard).join('');
 }
+// Emoji nomás para que cada tarjeta se distinga de un vistazo — puramente visual, no
+// afecta el matching (eso sigue siendo por keyword, ver productMatchesBusinessUnit).
+const BUSINESS_UNIT_EMOJI = { PAPAYA: '🧡', CITRUS: '💛', PLANTAIN: '💚', TROPICALES: '🌴' };
 function buildBusinessUnitCard(bu) {
   const safeBu = escapeForJsAttr(bu.businessUnit);
+  const emoji = BUSINESS_UNIT_EMOJI[String(bu.businessUnit).toUpperCase()] || '📦';
   return `<div class="admin-section-card">
-    <p class="section-label">${escapeHtml(bu.businessUnit)}</p>
-    <p style="font-size:12px;color:var(--text-muted);font-weight:600;margin:4px 0 6px;">Product keywords</p>
-    <p class="settings-caption" style="margin-top:0;">Matches the START of a product's description (case-insensitive) — e.g. "avocado" matches "Avocados Hass 40 Lbs."</p>
-    <div class="saved-chip-row" style="margin-bottom:8px;">${bu.keywords.map(kw =>
-      `<span class="saved-chip">${escapeHtml(kw)}<button type="button" onclick="removeBusinessUnitKeyword('${safeBu}','${escapeForJsAttr(kw)}')" title="Remove" aria-label="Remove ${escapeHtml(kw)}">✕</button></span>`
-    ).join('') || '<span style="font-size:12.5px;color:var(--text-faint);">No keywords yet — this section will never match any product.</span>'}</div>
-    <div style="display:flex;gap:8px;margin-bottom:16px;">
-      <input type="text" id="bu-keyword-input-${safeBu}" placeholder="e.g. avocado" style="flex:1;min-width:0;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'Inter',sans-serif;font-size:13px;background:var(--bg);color:var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();addBusinessUnitKeyword('${safeBu}');}">
-      <button type="button" class="admin-toggle-btn" style="white-space:nowrap;" onclick="addBusinessUnitKeyword('${safeBu}')">+ Add</button>
+    <div class="admin-card-header"><span class="icon">${emoji}</span><p class="section-label" style="margin-bottom:0;">${escapeHtml(bu.businessUnit)}</p></div>
+
+    <div class="admin-subsection">
+      <p class="admin-subsection-title"><i class="ti ti-tag"></i>Product keywords</p>
+      <p class="settings-caption" style="margin-top:0;">Matches the START of a product's description (case-insensitive) — e.g. "avocado" matches "Avocados Hass 40 Lbs."</p>
+      <div class="saved-chip-row" style="margin-top:10px;margin-bottom:8px;">${bu.keywords.map(kw =>
+        `<span class="saved-chip">${escapeHtml(kw)}<button type="button" onclick="removeBusinessUnitKeyword('${safeBu}','${escapeForJsAttr(kw)}')" title="Remove" aria-label="Remove ${escapeHtml(kw)}">✕</button></span>`
+      ).join('') || '<span style="font-size:12.5px;color:var(--text-faint);">No keywords yet — this section will never match any product.</span>'}</div>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="bu-keyword-input-${safeBu}" placeholder="e.g. avocado" style="flex:1;min-width:0;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'Inter',sans-serif;font-size:13px;background:var(--bg);color:var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();addBusinessUnitKeyword('${safeBu}');}">
+        <button type="button" class="admin-toggle-btn" style="white-space:nowrap;" onclick="addBusinessUnitKeyword('${safeBu}')">+ Add</button>
+      </div>
     </div>
-    <p style="font-size:12px;color:var(--text-muted);font-weight:600;margin:4px 0 6px;">Emails (4:30pm daily alert)</p>
-    <p class="settings-caption" style="margin-top:0;">Only sent if this section has an order it isn't getting status on that day — silent otherwise.</p>
-    <div class="saved-chip-row" style="margin-bottom:8px;">${bu.emails.map(email =>
-      `<span class="saved-chip">${escapeHtml(email)}<button type="button" onclick="removeBusinessUnitEmail('${safeBu}','${escapeForJsAttr(email)}')" title="Remove" aria-label="Remove ${escapeHtml(email)}">✕</button></span>`
-    ).join('') || '<span style="font-size:12.5px;color:var(--text-faint);">No one gets emailed for this section yet.</span>'}</div>
-    <div style="display:flex;gap:8px;">
-      <input type="email" id="bu-email-input-${safeBu}" placeholder="name@example.com" style="flex:1;min-width:0;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'Inter',sans-serif;font-size:13px;background:var(--bg);color:var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();addBusinessUnitEmail('${safeBu}');}">
-      <button type="button" class="admin-toggle-btn" style="white-space:nowrap;" onclick="addBusinessUnitEmail('${safeBu}')">+ Add</button>
+
+    <div class="admin-subsection">
+      <p class="admin-subsection-title"><i class="ti ti-mail"></i>Alert emails</p>
+      <p class="settings-caption" style="margin-top:0;">Only sent if this section has an order it isn't getting status on — silent otherwise.</p>
+      <div class="saved-chip-row" style="margin-top:10px;margin-bottom:8px;">${bu.emails.map(email =>
+        `<span class="saved-chip">${escapeHtml(email)}<button type="button" onclick="removeBusinessUnitEmail('${safeBu}','${escapeForJsAttr(email)}')" title="Remove" aria-label="Remove ${escapeHtml(email)}">✕</button></span>`
+      ).join('') || '<span style="font-size:12.5px;color:var(--text-faint);">No one gets emailed for this section yet.</span>'}</div>
+      <div style="display:flex;gap:8px;">
+        <input type="email" id="bu-email-input-${safeBu}" placeholder="name@example.com" style="flex:1;min-width:0;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'Inter',sans-serif;font-size:13px;background:var(--bg);color:var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();addBusinessUnitEmail('${safeBu}');}">
+        <button type="button" class="admin-toggle-btn" style="white-space:nowrap;" onclick="addBusinessUnitEmail('${safeBu}')">+ Add</button>
+      </div>
     </div>
   </div>`;
+}
+// "16:30" -> "4:30 PM", para las chips — mismo estilo de hora que ya usa el resto de
+// la app (12h con AM/PM), aunque por dentro se guarde en 24h (más simple de ordenar
+// y de generar con <input type="time">).
+function formatTimeSlot12h(hhmm) {
+  const parts = String(hhmm).split(':');
+  let h = parseInt(parts[0], 10), m = parts[1];
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12; if (h === 0) h = 12;
+  return h + ':' + m + ' ' + ampm;
+}
+function renderBusinessUnitEmailTimeChips() {
+  const el = document.getElementById('buEmailTimesChips');
+  el.innerHTML = businessUnitEmailTimes.map(t =>
+    `<span class="saved-chip">${formatTimeSlot12h(t)}<button type="button" onclick="removeBusinessUnitEmailTime('${t}')" title="Remove" aria-label="Remove ${t}">✕</button></span>`
+  ).join('') || '<span style="font-size:12.5px;color:var(--text-faint);">No times set — these emails will never send.</span>';
+}
+async function saveBusinessUnitEmailTimes() {
+  const result = await adminApiCall('adminSetBusinessUnitEmailTimes', { times: businessUnitEmailTimes });
+  if (!result) return;
+  if (result.error) { showToast(result.error, 'error'); return; }
+  businessUnitEmailTimes = result.times;
+  renderBusinessUnitEmailTimeChips();
+}
+function addBusinessUnitEmailTime() {
+  const input = document.getElementById('bu-email-time-input');
+  const val = input.value; // "HH:MM" 24h, lo que ya regresa <input type="time">
+  if (!val) return;
+  if (businessUnitEmailTimes.includes(val)) { showToast('Already in the list.'); return; }
+  businessUnitEmailTimes.push(val);
+  input.value = '';
+  saveBusinessUnitEmailTimes();
+}
+function removeBusinessUnitEmailTime(t) {
+  businessUnitEmailTimes = businessUnitEmailTimes.filter(x => x !== t);
+  saveBusinessUnitEmailTimes();
 }
 function getBusinessUnitEntry(bu) { return businessUnitsData.find(b => b.businessUnit === bu); }
 async function saveBusinessUnitKeywords(bu) {
