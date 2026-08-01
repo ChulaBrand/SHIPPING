@@ -4168,11 +4168,13 @@ function buildClerkCard(o) {
 
   const btns = LABELS.map((l, i) => {
     const idx = i + 1;
-    // Departed no se puede tocar sin haber pasado por Ready primero — a fuerza tiene
-    // que quedar marcada Ready antes (ver mismo candado en setOrderStatus/updateStatus).
-    const blockedDeparted = idx === 6 && est < 3;
+    // Departed no se puede tocar sin haber pasado por Ready primero — salvo que la
+    // orden ya esté marcada "Incomplete" a mano: eso significa que alguien ya la
+    // revisó y decidió mandarla así de todos modos, así que no tiene caso forzarla
+    // por Ready primero (ver mismo candado en setOrderStatus/updateStatus).
+    const blockedDeparted = idx === 6 && est < 3 && !o.incomplete;
     const disabled = !canEdit || blockedDeparted;
-    const title = blockedDeparted ? ' title="Mark the order Ready first"' : '';
+    const title = blockedDeparted ? ' title="Mark the order Ready first (or mark it Incomplete to skip)"' : '';
     return `<button class="sbtn${est === idx ? ' ' + SEL[i] : ''}" onclick="event.stopPropagation();setOrderStatus('${safeOrden}',${idx})" ${disabled ? 'disabled' : ''}${title}><span class="sbtn-letter">${LETTERS[i]}</span><span class="sbtn-text">${l}</span></button>`;
   }).join('');
 
@@ -4864,7 +4866,7 @@ function setOrderStatus(orden, status) {
   // No se puede saltar directo a Departed sin haber pasado por Ready — el botón ya se
   // dibuja disabled para este caso (ver buildClerkCard), esto es nomás el respaldo por
   // si algo lo llega a disparar de todos modos.
-  if (status === 6 && (parseInt(o.estatus) || 1) < 3) { showToast('Mark the order Ready before Departed', 'error'); return; }
+  if (status === 6 && (parseInt(o.estatus) || 1) < 3 && !o.incomplete) { showToast('Mark the order Ready before Departed', 'error'); return; }
   const prevSnapshot = { estatus: o.estatus, hora: o.hora, actualizado: o.actualizado, productState: productState[orden] ? productState[orden].slice() : null };
   o.estatus = status;
 
