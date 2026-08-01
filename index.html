@@ -1192,7 +1192,7 @@
           <div class="dropdown-panel" id="moreDropdownPanel" style="right:0;left:auto;">
             <button class="dropdown-option" id="dailySummaryBtn" onclick="closeAllDropdowns(); goDailySummary();" title="Download today's summary" aria-label="Download today's summary"><i class="ti ti-file-spreadsheet"></i> Summary</button>
             <button class="dropdown-option" id="cancelledViewBtn" onclick="toggleCancelledView()" title="View cancelled orders" aria-label="View cancelled orders"><i class="ti ti-trash"></i> Cancelled orders</button>
-            <button class="dropdown-option" onclick="toggleTomorrowView()"><i class="ti ti-calendar-event"></i> Tomorrow's orders</button>
+            <button class="dropdown-option" id="tomorrowViewBtn" onclick="toggleTomorrowView()"><i class="ti ti-calendar-event"></i> Tomorrow's orders</button>
           </div>
         </div>
       </div>
@@ -4436,6 +4436,7 @@ function showOrderView(view) {
   document.getElementById('tomorrow-section').style.display = view === 'tomorrow' ? 'block' : 'none';
   document.getElementById('unmatched-section').style.display = view === 'unmatched' ? 'block' : 'none';
   document.getElementById('cancelledViewBtn').classList.toggle('active', view === 'cancelled');
+  document.getElementById('tomorrowViewBtn').classList.toggle('active', view === 'tomorrow');
   document.getElementById('etaViewBtn').classList.toggle('active-amber', view === 'eta');
   document.getElementById('unmatchedViewBtn').classList.toggle('active-amber', view === 'unmatched');
   // Cancelled/Tomorrow viven escondidos dentro del menú "⋯ More" (ver
