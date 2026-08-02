@@ -190,11 +190,22 @@
   .btn-back { background:none; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px; color:var(--text-muted); cursor:pointer; padding:5px 12px; font-family:'Inter',sans-serif; min-height:44px; display:inline-flex; align-items:center; justify-content:center; gap:5px; }
   .btn-back:disabled { opacity:.5; cursor:default; }
   .spin-icon { display:inline-block; animation:spin .8s linear infinite; }
-  .admin-tabs { display:flex; gap:4px; margin-bottom:1.5rem; padding:5px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); overflow-x:auto; }
   .admin-tab-btn { display:flex; align-items:center; gap:6px; background:none; border:none; border-radius:var(--radius-sm); font-size:12.5px; font-weight:600; color:var(--text-muted); cursor:pointer; padding:9px 13px; font-family:'Inter',sans-serif; white-space:nowrap; transition:background .15s,color .15s; }
   .admin-tab-btn:hover { color:var(--text); }
   .admin-tab-btn i { font-size:15px; }
   .admin-tab-btn.active { color:var(--pink); background:var(--white); box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  /* Nav principal de Admin — antes pastillas horizontales arriba, ahora barra lateral
+     fija (mismo patrón ya usado dentro de Order Coordinator) para las 6 secciones. */
+  .admin-shell { display:flex; gap:22px; align-items:flex-start; }
+  .admin-sidebar { width:196px; flex-shrink:0; display:flex; flex-direction:column; gap:2px; position:sticky; top:16px; background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:8px; }
+  .admin-sidebar .admin-tab-btn { width:100%; justify-content:flex-start; padding:10px 12px; }
+  .admin-sidebar .admin-tab-btn i { width:18px; text-align:center; flex-shrink:0; }
+  .admin-main { flex:1; min-width:0; }
+  @media (max-width:760px) {
+    .admin-shell { flex-direction:column; }
+    .admin-sidebar { width:100%; flex-direction:row; overflow-x:auto; position:static; }
+    .admin-sidebar .admin-tab-btn { width:auto; }
+  }
   .admin-section-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius-sm); padding:16px 18px; margin-bottom:16px; }
   .admin-card-header { display:flex; align-items:center; gap:9px; margin-bottom:4px; }
   .admin-card-header .icon { display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:9px; background:var(--accent-tint-bg); color:var(--purple); font-size:15px; flex-shrink:0; }
@@ -959,7 +970,8 @@
       <p class="top-bar-title">Admin</p>
       <button class="btn-back" onclick="goRol()">Sign out</button>
     </div>
-    <div class="admin-tabs">
+    <div class="admin-shell">
+    <div class="admin-sidebar">
       <button class="admin-tab-btn active" data-tab="users" onclick="showAdminTab('users')"><i class="ti ti-users"></i>Users</button>
       <button class="admin-tab-btn" data-tab="clients" onclick="showAdminTab('clients')"><i class="ti ti-building-store"></i>Clients</button>
       <button class="admin-tab-btn" data-tab="driver" onclick="showAdminTab('driver')"><i class="ti ti-truck"></i>Driver/Client Screen</button>
@@ -967,10 +979,11 @@
       <button class="admin-tab-btn" data-tab="business" onclick="showAdminTab('business')"><i class="ti ti-category-2"></i>Business Units</button>
       <button class="admin-tab-btn" data-tab="analytics" onclick="showAdminTab('analytics')"><i class="ti ti-chart-bar"></i>Analytics Layout</button>
     </div>
+    <div class="admin-main">
 
     <div class="admin-tab-panel" id="admin-tab-users">
       <div class="checklist" style="margin-bottom:16px;">
-        <p class="checklist-title">Add user</p>
+        <p class="checklist-title"><i class="ti ti-user-plus"></i> Add user</p>
         <form style="display:flex;flex-direction:column;gap:8px;" onsubmit="event.preventDefault(); adminAddUser();">
           <input id="admin-new-name" type="text" placeholder="Name" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'Inter',sans-serif;font-size:14px;">
           <input id="admin-new-pin" type="text" inputmode="numeric" maxlength="4" enterkeyhint="go" autocomplete="off" placeholder="4-digit PIN" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;">
@@ -1005,15 +1018,15 @@
         <p class="upload-status show" id="admin-add-status" role="status" aria-live="polite" style="display:none;"></p>
       </div>
       <div class="admin-section-card">
-        <p class="section-label">Users</p>
+        <div class="admin-card-header"><span class="icon"><i class="ti ti-users"></i></span><p class="section-label" style="margin-bottom:0;">Users</p></div>
         <div id="admin-user-list"></div>
       </div>
     </div>
 
     <div class="admin-tab-panel" id="admin-tab-clients" style="display:none;">
       <div class="admin-section-card">
-        <p class="section-label">Boxes per pallet</p>
-        <p style="font-size:11.5px;color:var(--text-faint);margin:-2px 0 8px;">The standard applies when no client/store below has its own value set. HEB is detected by product, not by client.</p>
+        <div class="admin-card-header"><span class="icon"><i class="ti ti-box"></i></span><p class="section-label" style="margin-bottom:0;">Boxes per pallet</p></div>
+        <p style="font-size:11.5px;color:var(--text-faint);margin:8px 0 8px;">The standard applies when no client/store below has its own value set. HEB is detected by product, not by client.</p>
         <div class="settings-group"><div class="settings-row"><label>Standard</label><input type="number" id="setting-standardDivisor"></div></div>
         <div class="settings-group"><div class="settings-row"><label>HEB</label><input type="number" id="setting-hebDivisor"></div></div>
         <div class="settings-group">
@@ -1031,7 +1044,7 @@
       </div>
 
       <div class="checklist" style="margin:0 0 16px;">
-        <p class="checklist-title">Add client</p>
+        <p class="checklist-title"><i class="ti ti-building-store"></i> Add client</p>
         <p style="font-size:11px;color:var(--text-faint);margin:-4px 0 4px;">An "umbrella" client (e.g. SAM'S) groups stores — or, if it has no stores, works just like before: a regular client.</p>
         <form style="display:flex;flex-direction:column;gap:8px;" onsubmit="event.preventDefault(); adminAddClient();">
           <input id="admin-new-client-pattern" type="text" placeholder="Pattern name (as it appears on the PDF)" style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-family:'Inter',sans-serif;font-size:14px;">
@@ -1042,14 +1055,14 @@
         <p class="upload-status show" id="admin-add-client-status" role="status" aria-live="polite" style="display:none;"></p>
       </div>
       <div class="admin-section-card">
-        <p class="section-label">Clients</p>
+        <div class="admin-card-header"><span class="icon"><i class="ti ti-building-store"></i></span><p class="section-label" style="margin-bottom:0;">Clients</p></div>
         <div id="admin-client-list"></div>
       </div>
     </div>
 
     <div class="admin-tab-panel" id="admin-tab-driver" style="display:none;">
       <div class="admin-section-card">
-        <p class="section-label">Driver/Client Screen</p>
+        <div class="admin-card-header"><span class="icon"><i class="ti ti-truck"></i></span><p class="section-label" style="margin-bottom:0;">Driver/Client Screen</p></div>
         <div class="settings-group">
           <div class="settings-row"><label>Refresh every (seconds)</label><input type="number" id="setting-chofRefreshSeconds" min="10"></div>
           <p class="settings-caption">How often the driver/client tracking screen refreshes itself (minimum 10s so it doesn't overload the server).</p>
@@ -1159,15 +1172,15 @@
 
     <div class="admin-tab-panel" id="admin-tab-analytics" style="display:none;">
       <div class="admin-section-card">
-        <p class="section-label">Auto-refresh</p>
+        <div class="admin-card-header"><span class="icon"><i class="ti ti-refresh"></i></span><p class="section-label" style="margin-bottom:0;">Auto-refresh</p></div>
         <div class="settings-group"><div class="settings-row"><label>Refresh every (seconds)</label><input type="number" id="setting-analyticsRefreshSeconds" min="0"></div></div>
         <p style="font-size:11px;color:var(--text-faint);margin:-2px 0 8px;">0 = off (only refreshes with the button or pull-to-refresh). If you turn it on, minimum is 60s — anything shorter doesn't really help since the server already caches results for 90s.</p>
         <button class="btn-primary" style="margin-top:4px;" onclick="saveAnalyticsRefreshSettings()">Save changes</button>
         <p class="upload-status show" id="admin-analytics-refresh-status" role="status" aria-live="polite" style="display:none;"></p>
       </div>
       <div class="admin-section-card">
-        <p class="section-label">Data Analysis layout</p>
-        <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:8px;">"Order" moves the panel up/down. The checkbox turns the whole panel on or off. The menu sets which date range it opens with by default.</p>
+        <div class="admin-card-header"><span class="icon"><i class="ti ti-layout-grid"></i></span><p class="section-label" style="margin-bottom:0;">Data Analysis layout</p></div>
+        <p style="font-size:11.5px;color:var(--text-faint);margin:8px 0 8px;">"Order" moves the panel up/down. The checkbox turns the whole panel on or off. The menu sets which date range it opens with by default.</p>
         <div style="display:flex;gap:10px;align-items:center;padding:0 4px 4px;font-size:10.5px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:.02em;">
           <span style="width:64px;">Order</span>
           <span style="width:20px;text-align:center;">Show</span>
@@ -1178,6 +1191,9 @@
         <button class="btn-primary" style="margin-top:10px;" onclick="saveAdminAnalyticsConfig()">Save layout</button>
         <p class="upload-status show" id="admin-analytics-status" role="status" aria-live="polite" style="display:none;"></p>
       </div>
+    </div>
+
+    </div>
     </div>
   </div>
 
