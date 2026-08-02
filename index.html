@@ -1873,6 +1873,7 @@ function goRol() {
   // token viejo no sigue sirviendo hasta que expire solo a las 10 horas.
   const tokenToKill = SESSION_TOKEN || ADMIN_SESSION_TOKEN;
   if (tokenToKill) fetch(API, { method:'POST', body: JSON.stringify({ action:'logout', sessionToken: tokenToKill }) }).catch(()=>{});
+  clearPersistedSession();
   pinVal=""; updateDots(); currentUser=null; selectedUser=null; SESSION_TOKEN=null; ADMIN_SESSION_TOKEN=null; pendingUploadAfterLogin=false; SHIPPING_READ_ONLY=false;
   // En un aparato compartido, sin esto el siguiente que iniciara sesión (Admin u otro
   // clerk) veía la configuración/filtros de la persona anterior — las pestañas de Admin
@@ -2057,6 +2058,18 @@ let SHIPPING_READ_ONLY = false;
 // o.driverArrived para TODOS, esto solo lo enseña en pantalla a quien sí lo pidió; no
 // es información sensible, nomás que no todos los clerks la necesitan ver siempre).
 let SHOW_DRIVER_TIMES = false;
+// Guarda la sesión en localStorage para que un refresh de página (F5) no mande de
+// vuelta al login — antes SESSION_TOKEN vivía solo en memoria, así que se perdía con
+// cualquier recarga aunque el token siguiera siendo válido en el servidor hasta 10h.
+// Si el token en realidad ya expiró (turno anterior, etc.), la primera llamada real
+// (loadOrdenes/getAnalytics/...) lo detecta sola vía isSessionExpiredError y regresa
+// al login — mismo mecanismo que ya usa cualquier sesión que expira a medio uso.
+const SAVED_SESSION_KEY = 'chula-session';
+function persistSession(token, name, permissionsStr) {
+  try { localStorage.setItem(SAVED_SESSION_KEY, JSON.stringify({ token, name, permissions: permissionsStr, savedAt: Date.now() })); } catch (e) {}
+}
+function clearPersistedSession() { try { localStorage.removeItem(SAVED_SESSION_KEY); } catch (e) {} }
+
 async function completeLogin(result) {
   currentUser = selectedUser;
   SESSION_TOKEN = result.sessionToken;
@@ -2064,6 +2077,12 @@ async function completeLogin(result) {
   const perms = String(result.permissions || 'clerk').split(',').map(s => s.trim()).filter(Boolean);
   loginPermissions = perms;
   cachedLoginOrders = Array.isArray(result.orders) ? result.orders : null;
+  persistSession(SESSION_TOKEN, currentUser, result.permissions || '');
+  enterApp(perms);
+}
+// Parte de completeLogin() que no depende de la respuesta fresca del login — la
+// reusa restoreSessionIfAny() para entrar directo con una sesión ya guardada.
+function enterApp(perms) {
   const hasClerk = perms.includes('clerk'), hasShippingView = perms.includes('shipping_view');
   SHIPPING_READ_ONLY = hasShippingView && !hasClerk;
   SHOW_DRIVER_TIMES = perms.includes('driver_times');
@@ -2082,6 +2101,25 @@ async function completeLogin(result) {
     if (cachedLoginOrders) { ordenes = cachedLoginOrders; cachedLoginOrders = null; renderOrdenes(); }
     else { loadOrdenes(); }
   }
+}
+// Se llama al cargar la página (ver el final del archivo) — si hay una sesión
+// guardada y no luce vieja, entra directo sin pasar por el login.
+function restoreSessionIfAny() {
+  let saved;
+  try { saved = JSON.parse(localStorage.getItem(SAVED_SESSION_KEY) || 'null'); } catch (e) { saved = null; }
+  if (!saved || !saved.token || !saved.name) return false;
+  // 10h — mismo tiempo de vida que SESSION_TTL_SECONDS en Code.gs. Nomás para no
+  // mostrar la app un instante con un token que ya sabemos que caducó; si de todos
+  // modos se nos pasa uno vencido, el primer request real lo detecta igual.
+  if (!saved.savedAt || (Date.now() - saved.savedAt) > 10 * 3600 * 1000) { clearPersistedSession(); return false; }
+  currentUser = saved.name; selectedUser = saved.name;
+  SESSION_TOKEN = saved.token;
+  loadAppSettings();
+  const perms = String(saved.permissions || 'clerk').split(',').map(s => s.trim()).filter(Boolean);
+  loginPermissions = perms;
+  cachedLoginOrders = null;
+  enterApp(perms);
+  return true;
 }
 
 async function submitPassword() {
@@ -6383,6 +6421,11 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
+
+// Al final para que todo lo que necesita (loadOrdenes, showAccessChooser, etc.) ya
+// esté declarado — si hay una sesión guardada de antes de un refresh, entra directo
+// sin pasar por el login (ver completeLogin/persistSession/restoreSessionIfAny).
+restoreSessionIfAny();
 </script>
 </body>
 </html>
