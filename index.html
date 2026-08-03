@@ -967,6 +967,26 @@
         <div class="kpi-grid" id="kpis-unloading"></div>
         <canvas id="chartUnloadingTrend" style="margin-top:8px;"></canvas>
       </div>
+      <div class="analytics-panel" id="analytics-panel-driverDwell">
+        <div class="panel-title-row">
+          <p class="panel-title">Driver Time</p>
+          <div class="panel-title-row-right">
+            <span class="panel-range-badge" id="badge-driverDwell">Week</span>
+            <div class="mini-dropdown-wrap">
+              <button class="mini-filter-btn" onclick="togglePanelDropdown('driverDwell')" title="Filter this indicator" aria-label="Filter this indicator">⋯</button>
+              <div class="dropdown-panel mini" id="panel-dd-driverDwell">
+                <button class="dropdown-option" data-range="day" onclick="setPanelRange('driverDwell','day')">Day</button>
+                <button class="dropdown-option" data-range="week" onclick="setPanelRange('driverDwell','week')">Week</button>
+                <button class="dropdown-option" data-range="month" onclick="setPanelRange('driverDwell','month')">Month</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--text-faint);margin-bottom:6px;">How long a driver was here, from arrival to departure (only orders with both times recorded).</p>
+        <div class="kpi-grid" id="kpis-driverDwell"></div>
+        <canvas id="chartDriverDwellTrend" style="margin-top:8px;"></canvas>
+        <div id="driverDwellWorstList"></div>
+      </div>
     </div>
   </div>
 
@@ -1144,7 +1164,17 @@
                 <button type="button" class="admin-toggle-btn" style="white-space:nowrap;" onclick="addAlertEmail()">+ Add</button>
               </div>
               <input type="hidden" id="setting-alertEmails">
-              <p class="settings-caption">Who gets the "no PDF uploaded" and daily close-of-day summary emails. Leave empty to use the default account email.</p>
+              <p class="settings-caption">Who gets the "no PDF uploaded" email. Leave empty to use the default account email.</p>
+            </div>
+            <div class="settings-group">
+              <p style="font-size:13px;color:var(--text);font-weight:500;margin-bottom:8px;">Close summary emails</p>
+              <div class="saved-chip-row" id="closeSummaryEmailsChips" style="margin-bottom:8px;"></div>
+              <div style="display:flex;gap:8px;">
+                <input type="email" id="closeSummaryEmailInput" placeholder="name@example.com" style="flex:1;min-width:0;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'Inter',sans-serif;font-size:13px;background:var(--bg);color:var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();addCloseSummaryEmail();}">
+                <button type="button" class="admin-toggle-btn" style="white-space:nowrap;" onclick="addCloseSummaryEmail()">+ Add</button>
+              </div>
+              <input type="hidden" id="setting-closeSummaryEmails">
+              <p class="settings-caption">Who gets the daily "resumen" when the business day closes (totals, incompletes, unloading trucks, driver times). Leave empty to use the "no PDF uploaded" list above.</p>
             </div>
             <button class="btn-primary" style="margin-top:14px;" onclick="saveAdminSettings()">Save changes</button>
           </div>
@@ -2599,7 +2629,8 @@ const GENERAL_SETTINGS_FIELDS = [
   { key: 'cancelledArchiveHours', elId: 'setting-cancelledArchiveHours', type: 'number', default: 48, label: 'Hours before archiving cancelled orders' },
   { key: 'uploadAlertEnabled', elId: 'setting-uploadAlertEnabled', type: 'checkbox', label: 'Email if no PDF uploaded', format: v => (v !== 0 ? 'On' : 'Off') },
   { key: 'uploadAlertHour', elId: 'setting-uploadAlertHour', type: 'number', default: 11, min: 0, label: 'Alert hour' },
-  { key: 'alertEmails', elId: 'setting-alertEmails', type: 'text', label: 'Alert emails' }
+  { key: 'alertEmails', elId: 'setting-alertEmails', type: 'text', label: 'Alert emails' },
+  { key: 'closeSummaryEmails', elId: 'setting-closeSummaryEmails', type: 'text', label: 'Close summary emails' }
 ];
 let loadedGeneralSettings = {};
 // Las 5 secciones de "Today's orders" (Departed/estatus 6 nunca entra aquí, siempre va aparte).
@@ -2618,6 +2649,8 @@ async function loadAdminSettings() {
   // de verdad se ve como recuadritos.
   alertEmailsList = String(s.alertEmails || '').split(',').map(e => e.trim()).filter(Boolean);
   renderAlertEmailChips();
+  closeSummaryEmailsList = String(s.closeSummaryEmails || '').split(',').map(e => e.trim()).filter(Boolean);
+  renderCloseSummaryEmailChips();
 }
 async function saveAdminSettings() { await saveSettingsFields(GENERAL_SETTINGS_FIELDS, loadedGeneralSettings, 'admin-settings-status'); }
 
@@ -2657,6 +2690,31 @@ function addAlertEmail() {
 function removeAlertEmail(email) {
   alertEmailsList = alertEmailsList.filter(e => e !== email);
   renderAlertEmailChips();
+}
+
+// Mismo patrón que alertEmailsList arriba, pero para el resumen de cierre de día —
+// lista aparte (Code.gs cae sola a alertEmails si esta se deja vacía).
+let closeSummaryEmailsList = [];
+function renderCloseSummaryEmailChips() {
+  const wrap = document.getElementById('closeSummaryEmailsChips');
+  wrap.innerHTML = closeSummaryEmailsList.map(email =>
+    `<span class="saved-chip">${escapeHtml(email)}<button type="button" onclick="removeCloseSummaryEmail('${escapeForJsAttr(email)}')" title="Remove" aria-label="Remove ${escapeHtml(email)}">✕</button></span>`
+  ).join('');
+  document.getElementById('setting-closeSummaryEmails').value = closeSummaryEmailsList.join(',');
+}
+function addCloseSummaryEmail() {
+  const input = document.getElementById('closeSummaryEmailInput');
+  const email = input.value.trim();
+  if (!email) return;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast("That doesn't look like a valid email.", 'error'); return; }
+  if (closeSummaryEmailsList.some(e => e.toLowerCase() === email.toLowerCase())) { showToast('Already in the list.'); input.value = ''; return; }
+  closeSummaryEmailsList.push(email);
+  input.value = '';
+  renderCloseSummaryEmailChips();
+}
+function removeCloseSummaryEmail(email) {
+  closeSummaryEmailsList = closeSummaryEmailsList.filter(e => e !== email);
+  renderCloseSummaryEmailChips();
 }
 
 // ── BUSINESS UNITS (Admin) ──
@@ -2961,7 +3019,7 @@ async function saveDriverScreenSettings() { await saveSettingsFields(DRIVER_FIEL
 // Summary y Boxes quedan fijos (como estaban antes) — el Admin solo puede reordenar
 // y poner el default de las 6 gráficas de abajo.
 const ANALYTICS_TOP_KEYS = ['core', 'boxes'];
-const ANALYTICS_PANEL_LABELS = { core: 'Summary', boxes: 'Boxes', status: 'Orders by Status', product: 'Boxes by Product', day: 'Departed per Day', complete: 'Complete vs Incomplete', shipped: 'Shipped vs Not Shipped', person: 'Activity by Person', vendedor: 'Boxes by Salesperson', bayUsage: 'Bay Usage', leftBehind: 'Left Behind per Day', overdue: 'Overdue', unloading: 'Unloading Trucks' };
+const ANALYTICS_PANEL_LABELS = { core: 'Summary', boxes: 'Boxes', status: 'Orders by Status', product: 'Boxes by Product', day: 'Departed per Day', complete: 'Complete vs Incomplete', shipped: 'Shipped vs Not Shipped', person: 'Activity by Person', vendedor: 'Boxes by Salesperson', bayUsage: 'Bay Usage', leftBehind: 'Left Behind per Day', overdue: 'Overdue', unloading: 'Unloading Trucks', driverDwell: 'Driver Time' };
 // analyticsRefreshSeconds no usa el helper genérico loadSettingsFields/saveSettingsFields
 // porque su "apagado" es 0, no un mínimo fijo — el helper genérico haría clamp de 0 hacia
 // arriba al mínimo, sin dejar apagarlo nunca.
@@ -3074,7 +3132,7 @@ const RANGE_CACHE_MAX = 24;
 let panelOverride = {};           // panelKey -> 'day'|'week'|'month' | null (sigue el filtro general)
 let panelData = {};               // panelKey -> último dato usado por ese panel (para re-filtrar por fruta sin re-pedir)
 let prevPanelData = {};            // panelKey -> dato del período anterior de igual duración (solo paneles con KPI comparable)
-const COMPARISON_PANELS = ['core', 'boxes', 'overdue', 'unloading'];
+const COMPARISON_PANELS = ['core', 'boxes', 'overdue', 'unloading', 'driverDwell'];
 const ALL_FRUIT_KEYS = ['papaya', 'limes', 'pineapples', 'bananas_plantains', 'aloe', 'cucumbers', 'other'];
 const PRODUCT_LABELS = { papaya: 'Papaya', limes: 'Limes', pineapples: 'Pineapples', bananas_plantains: 'Bananas', aloe: 'Aloe Vera', cucumbers: 'Cucumbers', other: 'Other' };
 const PRODUCT_SHORT_LABELS = { papaya: 'PAP', limes: 'LIM', pineapples: 'PIN', bananas_plantains: 'BAN', aloe: 'ALO', cucumbers: 'CUC', other: 'OTH' };
@@ -3150,8 +3208,8 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
 // y el panel no tiene su propia anulación puesta. "Departed per Day" y "Left Behind
 // per Day" arrancan en Week (una tendencia de un solo día no dice mucho); el resto
 // arranca en Day.
-let DEFAULT_RANGE_FOR_PANEL = { core: 'day', boxes: 'day', status: 'day', product: 'day', day: 'week', person: 'day', complete: 'day', shipped: 'day', vendedor: 'day', bayUsage: 'day', leftBehind: 'week', overdue: 'week', unloading: 'week' };
-const ALL_PANEL_KEYS = ['core', 'boxes', 'status', 'product', 'day', 'person', 'complete', 'shipped', 'vendedor', 'bayUsage', 'leftBehind', 'overdue', 'unloading'];
+let DEFAULT_RANGE_FOR_PANEL = { core: 'day', boxes: 'day', status: 'day', product: 'day', day: 'week', person: 'day', complete: 'day', shipped: 'day', vendedor: 'day', bayUsage: 'day', leftBehind: 'week', overdue: 'week', unloading: 'week', driverDwell: 'week' };
+const ALL_PANEL_KEYS = ['core', 'boxes', 'status', 'product', 'day', 'person', 'complete', 'shipped', 'vendedor', 'bayUsage', 'leftBehind', 'overdue', 'unloading', 'driverDwell'];
 let analyticsLayoutLoaded = false;
 // Jala el acomodo (orden de paneles + default de cada uno) que el Admin haya guardado.
 // Si nunca ha guardado nada, el servidor regresa los valores de fábrica y no cambia nada.
@@ -3549,13 +3607,20 @@ async function downloadAnalyticsCSV() {
         if (!overdueByDay[o.fecha]) overdueByDay[o.fecha] = { sum: 0, count: 0 };
         overdueByDay[o.fecha].sum += o.hours; overdueByDay[o.fecha].count++;
       });
-      rows.push(csvRow(['Date', 'Total Orders', 'Departed', 'Pending', 'Incomplete', 'Boxes Ordered', 'Boxes Shipped', 'Left Behind', 'Unloading Trucks', 'Overdue Orders', 'Avg Overdue']));
+      const dwellByDay = {};
+      (Array.isArray(d.driverDwellList) ? d.driverDwellList : []).forEach(o => {
+        if (!dwellByDay[o.fecha]) dwellByDay[o.fecha] = { sum: 0, count: 0 };
+        dwellByDay[o.fecha].sum += o.minutes; dwellByDay[o.fecha].count++;
+      });
+      rows.push(csvRow(['Date', 'Total Orders', 'Departed', 'Pending', 'Incomplete', 'Boxes Ordered', 'Boxes Shipped', 'Left Behind', 'Unloading Trucks', 'Overdue Orders', 'Avg Overdue', 'Avg Driver Time']));
       days.forEach(day => {
         const b = daily[day];
         const od = overdueByDay[day];
+        const dw = dwellByDay[day];
         rows.push(csvRow([day, b.total, b.departed, b.pending, b.incomplete, b.boxesOrdered, b.boxesShipped,
           (d.leftBehindByDay || {})[day] || 0, (d.unloadingByDay || {})[day] || 0,
-          od ? od.count : 0, od ? formatHoursMin(od.sum / od.count) : '']));
+          od ? od.count : 0, od ? formatHoursMin(od.sum / od.count) : '',
+          dw ? formatHoursMin(dw.sum / dw.count / 60) : '']));
       });
     });
     // "Daily Boxes by Product" — mismo día por día, pero desglosado por fruta, para ver
@@ -3630,6 +3695,13 @@ async function downloadAnalyticsCSV() {
         .forEach(k => rows.push(csvRow(['Overdue by Product', PRODUCT_LABELS[k] || k, formatHoursMin(byProduct[k].sum / byProduct[k].count)])));
       filtered.slice().sort((a, b) => b.hours - a.hours).slice(0, 5)
         .forEach(o => rows.push(csvRow(['Overdue Top 5', '#' + o.orden + ' — ' + o.cliente, formatHoursMin(o.hours)])));
+    });
+    pushSection(rows, () => {
+      const all = Array.isArray(d.driverDwellList) ? d.driverDwellList : [];
+      const avg = all.length ? all.reduce((s, o) => s + o.minutes, 0) / all.length : 0;
+      rows.push(csvRow(['Driver Time', 'Avg Driver Time', formatHoursMin(avg / 60)]), csvRow(['Driver Time', 'Trucks', all.length]));
+      all.slice().sort((a, b) => b.minutes - a.minutes).slice(0, 5)
+        .forEach(o => rows.push(csvRow(['Driver Time Top 5', '#' + o.orden + ' — ' + o.cliente, formatHoursMin(o.minutes / 60)])));
     });
 
     if (rows.length <= 5) { showToast('Nothing to export in that range'); return; }
@@ -3875,11 +3947,47 @@ function renderUnloadingChart(d) {
   document.getElementById('kpis-unloading').innerHTML = kpiCardsHtml(kpis);
   renderTrendLineChart('chartUnloadingTrend', dayEntries, '#2563EB', 'rgba(37,99,235,0.15)');
 }
+// Cuánto tiempo estuvo cada chofer aquí (llegada -> salida) — mismo patrón que
+// renderOverduePanel, sin desglose por producto (esto es del camión, no del producto
+// que trae). d.driverDwellList: [{orden,cliente,minutes,fecha}], ver
+// computeDriverDwellList en Code.gs.
+function renderDriverDwellPanel(d) {
+  const all = Array.isArray(d.driverDwellList) ? d.driverDwellList : [];
+  const avgMinutes = all.length ? all.reduce((s, o) => s + o.minutes, 0) / all.length : 0;
+  const prevD = prevPanelData.driverDwell;
+  let prevAvgMinutes = null;
+  if (prevD) {
+    const prevAll = Array.isArray(prevD.driverDwellList) ? prevD.driverDwellList : [];
+    prevAvgMinutes = prevAll.length ? prevAll.reduce((s, o) => s + o.minutes, 0) / prevAll.length : 0;
+  }
+  const kpis = [
+    { label: 'Avg Driver Time', value: formatHoursMin(avgMinutes / 60), sub: all.length + ' truck' + (all.length === 1 ? '' : 's'), color: '#2563EB', delta: prevD ? formatDelta(avgMinutes, prevAvgMinutes, 'bad-up') : '' }
+  ];
+  document.getElementById('kpis-driverDwell').innerHTML = kpiCardsHtml(kpis);
+
+  const byDay = {};
+  all.forEach(o => {
+    if (!o.fecha) return;
+    if (!byDay[o.fecha]) byDay[o.fecha] = { sum: 0, count: 0 };
+    byDay[o.fecha].sum += o.minutes; byDay[o.fecha].count++;
+  });
+  const dayEntries = Object.entries(byDay)
+    .map(([day, v]) => [day, Math.round((v.sum / v.count) * 10) / 10])
+    .sort((a, b) => a[0].localeCompare(b[0]));
+  renderTrendLineChart('chartDriverDwellTrend', dayEntries, '#2563EB', 'rgba(37,99,235,0.15)', v => formatHoursMin(v / 60));
+
+  const worst = all.slice().sort((a, b) => b.minutes - a.minutes).slice(0, 5);
+  const list = document.getElementById('driverDwellWorstList');
+  if (!worst.length) { list.innerHTML = '<p style="font-size:12px;color:var(--text-faint);">Not enough data in this range.</p>'; return; }
+  list.innerHTML = `<p class="checklist-title" style="margin-top:4px;">Top 5</p>` + worst.map(o =>
+    `<div class="driver-product-row"><span>#${escapeHtml(o.orden)} — ${escapeHtml(o.cliente)}</span><span class="driver-product-badge not-shipped">${formatHoursMin(o.minutes / 60)}</span></div>`
+  ).join('');
+}
 const RENDER_FNS = {
   core: renderCoreKpis, boxes: renderBoxesKpis, status: renderStatusChart, product: renderProductChart,
   day: renderDayChart, person: renderPersonChart, complete: renderCompleteChart, shipped: renderShippedChart,
   vendedor: renderVendedorChart, bayUsage: renderBayUsageChart, leftBehind: renderLeftBehindChart,
-  overdue: renderOverduePanel, unloading: renderUnloadingChart
+  overdue: renderOverduePanel, unloading: renderUnloadingChart, driverDwell: renderDriverDwellPanel
 };
 
 
