@@ -132,12 +132,12 @@
   html, body { overscroll-behavior-y: contain; }
   body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:2rem 1rem 4rem; }
   .container { width:100%; max-width:420px; }
-  /* Admin tiene su propia barra lateral + contenido — con el mismo ancho angosto que
-     el resto de la app (pensado para celular) se veía todo apachurrado a la izquierda
-     en una pantalla ancha. Se ensancha SOLO mientras Admin está activo (ver show()) —
-     el resto de las pantallas (Shipping, tracking del chofer) se quedan como estaban,
-     pensadas para celular/tablet. */
-  .container.admin-wide { max-width:1160px; }
+  /* Admin/Shipping Panel/Data Analysis son pantallas de trabajo de oficina — con el
+     mismo ancho angosto que el resto de la app (pensado para celular) se veían todo
+     apachurradas a la izquierda en una pantalla ancha. Se ensanchan SOLO mientras esa
+     pantalla está activa (ver show()) — el tracking del chofer/cliente y el login se
+     quedan como estaban, pensados para celular. */
+  .container.wide { max-width:1160px; }
   .pull-refresh-indicator {
     position:fixed; top:8px; left:50%; z-index:999; width:32px; height:32px; border-radius:50%;
     background:var(--pink); color:#fff; display:flex; align-items:center; justify-content:center;
@@ -357,8 +357,8 @@
   .chart-legend-list { display:flex; flex-wrap:wrap; gap:7px 14px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
   .chart-legend-item { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted); }
   .chart-legend-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
-  .kpi-panel { }
-  .kpi-panels-row { display:flex; flex-direction:column; gap:14px; margin-bottom:14px; }
+  .kpi-panel { flex:1; min-width:280px; }
+  .kpi-panels-row { display:flex; flex-wrap:wrap; gap:14px; margin-bottom:14px; }
   .panel-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
   .panel-title-row .panel-title { margin-bottom:0; }
   .panel-title-row-right { display:flex; align-items:center; gap:6px; }
@@ -1882,12 +1882,14 @@ function roundToHalfHour(hhmm) {
   return String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
 }
 
+// Pantallas de trabajo (oficina/escritorio) que aprovechan una pantalla ancha — el
+// resto (login, tracking del chofer/cliente, subir PDF) se queda angosto a propósito,
+// pensado para celular.
+const WIDE_SCREENS = new Set(['screen-admin', 'screen-enc', 'screen-analytics']);
 function show(id) {
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  // Admin usa una barra lateral y le hace falta más espacio horizontal en pantallas
-  // anchas (ver .container.admin-wide) — el resto de las pantallas se quedan angostas.
-  document.querySelector('.container').classList.toggle('admin-wide', id === 'screen-admin');
+  document.querySelector('.container').classList.toggle('wide', WIDE_SCREENS.has(id));
 }
 let usersPromise = null;
 function prefetchUsers() {
