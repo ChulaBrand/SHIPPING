@@ -1489,6 +1489,17 @@ function escapeForJsAttr(str) {
 let APP_SETTINGS = { standardDivisor: 48, hebDivisor: 60, stalledHours: 6, stalledFloorHour: 10, soonHours: 1, lockHours: 48, chofRefreshSeconds: 30, chofShowClientName: 1, chofShowProducts: 1, chofGroupClientOrders: 1, shipRefreshSeconds: 120, analyticsRefreshSeconds: 0, savedOrdersHours: 24, statusRank1: 1, statusRank2: 2, statusRank3: 3, statusRank4: 4, statusRank5: 5 };
 let CLIENTS_CONFIG = []; // [{ nombrePatron, nombreCorto, cajasPorTarima, activo }], desde Admin → Clients
 let clientsConfigLoaded = false;
+// false SOLO si el cliente está en la lista y marcado Inactive — uno que no aparece en
+// Admin → Clients para nada se deja pasar (nunca se ha configurado, no hay motivo para
+// bloquearlo). Usado al subir un PDF (ver handlePapayaFile) para que un cliente
+// desactivado nunca llegue ni siquiera a la vista previa — Code.gs (syncDraft) hace la
+// misma revisión otra vez del lado del servidor, por si acaso.
+function clientIsActive(name) {
+  const target = String(name || '').trim().toLowerCase();
+  if (!target) return true;
+  const entry = CLIENTS_CONFIG.find(c => String(c.nombrePatron || '').toLowerCase() === target);
+  return !entry || entry.activo !== false;
+}
 async function loadAppSettings() {
   try {
     const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'getSettings' }) });
@@ -6334,6 +6345,10 @@ async function handlePapayaFile(file) {
   papayaLastFileName = file.name.replace(/\.pdf$/i, "");
   papayaStatusEl.textContent = "Reading PDF...";
   papayaResultsCard.style.display = "none";
+  // Hace falta CLIENTS_CONFIG cargado para saber quién está desactivado (ver
+  // clientIsActive) — goPapayaUpload() ya lo dispara al entrar a esta pantalla, esto es
+  // solo por si el PDF se soltó tan rápido que esa llamada todavía no había terminado.
+  if (!clientsConfigLoaded) await loadClientsConfig();
   try {
     const buf = await file.arrayBuffer();
     const lines = await extractLines(buf);
@@ -6363,10 +6378,17 @@ async function handlePapayaFile(file) {
       return { orden: o.sp, cliente: shortenClientName(o.name, o.note, o.sp), productos, vendedor: o.spn || '', fecha: pdfDateToIso(o.date) };
     }).filter(r => r.productos);
 
+    // Clientes desactivados (Admin → Clients → Inactive) nunca entran al sistema —
+    // se quitan aquí, antes de que lleguen ni siquiera a la vista previa/reporte de
+    // pallets. syncDraft() hace la misma revisión otra vez del lado del servidor.
+    const skippedInactive = papayaLastDraftRows.filter(r => !clientIsActive(r.cliente)).length;
+    if (skippedInactive) papayaLastDraftRows = papayaLastDraftRows.filter(r => clientIsActive(r.cliente));
+
     const [rows, flags] = buildReportRows(orders);
     papayaLastRows = rows; papayaLastFlags = flags;
     renderPapayaResults(rows, flags);
-    papayaStatusEl.textContent = rows.length ? "Done." : "Done — this PDF has no papaya, but you can still send the orders to Draft.";
+    const skippedNote = skippedInactive ? (' (' + skippedInactive + ' order' + (skippedInactive === 1 ? '' : 's') + ' skipped — inactive client)') : '';
+    papayaStatusEl.textContent = (rows.length ? "Done." : "Done — this PDF has no papaya, but you can still send the orders to Draft.") + skippedNote;
     // Se espera a que termine (ya no es fire-and-forget) para que el guard de arriba
     // también cubra el envío al Draft, no solo la lectura del PDF.
     await sendAndSyncDraft();
