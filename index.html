@@ -1894,9 +1894,9 @@ function roundToHalfHour(hhmm) {
 }
 
 // Pantallas de trabajo (oficina/escritorio) que aprovechan una pantalla ancha — el
-// resto (login, tracking del chofer/cliente, subir PDF) se queda angosto a propósito,
-// pensado para celular.
-const WIDE_SCREENS = new Set(['screen-admin', 'screen-enc', 'screen-analytics']);
+// resto (login, Shipping Panel, tracking del chofer/cliente, subir PDF) se queda
+// angosto a propósito (en Shipping alargaba mucho las tarjetas de pedido).
+const WIDE_SCREENS = new Set(['screen-admin', 'screen-analytics']);
 function show(id) {
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
