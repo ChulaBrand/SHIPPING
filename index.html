@@ -1637,26 +1637,16 @@ function orderMatchesProductFilter(o) {
   return false;
 }
 
-// "Incompleto" pasa por 2 caminos, cualquiera de los dos cuenta:
-//  1) Manual — alguien lo marcó a mano con el botón "⚠️ Mark Incomplete" en la tarjeta
-//     (o.incomplete, persistido en el servidor, col M de Orders — ver toggleOrderIncomplete).
-//  2) Automático — el estatus general ya avanzó más allá de Ready (Waiting for dock,
-//     Loading o Departed) pero al menos un producto se quedó atrás, todavía sin llegar a
-//     Ready — el mismo caso que marca el aviso "⚠️ Order moved ahead" dentro de la
-//     tarjeta expandida.
-// No depende de que la tarjeta ya se haya construido (productState solo se llena al
-// expandir) — calcula directo del array que ya manda el servidor.
+// "Incompleto" es SOLO manual — alguien lo marcó a mano con el botón "⚠️ Mark
+// Incomplete" en la tarjeta (o.incomplete, persistido en el servidor, col M de Orders
+// — ver toggleOrderIncomplete). Antes también se prendía solo si el estatus general ya
+// había avanzado más allá de Ready pero algún producto se había quedado atrás — pero
+// eso podía pasar sin que nadie hubiera marcado nada de verdad (ej. el feed seguía
+// tocando los círculos de producto después de que la orden ya iba en Ready), así que
+// la tarjeta se veía "Incomplete" sola sin que fuera una decisión de nadie.
 let incompleteFilterActive = false;
 function isOrderIncomplete(o) {
-  if (o.incomplete) return true;
-  const est = parseInt(o.estatus) || 1;
-  if (est <= 3) return false;
-  const prods = parseProductos(o.productos);
-  if (!prods.length) return false;
-  const statuses = Array.isArray(o.productEstatus) && o.productEstatus.length === prods.length
-    ? o.productEstatus
-    : prods.map(() => Math.min(est, 3));
-  return statuses.some(s => s < 3);
+  return !!o.incomplete;
 }
 function toggleIncompleteFilter() {
   incompleteFilterActive = !incompleteFilterActive;
