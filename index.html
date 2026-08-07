@@ -1147,6 +1147,15 @@
               <p class="settings-caption">The Cancelled screen is for undoing a recent mistake, not a long history — anything older than this moves out automatically and can no longer be restored from there.</p>
             </div>
             <button class="btn-primary" style="margin-top:14px;" onclick="saveAdminSettings()">Save changes</button>
+            <div class="settings-group" style="margin-top:18px;padding-top:18px;border-top:1px solid var(--border);">
+              <p style="font-size:13px;color:var(--text);font-weight:500;margin-bottom:8px;">Unlock an order</p>
+              <p class="settings-caption" style="margin-bottom:8px;">An order untouched past the hours above becomes fully read-only — status, Incomplete, and products all stop responding. This gives it one more chance without waiting or editing the Sheet by hand.</p>
+              <div style="display:flex;gap:8px;">
+                <input type="text" id="unlockOrderInput" placeholder="Order # (e.g. SP00123456)" style="flex:1;min-width:0;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;font-family:'Inter',sans-serif;font-size:13px;background:var(--bg);color:var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();unlockOrder();}">
+                <button type="button" class="admin-toggle-btn" style="white-space:nowrap;" onclick="unlockOrder()">Unlock</button>
+              </div>
+              <p class="upload-status show" id="unlock-order-status" role="status" aria-live="polite" style="display:none;"></p>
+            </div>
           </div>
 
           <div class="admin-section-card settings-pane" id="settings-pane-alerts" style="display:none;">
@@ -2656,6 +2665,30 @@ async function loadAdminSettings() {
   renderCloseSummaryEmailChips();
 }
 async function saveAdminSettings() { await saveSettingsFields(GENERAL_SETTINGS_FIELDS, loadedGeneralSettings, 'admin-settings-status'); }
+
+// Botón de emergencia para una orden que ya pasó el candado de 48h (ver adminUnlockOrder
+// en Code.gs) — no toca nada del pedido, nomás le "resetea el reloj" para que las
+// acciones normales (estatus, Incomplete, productos) la puedan volver a tocar.
+async function unlockOrder() {
+  const input = document.getElementById('unlockOrderInput');
+  const statusEl = document.getElementById('unlock-order-status');
+  const orden = input.value.trim();
+  if (!orden) { showToast('Enter an order number', 'error'); return; }
+  statusEl.style.display = 'block';
+  statusEl.textContent = 'Unlocking...';
+  try {
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'adminUnlockOrder', orden }) });
+    const result = await res.json();
+    if (isSessionExpiredError(result)) { handleSessionExpired(); return; }
+    if (result.error) { statusEl.textContent = 'Error: ' + result.error; showToast(result.error, 'error'); return; }
+    statusEl.textContent = 'Order #' + orden + ' unlocked — it can be edited again.';
+    input.value = '';
+    showToast('Order unlocked ✓');
+  } catch (e) {
+    statusEl.textContent = 'Sync error — check connection';
+    showToast('Sync error — check connection', 'error');
+  }
+}
 
 // Nav lateral de Settings (Refresh/Thresholds/Alerts/Status order) — cada pane es su
 // propia tarjeta con su propio botón de guardar, pero "Save changes" en cualquiera de
