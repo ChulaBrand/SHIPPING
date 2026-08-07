@@ -431,7 +431,6 @@
   /* checklist / per-product status circles */
   .checklist { display:flex; flex-direction:column; gap:10px; margin-bottom:10px; padding:10px 12px; background:var(--bg); border-radius:var(--radius-sm); border:1px solid var(--border); }
   .checklist-title { font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:2px; }
-  .checklist-hint { font-size:11px; color:var(--text-faint); font-style:italic; margin:2px 0 0; }
   .product-item { display:flex; flex-direction:column; gap:6px; }
   .product-name { font-size:12.5px; color:var(--text); line-height:1.3; }
   .pcircle-row { display:flex; gap:8px; }
@@ -4493,12 +4492,6 @@ function buildClerkCard(o) {
     }
   }
   const incomplete = prods.length > 0 && est > 3 && productState[o.orden].some(s => s < 3);
-  // Los círculos por producto solo se pueden tocar a mano si la orden ya está marcada
-  // "Incomplete" — mientras no lo esté, el detalle por producto SIEMPRE sigue al botón
-  // de estatus general (ver setOrderStatus), así nunca puede quedar desincronizado por
-  // accidente (ese fue justo el bug: alguien tocó Ready en la orden pero el círculo del
-  // producto se quedó atrás). Marcar Incomplete es la única puerta para editarlos aparte.
-  const canEditProducts = canEdit && !!o.incomplete;
 
   let checklistHtml = '';
   if (prods.length > 0) {
@@ -4507,13 +4500,12 @@ function buildClerkCard(o) {
       const circles = LETTERS.slice(0, 3).map((letter, ci) => {
         const idx = ci + 1;
         const activeCls = pStat === idx ? ` active p${idx}` : '';
-        const clickAttr = canEditProducts ? `onclick="event.stopPropagation();setProductStatus('${safeOrden}',${i},${idx})"` : '';
-        return `<button type="button" class="pcircle${activeCls}${!canEditProducts ? ' disabled' : ''}" ${!canEditProducts ? 'disabled' : ''} aria-label="${escapeHtml(p)} — status ${letter}" ${clickAttr}>${letter}</button>`;
+        const clickAttr = canEdit ? `onclick="event.stopPropagation();setProductStatus('${safeOrden}',${i},${idx})"` : '';
+        return `<button type="button" class="pcircle${activeCls}${!canEdit ? ' disabled' : ''}" ${!canEdit ? 'disabled' : ''} aria-label="${escapeHtml(p)} — status ${letter}" ${clickAttr}>${letter}</button>`;
       }).join('');
       return `<div class="product-item"><span class="product-name">${escapeHtml(p)}</span><div class="pcircle-row">${circles}</div></div>`;
     }).join('');
     checklistHtml = `<div class="checklist"><p class="checklist-title">Products</p>${items}</div>`;
-    if (!canEditProducts && canEdit) checklistHtml += `<p class="checklist-hint">Mark the order Incomplete to edit products individually</p>`;
   }
 
   const warnHtml = incomplete ? `<p class="warn-note">⚠️ Order moved ahead — not all products are Ready yet</p>` : '';
@@ -4689,11 +4681,12 @@ function pruneHistoryState() {
 }
 
 // ── "⚠️ Mark Incomplete" — aviso manual de que algo anda mal con el pedido (falta
-// algo, llegó dañado, queja del cliente) Y, a la vez, la única puerta para editar los
-// círculos de producto aparte (ver canEditProducts en buildClerkCard) — mientras no
-// esté marcada, el detalle por producto siempre sigue al estatus general. Optimista
-// igual que setOrderStatus, con su propio candado de secuencia para que una respuesta
-// tardía no le pise un toggle más nuevo.
+// algo, llegó dañado, queja del cliente) Y, a la vez, la única forma de que la orden
+// pueda pasar a Waiting for dock/Loading/Departed SIN que todos los productos estén
+// Ready (ver allProductsReady/blockedPastReady) — los círculos de producto en sí
+// siempre se pueden tocar, con o sin Incomplete. Optimista igual que setOrderStatus,
+// con su propio candado de secuencia para que una respuesta tardía no le pise un
+// toggle más nuevo.
 const incompleteSeq = {};
 async function toggleOrderIncomplete(orden, evt) {
   const key = String(orden);
@@ -4701,27 +4694,18 @@ async function toggleOrderIncomplete(orden, evt) {
   if (!o) return;
   const seq = (incompleteSeq[key] = (incompleteSeq[key] || 0) + 1);
   const prevValue = !!o.incomplete;
-  const prevProductState = productState[key] ? productState[key].slice() : null;
   o.incomplete = !prevValue;
-  // Al volver a marcar Complete, el detalle por producto se re-sincroniza de una vez al
-  // estatus general (mismo criterio que el servidor — ver toggleOrderIncomplete en
-  // Code.gs) — si no, un mismatch que se hizo mientras estaba Incomplete se quedaba ahí
-  // hasta el próximo tap de estatus general.
-  if (prevValue && !o.incomplete && productState[key]) {
-    productState[key] = productState[key].map(() => Math.min(parseInt(o.estatus) || 1, 3));
-  }
   applyOrderCardUpdate(key);
   showToast(o.incomplete ? 'Marked Incomplete ⚠️' : 'Marked Complete');
   try {
     const res = await fetch(API, { method: 'POST', body: JSON.stringify({ sessionToken: SESSION_TOKEN, action: 'toggleOrderIncomplete', orden: key }) });
     const result = await res.json();
     if (incompleteSeq[key] !== seq) return; // ya hay un toggle más nuevo para esta misma orden
-    if (isSessionExpiredError(result)) { o.incomplete = prevValue; if (prevProductState) productState[key] = prevProductState; applyOrderCardUpdate(key); handleSessionExpired(); return; }
-    if (result.error) { o.incomplete = prevValue; if (prevProductState) productState[key] = prevProductState; applyOrderCardUpdate(key); showToast(result.error, 'error'); }
+    if (isSessionExpiredError(result)) { o.incomplete = prevValue; applyOrderCardUpdate(key); handleSessionExpired(); return; }
+    if (result.error) { o.incomplete = prevValue; applyOrderCardUpdate(key); showToast(result.error, 'error'); }
   } catch (e) {
     if (incompleteSeq[key] !== seq) return;
     o.incomplete = prevValue;
-    if (prevProductState) productState[key] = prevProductState;
     applyOrderCardUpdate(key);
     showToast('Sync error — check connection', 'error');
   }
@@ -5208,12 +5192,13 @@ function allProductsReady(orden) {
   return Array.isArray(ps) && ps.length > 0 && ps.every(s => s === 3);
 }
 
-// Product circle click (O/P/R only) — SOLO se puede llegar aquí si la orden ya está
-// marcada "Incomplete" (ver canEditProducts en buildClerkCard; los círculos se dibujan
-// disabled si no). Mientras no esté Incomplete, el detalle por producto siempre sigue
-// al botón de estatus general (setOrderStatus) y nunca se toca aparte — así que aquí ya
-// no hay que recalcular el estatus general desde el producto: nomás se guarda el
-// detalle para el récord.
+// Product circle click (O/P/R only) — siempre se puede tocar, con o sin Incomplete.
+// Mientras la orden no haya pasado de Ready (est <= 3), el estatus general SIGUE al
+// producto más atrasado (igual que siempre) — así que bajar un círculo puede jalar la
+// orden entera hacia atrás. Una vez que ya pasó de Ready (Waiting for dock en
+// adelante), tocar un producto ya no jala el estatus general — nomás deja el detalle
+// de ese producto para el récord (Incomplete solo importa para el requisito de avanzar
+// de estatus, ver blockedPastReady/setOrderStatus, no para poder tocar los círculos).
 function setProductStatus(orden, idx, status) {
   if (!productState[orden]) return;
   const o = ordenes.find(x => String(x.orden) === String(orden));
@@ -5224,16 +5209,26 @@ function setProductStatus(orden, idx, status) {
   if (productState[orden][idx] === status) return;
   const prevSnapshot = { estatus: o.estatus, hora: o.hora, actualizado: o.actualizado, productState: productState[orden].slice() };
   productState[orden][idx] = status;
-  pushOrderStatus(orden, o.estatus, prevSnapshot); // el estatus general no cambia, solo se persiste el detalle por producto; ya repinta todo
+  const currentEst = parseInt(o.estatus) || 1;
+  if (currentEst <= 3) {
+    const prods = parseProductos(o.productos);
+    const minProd = prods.length ? Math.min(...productState[orden]) : status;
+    o.estatus = minProd;
+    pushOrderStatus(orden, minProd, prevSnapshot);
+  } else {
+    pushOrderStatus(orden, o.estatus, prevSnapshot); // el estatus general no cambia, pero sí se persiste el detalle por producto; ya repinta todo
+  }
 }
 
 // Order-level button click. Mientras la orden NO esté marcada "Incomplete", tocar un
 // botón de estatus general fuerza TODOS los círculos de producto a ese mismo nivel
-// (tope 3 — Ready es lo más lejos que llega el checklist por producto) — nunca se puede
-// modificar por producto aparte en este caso, así nunca queda desincronizado por
-// accidente (ese fue justo el bug real: alguien tocó Ready en la orden y el círculo del
-// producto se quedó atrás). Si la orden SÍ está marcada Incomplete, esto respeta lo que
-// ya se haya marcado por producto y no lo pisa.
+// (tope 3 — Ready es lo más lejos que llega el checklist por producto) — así nunca
+// queda desincronizado por accidente (ese fue justo el bug real: alguien tocó Ready en
+// la orden y el círculo del producto se quedó atrás). Los círculos se pueden seguir
+// tocando aparte después (ver setProductStatus) — eso no cambia; lo que este botón
+// garantiza es que EN EL MOMENTO del clic, todo arranca sincronizado. Si la orden SÍ
+// está marcada Incomplete, esto respeta lo que ya se haya marcado por producto y no lo
+// pisa — es la única forma de que el clic no pise ediciones por producto ya hechas.
 function setOrderStatus(orden, status) {
   const o = ordenes.find(x => String(x.orden) === String(orden));
   if (!o) return;
