@@ -5831,12 +5831,12 @@ function titleCase(s) {
 
 function divisorFor(clientKey, isHeb) {
   if (isHeb) return APP_SETTINGS.hebDivisor;
-  const override = CLIENTS_CONFIG.find(c => c.activo && String(c.nombrePatron || '').toLowerCase() === String(clientKey || '').toLowerCase());
+  const override = CLIENTS_CONFIG.find(c => c.activo !== false && String(c.nombrePatron || '').toLowerCase() === String(clientKey || '').toLowerCase());
   if (override && override.cajasPorTarima) return override.cajasPorTarima;
   // Si la tienda no trae su propio valor, hereda el de su cliente sombrilla (ej.
   // Terrell hereda de SAM'S) antes de caer al estándar general.
   if (override && override.parent) {
-    const parentClient = CLIENTS_CONFIG.find(c => c.activo && String(c.nombrePatron || '').toLowerCase() === String(override.parent).toLowerCase());
+    const parentClient = CLIENTS_CONFIG.find(c => c.activo !== false && String(c.nombrePatron || '').toLowerCase() === String(override.parent).toLowerCase());
     if (parentClient && parentClient.cajasPorTarima) return parentClient.cajasPorTarima;
   }
   return APP_SETTINGS.standardDivisor;
